@@ -41,7 +41,7 @@ contract ToucanContractRegistry is
         _;
     }
 
-    /// @notice security function that pauses all contracts part of the carbon bri  dge
+    /// @notice security function that pauses all contracts part of the carbon bridge
     function pauseSystem() external onlyPausers {
         CarbonProjectVintages cpv = CarbonProjectVintages(
             _carbonProjectVintagesAddress

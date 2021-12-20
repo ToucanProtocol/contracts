@@ -195,6 +195,7 @@ contract CarbonProjects is
         onlyManagers
         whenNotPaused
     {
+        require(validProjectTokenIds[projectTokenId], 'Project does not exist');
         delete projectData[projectTokenId];
         /// @dev set projectTokenId to invalid
         totalSupply--;

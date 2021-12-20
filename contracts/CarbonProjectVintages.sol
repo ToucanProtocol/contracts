@@ -197,6 +197,7 @@ contract CarbonProjectVintages is
         onlyManagers
         whenNotPaused
     {
+        // TODO: Check existence of vintage before deleting
         totalSupply--;
         delete vintageData[tokenId];
     }
