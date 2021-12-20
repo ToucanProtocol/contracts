@@ -127,7 +127,7 @@ contract BaseCarbonTonne is
         string[] memory _methodologies
     ) public virtual onlyOwner {
         uint256 standardsLen = _standards.length;
-        if (standardsLen > 0) {
+        if (standardsLen != 0) {
             for (uint256 i = 0; i < standardsLen; i++) {
                 if (addToList == true) {
                     standards[_standards[i]] = true;
@@ -138,7 +138,7 @@ contract BaseCarbonTonne is
         }
 
         uint256 methodologiesLen = _methodologies.length;
-        if (methodologiesLen > 0) {
+        if (methodologiesLen != 0) {
             for (uint256 i = 0; i < methodologiesLen; i++) {
                 if (addToList == true) {
                     methodologies[_methodologies[i]] = true;
@@ -149,7 +149,7 @@ contract BaseCarbonTonne is
         }
 
         uint256 regionsLen = _regions.length;
-        if (regionsLen > 0) {
+        if (regionsLen != 0) {
             for (uint256 i = 0; i < regionsLen; i++) {
                 if (addToList == true) {
                     regions[_regions[i]] = true;
@@ -271,7 +271,7 @@ contract BaseCarbonTonne is
         require(checkEligible(erc20Addr), 'Token rejected');
 
         uint256 remainingSpace = getRemaining();
-        require(remainingSpace > 0, 'Error: Cannot deposit, Pool is full');
+        require(remainingSpace != 0, 'Error: Cannot deposit, Pool is full');
 
         if (amount > remainingSpace) amount = remainingSpace;
 

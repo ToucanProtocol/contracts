@@ -279,7 +279,7 @@ contract CarbonProjects is
             return uri;
         }
         // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(uri).length > 0) {
+        if (bytes(uri).length != 0) {
             return string(abi.encodePacked(base, uri));
         }
 
