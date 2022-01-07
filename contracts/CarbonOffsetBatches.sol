@@ -19,6 +19,8 @@ import './CarbonOffsetBatchesStorage.sol';
 import './libraries/ProjectVintageUtils.sol';
 import './libraries/Modifiers.sol';
 
+/// @notice Also referred to as Batch-Contract (formerly BatchCollection)
+/// Contract that tokenizes retired/cancelled CO2 credits into NFTs via a claims process
 contract CarbonOffsetBatches is
     ICarbonOffsetBatches,
     ERC721EnumerableUpgradeable,
@@ -81,7 +83,7 @@ contract CarbonOffsetBatches is
     // ------------------------
 
     /// @notice Emergency function to disable contract's core functionality
-    /// @dev wraps _pause(), only Admin
+    /// @dev    wraps _pause(), only Admin
     function pause() public virtual onlyBy(contractRegistry, owner()) {
         _pause();
     }
@@ -108,6 +110,7 @@ contract CarbonOffsetBatches is
         _;
     }
 
+    /// @dev internal helper function to set the status and emit an event
     function updateStatus(uint256 tokenId, RetirementStatus newStatus)
         internal
         virtual
@@ -116,8 +119,9 @@ contract CarbonOffsetBatches is
         emit BatchStatusUpdate(tokenId, newStatus);
     }
 
-    /// @dev To confirm that claim about retirement is valid
-    /// fractionalization requires confirmation
+    /// @notice Function to approve a Batch-NFT after validation.
+    /// Fractionalization requires status Confirmed.
+    /// @dev    This flow requires a previous linking with a `projectVintageTokenId`.
     function confirmRetirement(uint256 tokenId)
         public
         virtual
@@ -137,14 +141,15 @@ contract CarbonOffsetBatches is
             'Cannot retire batch without project vintage'
         );
         require(
-            serialNumberExist[nftList[tokenId].serialNumber] == false,
+            serialNumberApproved[nftList[tokenId].serialNumber] == false,
             'Serialnumber has already been approved'
         );
         /// @dev setting serialnumber as unique after confirmation
-        serialNumberExist[nftList[tokenId].serialNumber] = true;
+        serialNumberApproved[nftList[tokenId].serialNumber] = true;
         updateStatus(tokenId, RetirementStatus.Confirmed);
     }
 
+    /// @notice Function to reject Batch-NFTs, e.g. if the serial number entered is incorrect.
     function rejectRetirement(uint256 tokenId)
         public
         virtual
@@ -156,10 +161,11 @@ contract CarbonOffsetBatches is
             'Batch must be in pending state to be rejected'
         );
         /// @dev unsetting serialnumber with rejection
-        serialNumberExist[nftList[tokenId].serialNumber] = false;
+        serialNumberApproved[nftList[tokenId].serialNumber] = false;
         updateStatus(tokenId, RetirementStatus.Rejected);
     }
 
+    /// @notice Function to reject Batch-NFTs, including a reason to be displayed to the user.
     function rejectWithComment(uint256 tokenId, string memory comment)
         public
         virtual
@@ -167,6 +173,28 @@ contract CarbonOffsetBatches is
         whenNotPaused
     {
         rejectRetirement(tokenId);
+        addComment(tokenId, comment);
+    }
+
+    /// @dev admin function to reject a previously approved batch
+    /// Requires that the Batch-NFT has not been fractionalized yet
+    function rejectApprovedWithComment(uint256 tokenId, string memory comment)
+        public
+        virtual
+        onlyOwner
+        whenNotPaused
+    {
+        require(
+            nftList[tokenId].status == RetirementStatus.Confirmed,
+            'Batch must be in confirmed state to be rejected'
+        );
+        require(
+            IToucanContractRegistry(contractRegistry).checkERC20(
+                ownerOf(tokenId)
+            ) == false,
+            'Batch has already been fractionalized'
+        );
+        updateStatus(tokenId, RetirementStatus.Rejected);
         addComment(tokenId, comment);
     }
 
@@ -186,6 +214,7 @@ contract CarbonOffsetBatches is
         updateStatus(tokenId, RetirementStatus.Pending);
     }
 
+    /// @dev Function for alternative flow where Batch-NFT approval is done separately.
     function linkWithVintage(uint256 tokenId, uint256 projectVintageTokenId)
         public
         virtual
@@ -197,6 +226,7 @@ contract CarbonOffsetBatches is
         emit BatchLinkedWithVintage(tokenId, projectVintageTokenId);
     }
 
+    /// @dev Function for main approval flow, which requires passing a `projectVintageTokenId`.
     function confirmRetirementWithVintage(
         uint256 tokenId,
         uint256 projectVintageTokenId
@@ -224,15 +254,17 @@ contract CarbonOffsetBatches is
     /// and unsetting a bunch of serials via multi-sig is not practical.
     /// So instead we allow the verifiers to do it.
     function unsetSerialNumber(string memory serialNumber) public onlyVerifier {
-        serialNumberExist[serialNumber] = false;
+        serialNumberApproved[serialNumber] = false;
     }
 
     // ----------------------------------
     //  (Semi-)Permissionless functions
     // ----------------------------------
 
-    /// @notice Permissionlessly mint empty BatchNFTs
-    /// @dev    To be updated by NFT owner after serial number has been provided
+    /// @notice     Permissionlessly mint empty BatchNFTs
+    /// Entry point to the carbon bridging process.
+    /// @dev        To be updated by NFT owner after serial number has been provided
+    /// @param to   The address the NFT should be minted to. This should be the user.
     function mintEmptyBatch(address to) external virtual whenNotPaused {
         batchTokenCounter++;
         uint256 newItemId = batchTokenCounter;
@@ -242,8 +274,12 @@ contract CarbonOffsetBatches is
         emit BatchMinted(to, newItemId);
     }
 
-    /// @dev  Updates BatchNFT after Serialnumber has been verified
-    /// Data is inserted by the NFT owner or verifier
+    /// @notice Updates BatchNFT after Serialnumber has been verified
+    /// @dev    Data is usually inserted by the user (NFT owner) via the UI
+    /// @param tokenId the Batch-NFT
+    /// @param serialNumber the serial number received from the registry/credit cancellation
+    /// @param quantity quantity in tCO2e
+    /// @param uri optional tokenURI with additional information
     function updateBatchWithData(
         uint256 tokenId,
         string memory serialNumber,
@@ -260,13 +296,13 @@ contract CarbonOffsetBatches is
             'Error: cannot change data after confirmation'
         );
         require(
-            serialNumberExist[serialNumber] == false,
+            serialNumberApproved[serialNumber] == false,
             'Serialnumber has already been approved'
         );
         nftList[tokenId].serialNumber = serialNumber;
         nftList[tokenId].quantity = quantity;
 
-        // Make sure metadata does not exist twice
+        /// @dev Make sure metadata does not exist twice
         if (!strcmp(uri, nftList[tokenId].uri)) {
             require(URIs[uri] == false, 'Error: uri already exists');
             nftList[tokenId].uri = uri;
@@ -280,6 +316,8 @@ contract CarbonOffsetBatches is
         emit BatchUpdated(tokenId, serialNumber, quantity);
     }
 
+    /// @dev Function to just update serial number and quantity and not the URI,
+    /// does not work for rejected bat
     function setSerialandQuantity(
         uint256 tokenId,
         string memory newSerialNumber,
@@ -295,7 +333,7 @@ contract CarbonOffsetBatches is
             'Error: cannot change data after confirmation'
         );
         require(
-            serialNumberExist[newSerialNumber] == false,
+            serialNumberApproved[newSerialNumber] == false,
             'Serialnumber has already been approved'
         );
         nftList[tokenId].serialNumber = newSerialNumber;
@@ -304,6 +342,7 @@ contract CarbonOffsetBatches is
         emit BatchUpdated(tokenId, newSerialNumber, newQuantity);
     }
 
+    /// @notice Returns just the confirmation (approval) status of Batch-NFT
     function getConfirmationStatus(uint256 tokenId)
         external
         view
@@ -314,7 +353,8 @@ contract CarbonOffsetBatches is
         return nftList[tokenId].status;
     }
 
-    // Used by onERC721Received when batch is transferred to TCO2 contract
+    /// @notice Returns all data from Batch-NFT
+    /// @dev Used in TCO2 contract's receive hook `onERC721Received`
     function getBatchNFTData(uint256 tokenId)
         external
         view
@@ -346,7 +386,7 @@ contract CarbonOffsetBatches is
         return (nftList[tokenId].comments, nftList[tokenId].commentAuthors);
     }
 
-    /// @dev here for debugging/mock purposes. safeTransferFrom(...) is error prone with ethers.js
+    /// @dev Overridden here because of function overloading issues with ethers.js
     function transferFrom(
         address from,
         address to,
@@ -359,7 +399,9 @@ contract CarbonOffsetBatches is
         safeTransferFrom(from, to, tokenId, '');
     }
 
-    /// @notice Function that automatically converts to ERC20s via corresponding contract
+    /// @notice Function that automatically converts Batch-NFT to TCO2 (ERC20)
+    /// @dev Queries the factory to find the corresponding TCO2 contract
+    /// Fractionalization happens via receive hook on `safeTransferFrom`
     function fractionalize(uint256 tokenId) external virtual {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
@@ -400,10 +442,8 @@ contract CarbonOffsetBatches is
         baseURI = gateway;
     }
 
-    /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
-     * based on the ERC721URIStorage implementation
-     */
+    /// @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+    /// based on the ERC721URIStorage implementation
     function tokenURI(uint256 tokenId)
         public
         view
@@ -431,7 +471,7 @@ contract CarbonOffsetBatches is
         return super.tokenURI(tokenId);
     }
 
-    // Implemented in order to disable transfers when paused
+    /// @dev Utilized here in order to disable transfers when paused
     function _beforeTokenTransfer(
         address from,
         address to,
@@ -442,15 +482,16 @@ contract CarbonOffsetBatches is
         require(!paused(), 'ERC20Pausable: token transfer while paused');
     }
 
-    /// @notice Append a comment to a batch.
+    /// @notice Append a comment to a Batch-NFT
     /// @dev Don't allow the contract owner to comment.  When the contract owner
     /// can also be a verifier they should add them as a verifier first; this
     /// should prevent accidental comments from the wrong account.
     function addComment(uint256 tokenId, string memory comment) public virtual {
         require(
             hasRole(VERIFIER_ROLE, _msgSender()) ||
-                _msgSender() == ownerOf(tokenId),
-            'Only the batch owner and verifiers can comment'
+                _msgSender() == ownerOf(tokenId) ||
+                _msgSender() == owner(),
+            'Only the batch owner, contract owner and verifiers can comment'
         );
         require(_exists(tokenId), 'Cannot comment on non-existent batch');
         nftList[tokenId].comments.push() = comment;

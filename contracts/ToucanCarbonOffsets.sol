@@ -33,6 +33,8 @@ contract ToucanCarbonOffsets is
 {
     event Retired(address sender, uint256 tokenId);
 
+    /// @dev modifier checks whether the `ToucanCarbonOffsetsFactory` is paused
+    /// Since TCO2 contracts are permissionless, pausing does not function individually
     modifier whenNotPaused() {
         address ToucanCarbonOffsetsFactoryAddress = IToucanContractRegistry(
             contractRegistry
@@ -55,7 +57,7 @@ contract ToucanCarbonOffsets is
         contractRegistry = _contractRegistry;
     }
 
-    /// @notice name getter overriden to return the a name based on the carbon project data
+    /// @notice Token name getter overriden to return the a name based on the carbon project data
     function name() public view virtual override returns (string memory) {
         string memory globalProjectId;
         string memory vintageName;
@@ -71,7 +73,7 @@ contract ToucanCarbonOffsets is
             );
     }
 
-    /// @notice symbol getter overriden to return the a symbol based on the carbon project data
+    /// @notice Token symbol getter overriden to return the a symbol based on the carbon project data
     function symbol() public view virtual override returns (string memory) {
         string memory globalProjectId;
         string memory vintageName;
@@ -82,6 +84,7 @@ contract ToucanCarbonOffsets is
             );
     }
 
+    /// @dev Helper function to retrieve data fragments for `name()` and `symbol()`
     function getGlobalProjectVintageIdentifiers()
         public
         view
@@ -94,7 +97,7 @@ contract ToucanCarbonOffsets is
         return (projectData.projectId, vintageData.name);
     }
 
-    // Function to get corresponding attributes from the CarbonProjects
+    /// @dev Function to get corresponding attributes from the CarbonProjects
     function getAttributes()
         public
         view
@@ -114,11 +117,10 @@ contract ToucanCarbonOffsets is
         return (projectData, vintageData);
     }
 
-    /**
-     * @dev function is called with `operator` as `_msgSender()` in a reference implementation by OZ
-     * `from` is the previous owner, not necessarily the same as operator
-     *  Function checks if NFT collection is whitelisted and next if attributes are matching this erc20 contract
-     **/
+    /// @notice Receive hook to fractionalize Batch-NFTs into ERC20's
+    /// @dev Function is called with `operator` as `_msgSender()` in a reference implementation by OZ
+    /// `from` is the previous owner, not necessarily the same as operator.
+    /// The hook checks if NFT collection is whitelisted and next if attributes are matching this ERC20 contract
     function onERC721Received(
         address, /* operator */
         address from,
@@ -158,7 +160,7 @@ contract ToucanCarbonOffsets is
         return this.onERC721Received.selector;
     }
 
-    // Check if CarbonOffsetBatches is whitelisted (official)
+    /// @dev Internal helper to check if CarbonOffsetBatches is whitelisted (official)
     function checkWhiteListed(address collection)
         internal
         view
@@ -176,9 +178,7 @@ contract ToucanCarbonOffsets is
         }
     }
 
-    /**
-     * @dev Checks if attributes of sent NFT are matching the attributes of this ERC20
-     **/
+    /// @dev Internal helper to check if `projectVintageTokenId`s are matching
     function checkMatchingAttributes(uint256 NFTprojectVintageTokenId)
         internal
         view
@@ -198,6 +198,8 @@ contract ToucanCarbonOffsets is
         remaining = cap - totalSupply();
     }
 
+    /// @dev Returns the cap for TCO2s based on `totalVintageQuantity`
+    /// Returns `~unlimited` if the value for the vintage is not set
     function getDepositCap() public view returns (uint256) {
         VintageData memory vintageData;
         (, vintageData) = getAttributes();
@@ -214,13 +216,14 @@ contract ToucanCarbonOffsets is
         }
     }
 
-    // Retirement of TCUs (the actual offsetting)
+    /// @notice Retirement/Cancellation of TCO2 tokens (the actual offsetting),
+    /// which results in the tokens being burnt
     function retire(uint256 amount) public virtual whenNotPaused {
         _retire(_msgSender(), amount);
     }
 
     /// @dev Allow for pools or third party contracts to retire for the user
-    // Requires approve
+    /// Requires approval
     function retireFrom(address account, uint256 amount)
         public
         virtual
@@ -237,14 +240,14 @@ contract ToucanCarbonOffsets is
         _retire(account, amount);
     }
 
-    // Alternative flow, where tokens are sent to a "retirement contract"
+    /// @dev Internal function for the burning of TCO2 tokens
     function _retire(address account, uint256 amount) internal virtual {
         _burn(account, amount);
         retiredAmount[account] += amount;
         emit Retired(account, amount);
     }
 
-    // Mint the Badge NFT showing how many tokens have been retired
+    /// @notice Mint an NFT showing how many tonnes of CO2 have been retired/cancelled
     function mintBadgeNFT(address to, uint256 amount)
         public
         virtual
@@ -269,6 +272,8 @@ contract ToucanCarbonOffsets is
     //      Locked ERC20 safety
     // -----------------------------
 
+    /// @dev Modifier to disallowing sending tokens to either the 0-address
+    /// or this contract itself
     modifier validDestination(address to) {
         require(to != address(0x0));
         require(to != address(this));

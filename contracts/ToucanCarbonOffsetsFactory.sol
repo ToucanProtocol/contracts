@@ -22,8 +22,8 @@ import './libraries/ProjectUtils.sol';
 import './libraries/ProjectVintageUtils.sol';
 import './libraries/Modifiers.sol';
 
-/// @notice Project-Vintage ERC20 Factory contract for BatchNFT fractionalization
-/// Locks in received ERC721 BatchNFTs and can mint corresponding quantity of ERC20s
+/// @notice This TCO2 factory creates project-vintage-specific ERC20 contracts for Batch-NFT fractionalization
+/// Locks in received ERC721 Batch-NFTs and can mint corresponding quantity of ERC20s
 /// Permissionless, anyone can deploy new ERC20s unless they do not yet exist and pid exists
 contract ToucanCarbonOffsetsFactory is
     ToucanCarbonOffsetsFactoryStorage,
@@ -76,6 +76,7 @@ contract ToucanCarbonOffsetsFactory is
         _unpause();
     }
 
+    /// @dev set the registry contract to be tracked
     function setToucanContractRegistry(address _address)
         public
         virtual
@@ -88,8 +89,9 @@ contract ToucanCarbonOffsetsFactory is
     // Permissionless functions
     // ------------------------
 
-    // Function to deploy new pERC20s
-    // Note: Function could be internal, but that would disallow pre-deploying ERC20s without existing NFTs
+    /// @notice internal factory function to deploy new TCO2 (ERC20) contracts
+    /// @dev the function creates a new BeaconProxy for each TCO2
+    /// @param projectVintageTokenId links the vintage-specific data to the TCO2 contract
     function deployNewProxy(uint256 projectVintageTokenId)
         internal
         virtual
@@ -112,7 +114,6 @@ contract ToucanCarbonOffsetsFactory is
             contractRegistry
         );
 
-        /// @dev deploy new proxyTCO2 contract
         BeaconProxy proxyTCO2 = new BeaconProxy(beacon, payload);
 
         IToucanContractRegistry(contractRegistry).addERC20(address(proxyTCO2));
@@ -147,7 +148,7 @@ contract ToucanCarbonOffsetsFactory is
         }
     }
 
-    /// @dev Lists addresses of deployed TCO2 contracts
+    /// @dev Returns all addresses of deployed TCO2 contracts
     function getContracts() public view virtual returns (address[] memory) {
         return deployedContracts;
     }

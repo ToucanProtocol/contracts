@@ -6,6 +6,7 @@
 
 pragma solidity ^0.8.0;
 
+/// @dev Separate storage contract to improve upgrade safety
 contract ToucanCarbonOffsetsStorage {
     uint256 public projectVintageTokenId;
     address public contractRegistry;

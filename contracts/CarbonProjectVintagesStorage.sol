@@ -9,6 +9,7 @@ pragma solidity >=0.8.4 <0.9.0;
 
 import './CarbonProjectVintageTypes.sol';
 
+/// @dev Separate storage contract to improve upgrade safety
 contract CarbonProjectVintagesStorage {
     uint128 public projectVintageTokenCounter;
     uint128 public totalSupply;

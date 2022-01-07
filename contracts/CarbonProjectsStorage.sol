@@ -9,6 +9,7 @@ pragma solidity >=0.8.4 <0.9.0;
 
 import './CarbonProjectTypes.sol';
 
+/// @dev Separate storage contract to improve upgrade safety
 contract CarbonProjectsStorage {
     uint128 public projectTokenCounter;
     uint128 public totalSupply;
@@ -27,6 +28,7 @@ contract CarbonProjectsStorage {
     /// Examples: projectokenIds that have been removed or non-existent ones
     mapping(uint256 => bool) public validProjectTokenIds;
 
+    /// @dev Maps a universal/global project-id like 'VCS-1234' to its `tokenId`
     mapping(string => uint256) public pidToTokenId;
 
     /// @dev All roles related to Access Control

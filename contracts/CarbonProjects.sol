@@ -17,6 +17,10 @@ import './libraries/Modifiers.sol';
 /// @notice The CarbonProjects contract stores carbon project-specific data
 /// The data is stored in structs via ERC721 tokens
 /// Most contracts in the protocol query the data stored here
+/// The attributes in the Project-NFTs are constant over all vintages of the project
+/// @dev Each project can have up to n vintages, with data stored in the
+/// `CarbonProjectVintages` contract. `vintageTokenId`s are mapped to `projectTokenId`s
+/// via `pvToTokenId` in the vintage contract.
 contract CarbonProjects is
     ICarbonProjects,
     CarbonProjectsStorage,
@@ -85,8 +89,8 @@ contract CarbonProjects is
         contractRegistry = _address;
     }
 
-    // Updates the controller, the entity in charge of the ProjectData
-    // Note: Questionable if needed if this stays ERC721, as this could be the NFT owner
+    /// @notice Updates the controller, the entity in charge of the ProjectData
+    /// Questionable if needed if this stays ERC721, as this could be the NFT owner
     function updateController(uint256 tokenId, address _controller)
         external
         virtual
@@ -99,8 +103,8 @@ contract CarbonProjects is
         projectData[tokenId].controller = _controller;
     }
 
-    // Adding a new project is currently permissionless
-    // updating will require permission
+    /// @notice Adds a new carbon project along with attributes/data
+    /// @dev Projects can be added by data-managers
     function addNewProject(
         address to,
         string memory projectId,
@@ -141,7 +145,8 @@ contract CarbonProjects is
         return newItemId;
     }
 
-    /// @dev owner can update project data except projectId in case of previous mistakes
+    /// @notice Updates and existing carbon project
+    /// @dev Projects can be updated by data-managers
     function updateProject(
         uint256 tokenId,
         string memory newStandard,
@@ -188,7 +193,7 @@ contract CarbonProjects is
         emit ProjectIdUpdated(tokenId);
     }
 
-    /// @dev removes a project and corresponding data, sets projectTokenId invalid
+    /// @dev Removes a project and corresponding data, sets projectTokenId invalid
     function removeProject(uint256 projectTokenId)
         external
         virtual
@@ -201,6 +206,7 @@ contract CarbonProjects is
         validProjectTokenIds[projectTokenId] = false;
     }
 
+    /// @dev Returns the global project-id, for example'VCS-1418'
     function getProjectId(uint256 tokenId)
         public
         view
@@ -211,6 +217,7 @@ contract CarbonProjects is
         return projectData[tokenId].projectId;
     }
 
+    /// @dev Function used by the utility function `checkProjectTokenExists`
     function isValidProjectTokenId(uint256 projectTokenId)
         public
         view
@@ -255,10 +262,8 @@ contract CarbonProjects is
         baseURI = gateway;
     }
 
-    /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
-     * based on the ERC721URIStorage implementation
-     */
+    /// @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+    /// based on the ERC721URIStorage implementation
     function tokenURI(uint256 tokenId)
         public
         view

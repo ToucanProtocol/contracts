@@ -6,10 +6,11 @@ pragma solidity ^0.8.0;
 
 import './CarbonOffsetBatchesTypes.sol';
 
+/// @dev Separate storage contract to improve upgrade safety
 contract CarbonOffsetBatchesStorage {
     uint256 public batchTokenCounter;
-
-    mapping(string => bool) public serialNumberExist;
+    /// @custom:oz-upgrades-renamed-from serialNumberExist
+    mapping(string => bool) public serialNumberApproved;
     mapping(string => bool) public URIs;
     mapping(address => bool) public verifiers; // has been removed, but must stay here because of storage layout
 

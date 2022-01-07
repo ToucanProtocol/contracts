@@ -96,8 +96,8 @@ contract CarbonProjectVintages is
         contractRegistry = _address;
     }
 
-    // Adding a new project vintage is currently permissionless
-    // Updating will require permission
+    /// @notice Adds a new carbon project-vintage along with attributes/data
+    /// @dev vintages can be added by data-managers
     function addNewVintage(
         address to,
         uint256 projectTokenId,
@@ -151,6 +151,8 @@ contract CarbonProjectVintages is
         return newItemId;
     }
 
+    /// @dev Function to check whether a projectVintageToken exists,
+    /// to be called by other (external) contracts
     function exists(uint256 tokenId)
         external
         view
@@ -161,7 +163,9 @@ contract CarbonProjectVintages is
         return super._exists(tokenId);
     }
 
-    /// @dev owner can update project data except projectId in case of previous mistakes
+    /// @notice Updates and existing carbon project
+    /// @dev Only data-managers can update the data for correction
+    /// except the sensitive `projectId`
     function updateProjectVintage(
         uint256 tokenId,
         // uint256 projectTokenId, // @dev commented out because very sensitive data, better via separate function
@@ -191,6 +195,7 @@ contract CarbonProjectVintages is
         emit ProjectVintageUpdated(tokenId);
     }
 
+    /// @dev Removes a project-vintage and corresponding data
     function removeVintage(uint256 tokenId)
         external
         virtual
@@ -235,10 +240,8 @@ contract CarbonProjectVintages is
         baseURI = baseURI_;
     }
 
-    /**
-     * @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
-     * based on the ERC721URIStorage implementation
-     */
+    /// @dev Returns the Uniform Resource Identifier (URI) for `tokenId` token.
+    /// based on the ERC721URIStorage implementation
     function tokenURI(uint256 tokenId)
         public
         view
