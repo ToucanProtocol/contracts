@@ -11,12 +11,11 @@ import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
 import '@openzeppelin/contracts/utils/Context.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
 
-import './IToucanContractRegistry.sol';
-import './ICarbonOffsetBatches.sol';
-import './ICarbonOffsetBadges.sol';
+import './interfaces/IToucanContractRegistry.sol';
+import './interfaces/ICarbonOffsetBatches.sol';
+import './interfaces/IRetirementCertificates.sol';
 import './CarbonProjects.sol';
 import './CarbonProjectVintages.sol';
-// import './ICarbonProjectVintages.sol';
 import './CarbonProjectVintageTypes.sol';
 import './ToucanCarbonOffsetsStorage.sol';
 import './ToucanCarbonOffsetsFactory.sol';
@@ -31,7 +30,17 @@ contract ToucanCarbonOffsets is
     IERC721Receiver,
     ToucanCarbonOffsetsStorage
 {
+    // ----------------------------------------
+    //      Events
+    // ----------------------------------------
+
     event Retired(address sender, uint256 tokenId);
+    event FeePaid(address bridger, uint256 fees);
+    event FeeBurnt(address bridger, uint256 fees);
+
+    // ----------------------------------------
+    //              Modifiers
+    // ----------------------------------------
 
     /// @dev modifier checks whether the `ToucanCarbonOffsetsFactory` is paused
     /// Since TCO2 contracts are permissionless, pausing does not function individually
@@ -45,6 +54,19 @@ contract ToucanCarbonOffsets is
         require(!_paused, 'Error: TCO2 contract is paused');
         _;
     }
+
+    // ----------------------------------------
+    //      Upgradable related functions
+    // ----------------------------------------
+
+    /// @dev Returns the current version of the smart contract
+    function version() public pure virtual returns (string memory) {
+        return '1.1.0';
+    }
+
+    // ----------------------------------------
+    //       Permissionless functions
+    // ----------------------------------------
 
     function initialize(
         string memory name_,
@@ -134,12 +156,12 @@ contract ToucanCarbonOffsets is
         );
 
         (
-            uint256 projectVintageTokenId,
+            uint256 gotVintageTokenId,
             uint256 quantity,
             RetirementStatus status
         ) = ICarbonOffsetBatches(msg.sender).getBatchNFTData(tokenId);
         require(
-            checkMatchingAttributes(projectVintageTokenId),
+            gotVintageTokenId == projectVintageTokenId,
             'Error: non-matching NFT'
         );
         require(
@@ -151,12 +173,38 @@ contract ToucanCarbonOffsets is
         /// @dev multiply tonne quantity with decimals
         quantity = quantity * 10**decimals();
 
-        uint256 remainingSpace = getRemaining();
         require(
-            remainingSpace > quantity,
+            getRemaining() >= quantity,
             'Error: Quantity in batch is higher than total vintages'
         );
-        _mint(from, quantity);
+
+        ToucanCarbonOffsetsFactory tco2Factory = ToucanCarbonOffsetsFactory(
+            IToucanContractRegistry(contractRegistry)
+                .toucanCarbonOffsetsFactoryAddress()
+        );
+        address bridgeFeeReceiver = tco2Factory.bridgeFeeReceiverAddress();
+
+        if (bridgeFeeReceiver == address(0x0)) {
+            // @dev if no bridge fee receiver address is set, mint without fees
+            _mint(from, quantity);
+        } else {
+            // @dev calculate bridge fees
+            (uint256 feeAmount, uint256 feeBurnAmount) = tco2Factory
+                .getBridgeFeeAndBurnAmount(quantity);
+            _mint(from, quantity - feeAmount);
+            address bridgeFeeBurnAddress = tco2Factory.bridgeFeeBurnAddress();
+            if (bridgeFeeBurnAddress != address(0x0) && feeBurnAmount > 0) {
+                feeAmount -= feeBurnAmount;
+                _mint(bridgeFeeReceiver, feeAmount);
+                _mint(bridgeFeeBurnAddress, feeBurnAmount);
+                emit FeePaid(from, feeAmount);
+                emit FeeBurnt(from, feeBurnAmount);
+            } else if (feeAmount > 0) {
+                _mint(bridgeFeeReceiver, feeAmount);
+                emit FeePaid(from, feeAmount);
+            }
+        }
+
         return this.onERC721Received.selector;
     }
 
@@ -172,20 +220,6 @@ contract ToucanCarbonOffsets is
             IToucanContractRegistry(contractRegistry)
                 .carbonOffsetBatchesAddress()
         ) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /// @dev Internal helper to check if `projectVintageTokenId`s are matching
-    function checkMatchingAttributes(uint256 NFTprojectVintageTokenId)
-        internal
-        view
-        virtual
-        returns (bool)
-    {
-        if (NFTprojectVintageTokenId == projectVintageTokenId) {
             return true;
         } else {
             return false;
@@ -244,28 +278,56 @@ contract ToucanCarbonOffsets is
     function _retire(address account, uint256 amount) internal virtual {
         _burn(account, amount);
         retiredAmount[account] += amount;
+
+        address TCO2FactoryAddress = IToucanContractRegistry(contractRegistry)
+            .toucanCarbonOffsetsFactoryAddress();
+        ToucanCarbonOffsetsFactory(TCO2FactoryAddress).increaseTotalRetired(
+            amount
+        );
         emit Retired(account, amount);
     }
 
     /// @notice Mint an NFT showing how many tonnes of CO2 have been retired/cancelled
-    function mintBadgeNFT(address to, uint256 amount)
-        public
-        virtual
-        whenNotPaused
-    {
-        address badgeAddr = IToucanContractRegistry(contractRegistry)
-            .carbonOffsetBadgesAddress();
+    function mintCertificate(
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) public virtual whenNotPaused {
         require(
             retiredAmount[msg.sender] >= amount,
             'Error: Cannot mint more than user has retired'
         );
 
-        ICarbonOffsetBadges(badgeAddr).mintBadge(
-            to,
+        address certAddr = IToucanContractRegistry(contractRegistry)
+            .carbonOffsetBadgesAddress();
+        IRetirementCertificates(certAddr).mintCertificate(
+            msg.sender, /// @dev retiringEntity set automatically
+            beneficiary,
+            beneficiaryString,
+            retirementMessage,
             projectVintageTokenId,
             amount
         );
         retiredAmount[msg.sender] -= amount;
+    }
+
+    /// @notice Retire offsets and mint certificate at once
+    function retireAndMintCertificate(
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) public virtual whenNotPaused {
+        // Retire provided amount
+        retire(amount);
+        // Mint certificate
+        mintCertificate(
+            beneficiary,
+            beneficiaryString,
+            retirementMessage,
+            amount
+        );
     }
 
     // -----------------------------
