@@ -6,7 +6,7 @@
 pragma solidity ^0.8.0;
 
 /// @dev Storage for UUPS Proxy upgradable BaseCarbonTonne
-contract BaseCarbonTonneStorage {
+abstract contract BaseCarbonTonneStorageV1 {
     uint256 public supplyCap;
     mapping(address => uint256) public tokenBalances;
     address public contractRegistry;
@@ -35,6 +35,30 @@ contract BaseCarbonTonneStorage {
     /// @dev mapping to exclude certain TCO2 contracts by address,
     /// even if the attribute matching would pass
     mapping(address => bool) public internalBlackList;
-
-    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 }
+
+abstract contract BaseCarbonTonneStorageV1_1 {
+    /// @dev fees redeem receiver address
+    address public feeRedeemReceiver;
+
+    uint256 public feeRedeemPercentageInBase;
+
+    /// @dev fees redeem burn address
+    address public feeRedeemBurnAddress;
+
+    /// @dev fees redeem burn percentage with 2 fixed decimals precision
+    uint256 public feeRedeemBurnPercentageInBase;
+}
+
+abstract contract BaseCarbonTonneStorageV1_2 {
+    mapping(address => bool) public redeemFeeExemptedAddresses;
+
+    /// @notice array used to read from when redeeming TCO2s automatically
+    address[] public scoredTCO2s;
+}
+
+abstract contract BaseCarbonTonneStorage is
+    BaseCarbonTonneStorageV1,
+    BaseCarbonTonneStorageV1_1,
+    BaseCarbonTonneStorageV1_2
+{}
