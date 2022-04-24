@@ -32,7 +32,4 @@ contract CarbonProjectVintagesStorage {
     /// project/vintage; only a long serial number containing info which allows
     /// that association.
     mapping(uint256 => mapping(uint64 => uint256)) public pvToTokenId;
-
-    /// @dev All roles related to Access Control
-    bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 }

@@ -6,12 +6,12 @@
 pragma solidity ^0.8.0;
 
 /// @dev Storage for the UUPS Proxy upgradable NCT contract
-contract NatureCarbonTonneStorage {
+abstract contract NatureCarbonTonneStorageV1 {
     uint256 public supplyCap;
     mapping(address => uint256) public tokenBalances;
     address public contractRegistry;
 
-    /// @dev !! When bringing this change into the BCT contract, keep in mind that this var cannot be in this place as it would render the storage layout incompatible !!
+    /// @notice array used to read from when redeeming TCO2s automatically
     address[] public scoredTCO2s;
 
     /// @dev Mappings for attributes that can be included or excluded
@@ -50,3 +50,12 @@ contract NatureCarbonTonneStorage {
     bool public standardsIsAcceptedMapping;
     bool public methodologiesIsAcceptedMapping;
 }
+
+abstract contract NatureCarbonTonneStorageV1_1 {
+    mapping(address => bool) public redeemFeeExemptedAddresses;
+}
+
+abstract contract NatureCarbonTonneStorage is
+    NatureCarbonTonneStorageV1,
+    NatureCarbonTonneStorageV1_1
+{}

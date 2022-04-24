@@ -12,8 +12,8 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-import './IToucanContractRegistry.sol';
-import './ICarbonOffsetBatches.sol';
+import './interfaces/IToucanContractRegistry.sol';
+import './interfaces/ICarbonOffsetBatches.sol';
 import './ToucanCarbonOffsetsFactory.sol';
 import './CarbonOffsetBatchesStorage.sol';
 import './libraries/ProjectVintageUtils.sol';
@@ -34,6 +34,16 @@ contract CarbonOffsetBatches is
 {
     using AddressUpgradeable for address;
 
+    // ----------------------------------------
+    //      Constants
+    // ----------------------------------------
+
+    bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
+
+    // ----------------------------------------
+    //      Events
+    // ----------------------------------------
+
     event BatchMinted(address sender, uint256 tokenId);
     event BatchUpdated(uint256 tokenId, string serialNumber, uint256 quantity);
     event BatchLinkedWithVintage(
@@ -47,8 +57,6 @@ contract CarbonOffsetBatches is
         string comment
     );
     event BatchStatusUpdate(uint256 tokenId, RetirementStatus status);
-
-    bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
 
     // ----------------------------------------
     //      Upgradable related functions
@@ -68,7 +76,7 @@ contract CarbonOffsetBatches is
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         contractRegistry = _contractRegistry;
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -266,8 +274,12 @@ contract CarbonOffsetBatches is
     /// @dev        To be updated by NFT owner after serial number has been provided
     /// @param to   The address the NFT should be minted to. This should be the user.
     function mintEmptyBatch(address to) external virtual whenNotPaused {
-        batchTokenCounter++;
         uint256 newItemId = batchTokenCounter;
+        unchecked {
+            ++newItemId;
+        }
+        batchTokenCounter = newItemId;
+
         _safeMint(to, newItemId);
         nftList[newItemId].status = RetirementStatus.Pending;
 
@@ -291,8 +303,9 @@ contract CarbonOffsetBatches is
                 hasRole(VERIFIER_ROLE, _msgSender()),
             'Error: update only by owner or verifier'
         );
+        RetirementStatus status = nftList[tokenId].status;
         require(
-            nftList[tokenId].status != RetirementStatus.Confirmed,
+            status != RetirementStatus.Confirmed,
             'Error: cannot change data after confirmation'
         );
         require(
@@ -309,7 +322,7 @@ contract CarbonOffsetBatches is
             URIs[uri] = true;
         }
 
-        if (nftList[tokenId].status == RetirementStatus.Rejected) {
+        if (status == RetirementStatus.Rejected) {
             updateStatus(tokenId, RetirementStatus.Pending);
         }
 

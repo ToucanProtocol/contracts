@@ -12,5 +12,7 @@ contract ToucanCarbonOffsetsStorage {
     address public contractRegistry;
 
     mapping(address => uint256) public minterToId;
+    /// @dev deprecated field; retirements are now tracked
+    /// as events in the RetirementCertificatesStorage contract
     mapping(address => uint256) public retiredAmount;
 }

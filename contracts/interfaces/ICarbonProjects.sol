@@ -7,6 +7,8 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
+import '../CarbonProjectTypes.sol';
+
 interface ICarbonProjects is IERC721Upgradeable {
     function getProjectId(uint256 tokenId)
         external
@@ -27,4 +29,9 @@ interface ICarbonProjects is IERC721Upgradeable {
     ) external returns (uint256);
 
     function isValidProjectTokenId(uint256 tokenId) external returns (bool);
+
+    function getProjectDataByTokenId(uint256 tokenId)
+        external
+        view
+        returns (ProjectData memory);
 }

@@ -10,10 +10,9 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-import './IToucanContractRegistry.sol';
-import './ICarbonProjectVintages.sol';
+import './interfaces/IToucanContractRegistry.sol';
+import './interfaces/ICarbonProjectVintages.sol';
 import './CarbonProjectVintagesStorage.sol';
-import './CarbonProjects.sol';
 import './libraries/ProjectUtils.sol';
 import './libraries/Modifiers.sol';
 
@@ -32,6 +31,17 @@ contract CarbonProjectVintages is
     Modifiers,
     ProjectUtils
 {
+    // ----------------------------------------
+    //      Constants
+    // ----------------------------------------
+
+    /// @dev All roles related to Access Control
+    bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
+
+    // ----------------------------------------
+    //      Events
+    // ----------------------------------------
+
     event ProjectVintageMinted(
         address receiver,
         uint256 tokenId,
@@ -54,7 +64,7 @@ contract CarbonProjectVintages is
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         /// @dev granting the deployer==owner the rights to grant other roles
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -125,9 +135,13 @@ contract CarbonProjectVintages is
         );
 
         /// @dev Increase `projectVintageTokenCounter` and mark current Id as valid
-        projectVintageTokenCounter++;
-        totalSupply++;
         uint256 newItemId = projectVintageTokenCounter;
+        unchecked {
+            ++newItemId;
+            ++totalSupply;
+        }
+        projectVintageTokenCounter = uint128(newItemId);
+
         validProjectVintageIds[newItemId] = true;
 
         _mint(to, newItemId);
@@ -211,6 +225,7 @@ contract CarbonProjectVintages is
         external
         view
         virtual
+        override
         returns (VintageData memory)
     {
         return (vintageData[tokenId]);

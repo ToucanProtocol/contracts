@@ -7,6 +7,8 @@ pragma solidity ^0.8.0;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
+import '../CarbonProjectVintageTypes.sol';
+
 interface ICarbonProjectVintages is IERC721Upgradeable {
     function addNewVintage(
         address to,
@@ -24,4 +26,9 @@ interface ICarbonProjectVintages is IERC721Upgradeable {
     ) external returns (uint256);
 
     function exists(uint256 tokenId) external view returns (bool);
+
+    function getProjectVintageDataByTokenId(uint256 tokenId)
+        external
+        view
+        returns (VintageData memory);
 }

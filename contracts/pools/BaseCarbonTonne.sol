@@ -14,9 +14,9 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-import '../interfaces/IToucanContractRegistry.sol';
 import '../interfaces/ICarbonOffsetBatches.sol';
-import '../ToucanCarbonOffsets.sol';
+import '../interfaces/IToucanCarbonOffsets.sol';
+import '../interfaces/IToucanContractRegistry.sol';
 import './BaseCarbonTonneStorage.sol';
 
 /// @notice Base Carbon Tonne for KlimaDAO
@@ -366,7 +366,7 @@ contract BaseCarbonTonne is
     {
         ProjectData memory projectData;
         VintageData memory vintageData;
-        (projectData, vintageData) = ToucanCarbonOffsets(erc20Addr)
+        (projectData, vintageData) = IToucanCarbonOffsets(erc20Addr)
             .getAttributes();
 
         /// @dev checks if any one of the attributes are blacklisted.
@@ -499,9 +499,11 @@ contract BaseCarbonTonne is
 
         uint256 totalFee;
         uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
+        bool isExempted = redeemFeeExemptedAddresses[msg.sender];
+
         for (uint256 i; i < erc20s.length; ++i) {
             uint256 feeAmount;
-            if (!redeemFeeExemptedAddresses[msg.sender]) {
+            if (!isExempted) {
                 feeAmount = calculateFeeForSingleAmount(
                     amounts[i],
                     _feeRedeemPercentageInBase

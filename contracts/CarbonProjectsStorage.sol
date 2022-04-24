@@ -30,7 +30,4 @@ contract CarbonProjectsStorage {
 
     /// @dev Maps a universal/global project-id like 'VCS-1234' to its `tokenId`
     mapping(string => uint256) public pidToTokenId;
-
-    /// @dev All roles related to Access Control
-    bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 }

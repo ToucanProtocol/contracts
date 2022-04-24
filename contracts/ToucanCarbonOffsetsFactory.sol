@@ -14,14 +14,13 @@ import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol';
 
 // ============ Internal Imports ============
-import './ToucanCarbonOffsets.sol';
 import './interfaces/IToucanContractRegistry.sol';
 import './interfaces/ICarbonOffsetBatches.sol';
-import './CarbonProjects.sol';
-import './ToucanCarbonOffsetsFactoryStorage.sol';
 import './libraries/ProjectUtils.sol';
 import './libraries/ProjectVintageUtils.sol';
 import './libraries/Modifiers.sol';
+import './ToucanCarbonOffsets.sol';
+import './ToucanCarbonOffsetsFactoryStorage.sol';
 
 /// @notice This TCO2 factory creates project-vintage-specific ERC20 contracts for Batch-NFT fractionalization
 /// Locks in received ERC721 Batch-NFTs and can mint corresponding quantity of ERC20s

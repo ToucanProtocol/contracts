@@ -11,7 +11,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
 import './CarbonProjectsStorage.sol';
-import './ICarbonProjects.sol';
+import './interfaces/ICarbonProjects.sol';
 import './libraries/Modifiers.sol';
 
 /// @notice The CarbonProjects contract stores carbon project-specific data
@@ -31,6 +31,17 @@ contract CarbonProjects is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
+    // ----------------------------------------
+    //      Constants
+    // ----------------------------------------
+
+    /// @dev All roles related to Access Control
+    bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
+
+    // ----------------------------------------
+    //      Events
+    // ----------------------------------------
+
     event ProjectMinted(address receiver, uint256 tokenId);
     event ProjectUpdated(uint256 tokenId);
     event ProjectIdUpdated(uint256 tokenId);
@@ -48,7 +59,7 @@ contract CarbonProjects is
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         /// @dev granting the deployer==owner the rights to grant other roles
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -89,20 +100,6 @@ contract CarbonProjects is
         contractRegistry = _address;
     }
 
-    /// @notice Updates the controller, the entity in charge of the ProjectData
-    /// Questionable if needed if this stays ERC721, as this could be the NFT owner
-    function updateController(uint256 tokenId, address _controller)
-        external
-        virtual
-        whenNotPaused
-    {
-        require(
-            msg.sender == ownerOf(tokenId),
-            'Error: Caller is not the owner'
-        );
-        projectData[tokenId].controller = _controller;
-    }
-
     /// @notice Adds a new carbon project along with attributes/data
     /// @dev Projects can be added by data-managers
     function addNewProject(
@@ -123,9 +120,13 @@ contract CarbonProjects is
         require(projectIds[projectId] == false, 'Project already exists');
         projectIds[projectId] = true;
 
-        projectTokenCounter++;
-        totalSupply++;
         uint256 newItemId = projectTokenCounter;
+        unchecked {
+            ++newItemId;
+            ++totalSupply;
+        }
+        projectTokenCounter = uint128(newItemId);
+
         validProjectTokenIds[newItemId] = true;
 
         _mint(to, newItemId);
@@ -233,6 +234,7 @@ contract CarbonProjects is
         external
         view
         virtual
+        override
         returns (ProjectData memory)
     {
         return (projectData[tokenId]);

@@ -5,10 +5,8 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity ^0.8.0;
 
-import '../IToucanContractRegistry.sol';
-import '../ICarbonProjectVintages.sol';
-
-import 'hardhat/console.sol'; // dev & testing
+import '../interfaces/IToucanContractRegistry.sol';
+import '../interfaces/ICarbonProjectVintages.sol';
 
 contract ProjectVintageUtils {
     function checkProjectVintageTokenExists(

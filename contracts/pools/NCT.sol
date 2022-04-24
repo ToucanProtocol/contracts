@@ -14,9 +14,9 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-import './../IToucanContractRegistry.sol';
-import './../ICarbonOffsetBatches.sol';
-import './../ToucanCarbonOffsets.sol';
+import '../interfaces/ICarbonOffsetBatches.sol';
+import '../interfaces/IToucanCarbonOffsets.sol';
+import '../interfaces/IToucanContractRegistry.sol';
 import './NCTStorage.sol';
 
 /// @notice Nature Carbon Tonne (or NatureCarbonTonne)
@@ -37,7 +37,6 @@ contract NatureCarbonTonne is
     // ----------------------------------------
 
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
-    bytes32 public constant SEEDER_ROLE = keccak256('SEEDER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
     /// @dev fees redeem percentage with 2 fixed decimals precision
     uint256 public constant feeRedeemDivider = 1e4;
@@ -60,31 +59,29 @@ contract NatureCarbonTonne is
     event AttributeMethodologyRemoved(string methodology);
     event AttributeRegionAdded(string region);
     event AttributeRegionRemoved(string region);
-    event RedeemFeePaid(address redeemeer, uint256 fees);
+    event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
+    event ToucanRegistrySet(address ContractRegistry);
+    event MappingSwitched(string mappingName, bool accepted);
+    event SupplyCapUpdated(uint256 newCap);
+    event MinimumVintageStartTimeUpdated(uint256 minimumVintageStartTime);
+    event TCO2ScoringUpdated(address[] tco2s);
 
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize(
-        uint64 _minimumVintageStartTime,
-        address _feeRedeemReceiver,
-        uint256 _feeRedeemPercentageInBase,
-        address _feeRedeemBurnAddress,
-        uint256 _feeRedeemBurnPercentageInBase
-    ) public virtual initializer {
+    /// @dev Returns the current version of the smart contract
+    function version() public pure virtual returns (string memory) {
+        return '1.2.0';
+    }
+
+    function initialize() public virtual initializer {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __ERC20_init_unchained('Toucan Protocol: Nature Carbon Tonne', 'NCT');
-        setMinimumVintageStartTime(_minimumVintageStartTime);
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        seedMode = true;
-        setFeeRedeemReceiver(_feeRedeemReceiver);
-        setFeeRedeemPercentage(_feeRedeemPercentageInBase);
-        setFeeRedeemBurnAddress(_feeRedeemBurnAddress);
-        setFeeRedeemBurnPercentage(_feeRedeemBurnPercentageInBase);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -98,49 +95,23 @@ contract NatureCarbonTonne is
     //      Admin functions
     // ------------------------
 
-    /// @notice Dis-allow deposits by accounts w/o the Seeder role, which will add AMM liquidity
-    /// the modifier only checks this as long as the seedMode is active
-    modifier onlyPoolSeeders() {
-        if (seedMode) {
-            require(
-                hasRole(SEEDER_ROLE, msg.sender) || owner() == msg.sender,
-                'Not a pool seeder'
-            );
-        }
-        _;
-    }
-
-    /// @notice The function irreversibly disables the seedMode after which deposits are open publicly
-    function disableSeedMode() external onlyOwner {
-        seedMode = false;
-    }
-
-    /// @dev Modifier that only lets the contract's owner and granted pausers pause the system
-    modifier onlyPausers() {
+    /// @dev modifier that only lets the contract's owner and granted role to execute
+    modifier onlyWithRole(bytes32 role) {
         require(
-            hasRole(PAUSER_ROLE, msg.sender) || owner() == msg.sender,
-            'Caller not authorized'
-        );
-        _;
-    }
-
-    /// @dev Modifier that's restricting access to contract's owner and granted managers
-    modifier onlyManagers() {
-        require(
-            hasRole(MANAGER_ROLE, msg.sender) || owner() == msg.sender,
-            'Caller not authorized'
+            hasRole(role, msg.sender) || owner() == msg.sender,
+            'Unauthorized'
         );
         _;
     }
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() public virtual onlyPausers {
+    function pause() public virtual onlyWithRole(PAUSER_ROLE) {
         _pause();
     }
 
     /// @dev Unpause the system, wraps _unpause(), only Admin
-    function unpause() public virtual onlyPausers {
+    function unpause() public virtual onlyWithRole(PAUSER_ROLE) {
         _unpause();
     }
 
@@ -150,6 +121,7 @@ contract NatureCarbonTonne is
         onlyOwner
     {
         contractRegistry = _address;
+        emit ToucanRegistrySet(_address);
     }
 
     /// @notice Generic function to switch attributes mappings into either
@@ -174,6 +146,7 @@ contract NatureCarbonTonne is
                 ? methodologiesIsAcceptedMapping = true
                 : methodologiesIsAcceptedMapping = false;
         }
+        emit MappingSwitched(_mappingName, accepted);
     }
 
     /// @notice Function to add attributes for filtering (does not support complex AttributeSets)
@@ -185,42 +158,33 @@ contract NatureCarbonTonne is
         string[] memory _standards,
         string[] memory _methodologies
     ) public virtual onlyOwner {
-        uint256 standardsLen = _standards.length;
-        if (standardsLen > 0) {
-            for (uint256 i = 0; i < standardsLen; i++) {
-                if (addToList == true) {
-                    standards[_standards[i]] = true;
-                    emit AttributeStandardAdded(_standards[i]);
-                } else {
-                    standards[_standards[i]] = false;
-                    emit AttributeStandardRemoved(_standards[i]);
-                }
+        for (uint256 i; i < _standards.length; ++i) {
+            if (addToList == true) {
+                standards[_standards[i]] = true;
+                emit AttributeStandardAdded(_standards[i]);
+            } else {
+                standards[_standards[i]] = false;
+                emit AttributeStandardRemoved(_standards[i]);
             }
         }
 
-        uint256 methodologiesLen = _methodologies.length;
-        if (methodologiesLen > 0) {
-            for (uint256 i = 0; i < methodologiesLen; i++) {
-                if (addToList == true) {
-                    methodologies[_methodologies[i]] = true;
-                    emit AttributeMethodologyAdded(_methodologies[i]);
-                } else {
-                    methodologies[_methodologies[i]] = false;
-                    emit AttributeMethodologyRemoved(_methodologies[i]);
-                }
+        for (uint256 i; i < _methodologies.length; ++i) {
+            if (addToList == true) {
+                methodologies[_methodologies[i]] = true;
+                emit AttributeMethodologyAdded(_methodologies[i]);
+            } else {
+                methodologies[_methodologies[i]] = false;
+                emit AttributeMethodologyRemoved(_methodologies[i]);
             }
         }
 
-        uint256 regionsLen = _regions.length;
-        if (regionsLen > 0) {
-            for (uint256 i = 0; i < regionsLen; i++) {
-                if (addToList == true) {
-                    regions[_regions[i]] = true;
-                    emit AttributeRegionAdded(_regions[i]);
-                } else {
-                    regions[_regions[i]] = false;
-                    emit AttributeRegionRemoved(_regions[i]);
-                }
+        for (uint256 i; i < _regions.length; ++i) {
+            if (addToList == true) {
+                regions[_regions[i]] = true;
+                emit AttributeRegionAdded(_regions[i]);
+            } else {
+                regions[_regions[i]] = false;
+                emit AttributeRegionRemoved(_regions[i]);
             }
         }
     }
@@ -231,9 +195,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             externalWhiteList[erc20Addr[i]] = true;
             emit ExternalAddressWhitelisted(erc20Addr[i]);
         }
@@ -245,9 +207,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             internalWhiteList[erc20Addr[i]] = true;
             emit InternalAddressWhitelisted(erc20Addr[i]);
         }
@@ -259,9 +219,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             internalBlackList[erc20Addr[i]] = true;
             emit InternalAddressBlacklisted(erc20Addr[i]);
         }
@@ -273,9 +231,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             externalWhiteList[erc20Addr[i]] = false;
             emit ExternalAddressRemovedFromWhitelist(erc20Addr[i]);
         }
@@ -287,9 +243,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             internalBlackList[erc20Addr[i]] = false;
             emit InternalAddressRemovedFromBlackList(erc20Addr[i]);
         }
@@ -301,9 +255,7 @@ contract NatureCarbonTonne is
         public
         onlyOwner
     {
-        uint256 addrLen = erc20Addr.length;
-
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < erc20Addr.length; ++i) {
             internalWhiteList[erc20Addr[i]] = false;
             emit InternalAddressRemovedFromWhitelist(erc20Addr[i]);
         }
@@ -313,6 +265,7 @@ contract NatureCarbonTonne is
     /// @dev supplyCap is initially set to 0 and must be increased before deposits
     function setSupplyCap(uint256 newCap) external virtual onlyOwner {
         supplyCap = newCap;
+        emit SupplyCapUpdated(newCap);
     }
 
     /// @notice Determines the minimum vintage start time acceptance criteria of TCO2s
@@ -323,14 +276,19 @@ contract NatureCarbonTonne is
         onlyOwner
     {
         minimumVintageStartTime = _minimumVintageStartTime;
+        emit MinimumVintageStartTimeUpdated(_minimumVintageStartTime);
     }
 
-    /// @notice Allows owner to pass an array to hold TCO2 contract addesses that are
+    /// @notice Allows MANAGERs or the owner to pass an array to hold TCO2 contract addesses that are
     /// ordered by some form of scoring mechanism
     /// @param tco2s array of ordered TCO2 addresses
-    function setTCO2Scoring(address[] calldata tco2s) external onlyManagers {
-        require(tco2s.length > 0, 'TCO2 Array is empty');
+    function setTCO2Scoring(address[] calldata tco2s)
+        external
+        onlyWithRole(MANAGER_ROLE)
+    {
+        require(tco2s.length > 0, '!tco2s');
         scoredTCO2s = tco2s;
+        emit TCO2ScoringUpdated(tco2s);
     }
 
     // ----------------------------
@@ -345,12 +303,11 @@ contract NatureCarbonTonne is
         public
         virtual
         whenNotPaused
-        onlyPoolSeeders
     {
         require(checkEligible(erc20Addr));
 
         uint256 remainingSpace = getRemaining();
-        require(remainingSpace > 0, 'Pool is full');
+        require(remainingSpace > 0, 'Full pool');
 
         if (amount > remainingSpace) amount = remainingSpace;
 
@@ -368,7 +325,7 @@ contract NatureCarbonTonne is
 
     /// @notice Internal function that checks if token to be deposited is eligible for this pool
     function checkEligible(address erc20Addr)
-        internal
+        public
         view
         virtual
         returns (bool)
@@ -381,16 +338,13 @@ contract NatureCarbonTonne is
                 return true;
             }
 
-            require(internalBlackList[erc20Addr] == false, 'TCO2 blacklisted');
+            require(internalBlackList[erc20Addr] == false, 'Blacklisted TCO2');
 
             require(checkAttributeMatching(erc20Addr) == true);
         }
         /// @dev If not Toucan native contract, check if address is whitelisted
         else {
-            require(
-                externalWhiteList[erc20Addr] == true,
-                'External contract not whitelisted'
-            );
+            require(externalWhiteList[erc20Addr] == true, 'Not whitelisted');
             return true;
         }
 
@@ -406,14 +360,14 @@ contract NatureCarbonTonne is
     {
         ProjectData memory projectData;
         VintageData memory vintageData;
-        (projectData, vintageData) = ToucanCarbonOffsets(erc20Addr)
+        (projectData, vintageData) = IToucanCarbonOffsets(erc20Addr)
             .getAttributes();
 
         /// @dev checks if any one of the attributes are blacklisted.
         /// If mappings are set to "whitelist"-mode, require the opposite
         require(
             vintageData.startTime >= minimumVintageStartTime,
-            'StartTime too old'
+            'Start time too old'
         );
         require(
             regions[projectData.region] == regionsIsAcceptedMapping,
@@ -441,7 +395,7 @@ contract NatureCarbonTonne is
     {
         require(
             _feeRedeemPercentageInBase < feeRedeemDivider,
-            'Requires feeRedeemPercentage < divider'
+            'Invalid fee percentage'
         );
         feeRedeemPercentageInBase = _feeRedeemPercentageInBase;
     }
@@ -453,10 +407,7 @@ contract NatureCarbonTonne is
         virtual
         onlyOwner
     {
-        require(
-            _feeRedeemReceiver != address(0),
-            'Fee redeem receiver invalid'
-        );
+        require(_feeRedeemReceiver != address(0), 'Invalid fee address');
         feeRedeemReceiver = _feeRedeemReceiver;
     }
 
@@ -485,6 +436,26 @@ contract NatureCarbonTonne is
         feeRedeemBurnAddress = _feeRedeemBurnAddress;
     }
 
+    /// @notice Adds a new address for redeem fees exemption
+    /// @param _address address to be exempted on redeem fees
+    function addRedeemFeeExemptedAddress(address _address)
+        public
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedAddresses[_address] = true;
+    }
+
+    /// @notice Removes a new address for redeem fees exemption
+    /// @param _address address to be exempted on redeem fees
+    function removeRedeemFeeExemptedAddress(address _address)
+        public
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedAddresses[_address] = false;
+    }
+
     /// @notice View function to calculate fees pre-execution
     /// @dev User specifies in front-end the addresses and amounts they want
     /// @param tco2s Array of TCO2 contract addresses
@@ -494,12 +465,15 @@ contract NatureCarbonTonne is
         address[] memory tco2s,
         uint256[] memory amounts
     ) public view virtual whenNotPaused returns (uint256) {
+        if (redeemFeeExemptedAddresses[msg.sender]) {
+            return 0;
+        }
         uint256 addrLen = tco2s.length;
         uint256 amountsLen = amounts.length;
-        uint256 totalFee = 0;
+        uint256 totalFee;
         require(addrLen == amountsLen, 'Length of arrays differ');
 
-        for (uint256 i = 0; i < addrLen; i++) {
+        for (uint256 i; i < addrLen; ++i) {
             uint256 feeAmount = calculateFeeForSingleAmount(
                 amounts[i],
                 feeRedeemPercentageInBase
@@ -519,19 +493,22 @@ contract NatureCarbonTonne is
         virtual
         whenNotPaused
     {
-        uint256 addrLen = tco2s.length;
-        uint256 amountsLen = amounts.length;
-        uint256 totalFee = 0;
-        require(addrLen == amountsLen, 'Length of arrays differ');
+        require(tco2s.length == amounts.length, 'Length of arrays differ');
+
+        uint256 totalFee;
         uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
-        for (uint256 i = 0; i < addrLen; i++) {
-            uint256 feeAmount = 0;
-            feeAmount = calculateFeeForSingleAmount(
-                amounts[i],
-                _feeRedeemPercentageInBase
-            );
-            totalFee += feeAmount;
-            redeemSingle(msg.sender, tco2s[i], amounts[i] - feeAmount);
+        bool isExempted = redeemFeeExemptedAddresses[msg.sender];
+
+        for (uint256 i; i < tco2s.length; ++i) {
+            uint256 feeAmount;
+            if (!isExempted) {
+                feeAmount = calculateFeeForSingleAmount(
+                    amounts[i],
+                    _feeRedeemPercentageInBase
+                );
+                totalFee += feeAmount;
+            }
+            redeemSingle(tco2s[i], amounts[i] - feeAmount);
         }
         if (totalFee != 0) {
             uint256 burnAmount = calculateRedeemFeeBurnAmount(
@@ -557,10 +534,10 @@ contract NatureCarbonTonne is
 
     function calculateFeeForSingleAmount(uint256 _amount, uint256 feeRedeemBp)
         internal
-        pure
+        view
         returns (uint256 _fees)
     {
-        if (feeRedeemBp == 0) {
+        if (feeRedeemBp == 0 || redeemFeeExemptedAddresses[msg.sender]) {
             return 0;
         }
         _fees = (_amount * feeRedeemBp) / feeRedeemDivider;
@@ -574,7 +551,7 @@ contract NatureCarbonTonne is
     function redeemAuto(uint256 amount) public virtual whenNotPaused {
         require(amount <= totalSupply(), 'Amount exceeds totalSupply');
         uint256 remainingAmount = amount;
-        uint256 i = 0;
+        uint256 i;
 
         uint256 scoredTCO2Len = scoredTCO2s.length;
         while (remainingAmount > 0 && i < scoredTCO2Len) {
@@ -583,29 +560,89 @@ contract NatureCarbonTonne is
             uint256 amountToRedeem = remainingAmount > balance
                 ? balance
                 : remainingAmount;
-            redeemSingle(msg.sender, tco2, amountToRedeem);
+            redeemSingle(tco2, amountToRedeem);
             remainingAmount -= amountToRedeem;
-            i += 1;
+            unchecked {
+                i += 1;
+            }
         }
 
-        require(
-            remainingAmount == 0,
-            'Amount exceeds balance of TCO2s in array'
-        );
+        require(remainingAmount == 0, 'Non-zero remaining amount');
+    }
+
+    /// @notice Automatically redeems an amount of Pool tokens for underlying
+    /// TCO2s from an array of ranked TCO2 contracts starting from contract at
+    /// index 0 until amount is satisfied. redeemAuto2 is slightly more expensive
+    /// than redeemAuto but it is going to be more optimal to use by other on-chain
+    /// contracts.
+    /// @param amount Total amount to be redeemed
+    /// @return tco2s amounts The addresses and amounts of the TCO2s that were
+    /// automatically redeemed
+    function redeemAuto2(uint256 amount)
+        public
+        virtual
+        whenNotPaused
+        returns (address[] memory tco2s, uint256[] memory amounts)
+    {
+        require(amount <= totalSupply(), 'Amount exceeds totalSupply');
+        uint256 remainingAmount = amount;
+        uint256 i;
+
+        uint256 scoredTCO2Len = scoredTCO2s.length;
+        while (remainingAmount > 0 && i < scoredTCO2Len) {
+            address tco2 = scoredTCO2s[i];
+            uint256 balance = tokenBalances[tco2];
+            uint256 amountToRedeem = remainingAmount > balance
+                ? balance
+                : remainingAmount;
+            remainingAmount -= amountToRedeem;
+            unchecked {
+                i += 1;
+            }
+
+            // Create return arrays statically since Solidity does not
+            // support dynamic arrays or mappings in-memory (EIP-1153).
+            // Do it here to avoid having to fill out the last indexes
+            // during the second iteration.
+            if (remainingAmount == 0) {
+                tco2s = new address[](i);
+                amounts = new uint256[](i);
+
+                tco2s[i - 1] = tco2;
+                amounts[i - 1] = amountToRedeem;
+                redeemSingle(tco2, amountToRedeem);
+            }
+        }
+
+        require(remainingAmount == 0, 'Non-zero remaining amount');
+
+        // Execute the second iteration by avoiding to run the last index
+        // since we have already executed that in the first iteration.
+        for (uint256 j; j < i - 1; ++j) {
+            address tco2 = scoredTCO2s[j];
+            // This second loop only gets called when the `remainingAmount` is larger
+            // than the first tco2 balance in the array. Here, in every iteration the
+            // tco2 balance is smaller than the remaining amount while the last bit of
+            // the `remainingAmount` which is smaller than the tco2 balance, got redeemed
+            // in the first loop.
+            uint256 balance = tokenBalances[tco2];
+            tco2s[j] = tco2;
+            amounts[j] = balance;
+            redeemSingle(tco2, balance);
+        }
     }
 
     /// @dev Internal function that redeems a single underlying token
-    function redeemSingle(
-        address account,
-        address erc20,
-        uint256 amount
-    ) internal virtual whenNotPaused {
-        require(msg.sender == account, 'Only own funds can be redeemed');
+    function redeemSingle(address erc20, uint256 amount)
+        internal
+        virtual
+        whenNotPaused
+    {
         require(tokenBalances[erc20] >= amount, 'Amount exceeds supply');
-        _burn(account, amount);
+        _burn(msg.sender, amount);
         tokenBalances[erc20] -= amount;
-        IERC20Upgradeable(erc20).safeTransfer(account, amount);
-        emit Redeemed(account, erc20, amount);
+        IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+        emit Redeemed(msg.sender, erc20, amount);
     }
 
     /// @dev Implemented in order to disable transfers when paused
@@ -616,7 +653,7 @@ contract NatureCarbonTonne is
     ) internal virtual override {
         super._beforeTokenTransfer(from, to, amount);
 
-        require(!paused(), 'Transfers are paused');
+        require(!paused(), 'Paused contract');
     }
 
     /// @dev Returns the remaining space in pool before hitting the cap

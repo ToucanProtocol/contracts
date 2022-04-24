@@ -9,11 +9,8 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
-import './CarbonProjectVintages.sol';
-import './CarbonProjects.sol';
-import './CarbonOffsetBatches.sol';
-import './ToucanCarbonOffsetsFactory.sol';
-import './IToucanContractRegistry.sol';
+import './interfaces/IPausable.sol';
+import './interfaces/IToucanContractRegistry.sol';
 import './ToucanContractRegistryStorage.sol';
 
 /// @dev The ToucanContractRegistry is queried by other contracts for current addresses
@@ -24,6 +21,16 @@ contract ToucanContractRegistry is
     IToucanContractRegistry,
     UUPSUpgradeable
 {
+    // ----------------------------------------
+    //      Constants
+    // ----------------------------------------
+
+    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+
+    // ----------------------------------------
+    //      Modifiers
+    // ----------------------------------------
+
     modifier onlyBy(address _factory, address _owner) {
         require(
             _factory == _msgSender() || _owner == _msgSender(),
@@ -43,42 +50,30 @@ contract ToucanContractRegistry is
 
     /// @notice security function that pauses all contracts part of the carbon bri  dge
     function pauseSystem() external onlyPausers {
-        CarbonProjectVintages cpv = CarbonProjectVintages(
-            _carbonProjectVintagesAddress
-        );
+        IPausable cpv = IPausable(_carbonProjectVintagesAddress);
         if (!cpv.paused()) cpv.pause();
 
-        CarbonProjects cp = CarbonProjects(_carbonProjectsAddress);
+        IPausable cp = IPausable(_carbonProjectsAddress);
         if (!cp.paused()) cp.pause();
 
-        CarbonOffsetBatches cob = CarbonOffsetBatches(
-            _carbonOffsetBatchesAddress
-        );
+        IPausable cob = IPausable(_carbonOffsetBatchesAddress);
         if (!cob.paused()) cob.pause();
 
-        ToucanCarbonOffsetsFactory tcof = ToucanCarbonOffsetsFactory(
-            _toucanCarbonOffsetsFactoryAddress
-        );
+        IPausable tcof = IPausable(_toucanCarbonOffsetsFactoryAddress);
         if (!tcof.paused()) tcof.pause();
     }
 
     function unpauseSystem() external onlyOwner {
-        CarbonProjectVintages cpv = CarbonProjectVintages(
-            _carbonProjectVintagesAddress
-        );
+        IPausable cpv = IPausable(_carbonProjectVintagesAddress);
         if (cpv.paused()) cpv.unpause();
 
-        CarbonProjects cp = CarbonProjects(_carbonProjectsAddress);
+        IPausable cp = IPausable(_carbonProjectsAddress);
         if (cp.paused()) cp.unpause();
 
-        CarbonOffsetBatches cob = CarbonOffsetBatches(
-            _carbonOffsetBatchesAddress
-        );
+        IPausable cob = IPausable(_carbonOffsetBatchesAddress);
         if (cob.paused()) cob.unpause();
 
-        ToucanCarbonOffsetsFactory tcof = ToucanCarbonOffsetsFactory(
-            _toucanCarbonOffsetsFactoryAddress
-        );
+        IPausable tcof = IPausable(_toucanCarbonOffsetsFactoryAddress);
         if (tcof.paused()) tcof.unpause();
     }
 
@@ -89,7 +84,7 @@ contract ToucanContractRegistry is
     function initialize() public virtual initializer {
         __Ownable_init();
         /// @dev granting the deployer==owner the rights to grant other roles
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)

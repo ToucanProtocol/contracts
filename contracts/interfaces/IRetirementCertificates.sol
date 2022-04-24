@@ -8,10 +8,17 @@ pragma solidity ^0.8.0;
 interface IRetirementCertificates {
     function mintCertificate(
         address retiringEntity,
+        string calldata retiringEntityString,
         address beneficiary,
         string calldata beneficiaryString,
         string calldata retirementMessage,
-        uint256 projectVintageTokenId,
-        uint256 amount
+        uint256[] calldata retirementEventIds
     ) external;
+
+    function registerEvent(
+        address retiringEntity,
+        uint256 projectVintageTokenId,
+        uint256 amount,
+        bool isLegacy
+    ) external returns (uint256 retireEventCounter);
 }
