@@ -55,6 +55,17 @@ contract ToucanCarbonOffsets is
         _;
     }
 
+    modifier onlyAllowed() {
+        address ToucanCarbonOffsetsFactoryAddress = IToucanContractRegistry(
+            contractRegistry
+        ).toucanCarbonOffsetsFactoryAddress();
+        bool isAllowed = IToucanCarbonOffsetsFactory(
+            ToucanCarbonOffsetsFactoryAddress
+        ).allowlist(msg.sender);
+        require(isAllowed, 'Not allowed');
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -406,6 +417,35 @@ contract ToucanCarbonOffsets is
             retirementMessage,
             retirementEventIds
         );
+    }
+
+    /// @notice Burn TCO2 on behalf of a user. msg.sender does not require approval
+    /// by the account for the burn to be successfull. This function is exposed so it
+    /// can be utilized in cross-chain transfers of TCO2 where we want to burn the
+    /// TCO2 in the source chain but not retire it.
+    /// @param account The user for whom to burn TCO2
+    /// @param amount The amount to burn.
+    function bridgeBurn(address account, uint256 amount)
+        external
+        virtual
+        whenNotPaused
+        onlyAllowed
+    {
+        _burn(account, amount);
+    }
+
+    /// @notice Mint TCO2 on behalf of a user. This function is exposed so it
+    /// can be utilized in cross-chain transfers of TCO2 where we want to mint the
+    /// TCO2 in the source chain.
+    /// @param account The user for whom to mint TCO2
+    /// @param amount The amount to mint.
+    function bridgeMint(address account, uint256 amount)
+        external
+        virtual
+        whenNotPaused
+        onlyAllowed
+    {
+        _mint(account, amount);
     }
 
     // -----------------------------
