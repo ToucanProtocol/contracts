@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 
 /// @dev Storage for the UUPS Proxy upgradable NCT contract
 abstract contract NatureCarbonTonneStorageV1 {
@@ -45,6 +45,7 @@ abstract contract NatureCarbonTonneStorageV1 {
 
     /// @dev repacked smaller variables here so new bools can be added below
     uint64 public minimumVintageStartTime;
+    //slither-disable-next-line constable-states
     bool public seedMode;
     bool public regionsIsAcceptedMapping;
     bool public standardsIsAcceptedMapping;

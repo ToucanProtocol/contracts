@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 
 // ============ External Imports ============
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -25,6 +25,7 @@ import './ToucanCarbonOffsetsFactoryStorage.sol';
 /// @notice This TCO2 factory creates project-vintage-specific ERC20 contracts for Batch-NFT fractionalization
 /// Locks in received ERC721 Batch-NFTs and can mint corresponding quantity of ERC20s
 /// Permissionless, anyone can deploy new ERC20s unless they do not yet exist and pid exists
+//slither-disable-next-line unprotected-upgrade
 contract ToucanCarbonOffsetsFactory is
     ToucanCarbonOffsetsFactoryStorageV1,
     OwnableUpgradeable,
@@ -47,16 +48,25 @@ contract ToucanCarbonOffsetsFactory is
 
     event TokenCreated(uint256 vintageTokenId, address tokenAddress);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
     /// @dev Returns the current version of the smart contract
-    function version() public pure returns (string memory) {
+    function version() external pure returns (string memory) {
         return '1.1.0';
     }
 
-    function initialize(address _contractRegistry) public virtual initializer {
+    function initialize(address _contractRegistry)
+        external
+        virtual
+        initializer
+    {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
@@ -81,18 +91,18 @@ contract ToucanCarbonOffsetsFactory is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() public virtual onlyBy(contractRegistry, owner()) {
+    function pause() external virtual onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() public virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external virtual onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
     /// @dev set the registry contract to be tracked
     function setToucanContractRegistry(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -128,6 +138,7 @@ contract ToucanCarbonOffsetsFactory is
             contractRegistry
         );
 
+        //slither-disable-next-line reentrancy-no-eth
         BeaconProxy proxyTCO2 = new BeaconProxy(beacon, payload);
 
         IToucanContractRegistry(contractRegistry).addERC20(address(proxyTCO2));
@@ -141,7 +152,7 @@ contract ToucanCarbonOffsetsFactory is
     /// @dev Deploys a TCO2 contract based on a project vintage
     /// @param projectVintageTokenId numeric tokenId from vintage in `CarbonProjectVintages`
     function deployFromVintage(uint256 projectVintageTokenId)
-        public
+        external
         virtual
         whenNotPaused
     {
@@ -171,32 +182,38 @@ contract ToucanCarbonOffsetsFactory is
     }
 
     /// @dev Returns all addresses of deployed TCO2 contracts
-    function getContracts() public view virtual returns (address[] memory) {
+    function getContracts() external view virtual returns (address[] memory) {
         return deployedContracts;
     }
 
-    function bridgeFeeReceiverAddress() public view virtual returns (address) {
+    function bridgeFeeReceiverAddress()
+        external
+        view
+        virtual
+        returns (address)
+    {
         return bridgeFeeReceiver;
     }
 
     function getBridgeFeeAndBurnAmount(uint256 _quantity)
-        public
+        external
         view
         virtual
         returns (uint256, uint256)
     {
-        uint256 feeDivider = bridgeFeeDivider;
+        //slither-disable-next-line divide-before-multiply
         uint256 feeAmount = (_quantity * bridgeFeePercentageInBase) /
-            feeDivider;
+            bridgeFeeDivider;
+        //slither-disable-next-line divide-before-multiply
         uint256 burnAmount = (feeAmount * bridgeFeeBurnPercentageInBase) /
-            feeDivider;
+            bridgeFeeDivider;
         return (feeAmount, burnAmount);
     }
 
     /// @notice Update the bridge fee percentage
     /// @param _bridgeFeePercentageInBase percentage of bridge fee in base
     function setBridgeFeePercentage(uint256 _bridgeFeePercentageInBase)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -210,7 +227,7 @@ contract ToucanCarbonOffsetsFactory is
     /// @notice Update the bridge fee receiver
     /// @param _bridgeFeeReceiver address to transfer the fees
     function setBridgeFeeReceiver(address _bridgeFeeReceiver)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -220,7 +237,7 @@ contract ToucanCarbonOffsetsFactory is
     /// @notice Update the bridge fee burning percentage
     /// @param _bridgeFeeBurnPercentageInBase percentage of bridge fee in base
     function setBridgeFeeBurnPercentage(uint256 _bridgeFeeBurnPercentageInBase)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -234,7 +251,7 @@ contract ToucanCarbonOffsetsFactory is
     /// @notice Update the bridge fee burn address
     /// @param _bridgeFeeBurnAddress address to transfer the fees to burn
     function setBridgeFeeBurnAddress(address _bridgeFeeBurnAddress)
-        public
+        external
         virtual
         onlyOwner
     {

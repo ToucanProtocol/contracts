@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
@@ -48,6 +48,11 @@ contract ToucanContractRegistry is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     /// @notice security function that pauses all contracts part of the carbon bri  dge
     function pauseSystem() external onlyPausers {
         IPausable cpv = IPausable(_carbonProjectVintagesAddress);
@@ -81,7 +86,7 @@ contract ToucanContractRegistry is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() public virtual initializer {
+    function initialize() external virtual initializer {
         __Ownable_init();
         /// @dev granting the deployer==owner the rights to grant other roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
