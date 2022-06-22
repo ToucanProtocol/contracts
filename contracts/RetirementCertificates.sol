@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
@@ -15,7 +15,10 @@ import './interfaces/IToucanContractRegistry.sol';
 import './RetirementCertificatesStorage.sol';
 
 /// @notice The `RetirementCertificates` contract lets users mint NFTs that act as proof-of-retirement.
-/// These Retirement Certificate NFTs display how many kilos of CO2-equivalent a user has burnt
+/// These Retirement Certificate NFTs display how many TCO2s a user has burnt
+/// @dev The amount of RetirementEvents is denominated in the 18-decimal form
+/// @dev Getters in this contract return the corresponding amount in tonnes or kilos
+//slither-disable-next-line unprotected-upgrade
 contract RetirementCertificates is
     ERC721Upgradeable,
     OwnableUpgradeable,
@@ -45,17 +48,22 @@ contract RetirementCertificates is
     event BaseURISet(string baseURI);
     event MinValidAmountSet(uint256 previousAmount, uint256 newAmount);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
     /// @dev Returns the current version of the smart contract
-    function version() public pure virtual returns (string memory) {
+    function version() external pure virtual returns (string memory) {
         return '1.0.0';
     }
 
     function initialize(address _contractRegistry, string memory _baseURI)
-        public
+        external
         virtual
         initializer
     {
@@ -81,7 +89,7 @@ contract RetirementCertificates is
     // ------------------------
 
     function setToucanContractRegistry(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -96,6 +104,8 @@ contract RetirementCertificates is
 
     function setMinValidRetirementAmount(uint256 amount) external onlyOwner {
         uint256 previousAmount = minValidRetirementAmount;
+        require(previousAmount != amount, 'Already set');
+
         minValidRetirementAmount = amount;
         emit MinValidAmountSet(previousAmount, amount);
     }
@@ -120,9 +130,7 @@ contract RetirementCertificates is
     ) external returns (uint256) {
         // Logic requires that minting can only originate from a project-vintage ERC20 contract
         require(
-            IToucanContractRegistry(contractRegistry).checkERC20(
-                _msgSender()
-            ) == true,
+            IToucanContractRegistry(contractRegistry).checkERC20(msg.sender),
             'Caller not a TCO2'
         );
         require(
@@ -181,20 +189,16 @@ contract RetirementCertificates is
         // 1. Check whether event belongs to user (retiring entity)
         // 2. Check whether the event has previously been attached
         require(retirementEventIds.length != 0, 'Empty event array');
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < retirementEventIds.length; ++i) {
+            uint256 eventId = retirementEventIds[i];
             require(
-                retirements[retirementEventIds[i]].retiringEntity ==
-                    retiringEntity,
+                retirements[eventId].retiringEntity == retiringEntity,
                 'Invalid event to be claimed'
             );
-            require(
-                !claimedEvents[retirementEventIds[i]],
-                'Already claimed event'
-            );
-            claimedEvents[retirementEventIds[i]] = true;
-            certificates[tokenId].retirementEventIds.push(
-                retirementEventIds[i]
-            );
+            require(!claimedEvents[eventId], 'Already claimed event');
+            claimedEvents[eventId] = true;
+            certificates[tokenId].retirementEventIds.push(eventId);
         }
     }
 
@@ -308,14 +312,14 @@ contract RetirementCertificates is
 
     /// @notice Get certificate data for an NFT.
     /// @param tokenId The id of the NFT to get data for.
-    function getData(uint256 tokenId) public view returns (Data memory) {
+    function getData(uint256 tokenId) external view returns (Data memory) {
         return certificates[tokenId];
     }
 
     /// @notice Get all events for a user.
     /// @param user The user for whom to fetch all events.
     function getUserEvents(address user)
-        public
+        external
         view
         returns (uint256[] memory)
     {
@@ -334,6 +338,7 @@ contract RetirementCertificates is
         returns (uint256 amount)
     {
         uint256[] memory eventIds = certificates[tokenId].retirementEventIds;
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < eventIds.length; ++i) {
             amount += retirements[eventIds[i]].amount;
         }
@@ -347,8 +352,10 @@ contract RetirementCertificates is
         view
         returns (uint256)
     {
+        //slither-disable-next-line uninitialized-local
         uint256 amount;
         uint256[] memory eventIds = certificates[tokenId].retirementEventIds;
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < eventIds.length; ++i) {
             amount += retirements[eventIds[i]].amount;
         }
@@ -363,8 +370,10 @@ contract RetirementCertificates is
         view
         returns (uint256)
     {
+        //slither-disable-next-line uninitialized-local
         uint256 amount;
         uint256[] memory eventIds = certificates[tokenId].retirementEventIds;
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < eventIds.length; ++i) {
             amount += retirements[eventIds[i]].amount;
         }

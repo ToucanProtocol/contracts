@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
@@ -35,6 +35,8 @@ contract CarbonProjectVintages is
     //      Constants
     // ----------------------------------------
 
+    string public constant VERSION = '1.1.0';
+
     /// @dev All roles related to Access Control
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 
@@ -55,7 +57,7 @@ contract CarbonProjectVintages is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() public virtual initializer {
+    function initialize() external virtual initializer {
         __Context_init_unchained();
         __ERC721_init_unchained(
             'Toucan Protocol: Carbon Project Vintages',
@@ -89,17 +91,17 @@ contract CarbonProjectVintages is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() public virtual onlyBy(contractRegistry, owner()) {
+    function pause() external virtual onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() public virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external virtual onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
     function setToucanContractRegistry(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -108,29 +110,24 @@ contract CarbonProjectVintages is
 
     /// @notice Adds a new carbon project-vintage along with attributes/data
     /// @dev vintages can be added by data-managers
-    function addNewVintage(
-        address to,
-        uint256 projectTokenId,
-        string memory name,
-        uint64 startTime,
-        uint64 endTime,
-        uint64 totalVintageQuantity,
-        bool isCorsiaCompliant,
-        bool isCCPcompliant,
-        string memory coBenefits,
-        string memory correspAdjustment,
-        string memory additionalCertification,
-        string memory uri
-    ) external virtual override onlyManagers whenNotPaused returns (uint256) {
-        checkProjectTokenExists(contractRegistry, projectTokenId);
+    function addNewVintage(address to, VintageData memory _vintageData)
+        external
+        virtual
+        override
+        onlyManagers
+        whenNotPaused
+        returns (uint256)
+    {
+        checkProjectTokenExists(contractRegistry, _vintageData.projectTokenId);
 
         require(
-            pvToTokenId[projectTokenId][startTime] == 0,
+            pvToTokenId[_vintageData.projectTokenId][_vintageData.startTime] ==
+                0,
             'Error: vintage already added'
         );
 
         require(
-            startTime < endTime,
+            _vintageData.startTime < _vintageData.endTime,
             'Error: vintage startTime must be less than endTime'
         );
 
@@ -146,21 +143,16 @@ contract CarbonProjectVintages is
 
         _mint(to, newItemId);
 
-        vintageData[newItemId].name = name;
-        vintageData[newItemId].startTime = startTime;
-        vintageData[newItemId].endTime = endTime;
-        vintageData[newItemId].projectTokenId = projectTokenId;
-        vintageData[newItemId].totalVintageQuantity = totalVintageQuantity;
-        vintageData[newItemId].isCorsiaCompliant = isCorsiaCompliant;
-        vintageData[newItemId].isCCPcompliant = isCCPcompliant;
-        vintageData[newItemId].coBenefits = coBenefits;
-        vintageData[newItemId].correspAdjustment = correspAdjustment;
-        vintageData[newItemId]
-            .additionalCertification = additionalCertification;
-        vintageData[newItemId].uri = uri;
-
-        emit ProjectVintageMinted(to, newItemId, projectTokenId, startTime);
-        pvToTokenId[projectTokenId][startTime] = newItemId;
+        vintageData[newItemId] = _vintageData;
+        emit ProjectVintageMinted(
+            to,
+            newItemId,
+            _vintageData.projectTokenId,
+            _vintageData.startTime
+        );
+        pvToTokenId[_vintageData.projectTokenId][
+            _vintageData.startTime
+        ] = newItemId;
 
         return newItemId;
     }
@@ -182,29 +174,12 @@ contract CarbonProjectVintages is
     /// except the sensitive `projectId`
     function updateProjectVintage(
         uint256 tokenId,
-        // uint256 projectTokenId, // @dev commented out because very sensitive data, better via separate function
-        string memory name,
-        uint64 startTime,
-        uint64 endTime,
-        uint64 totalVintageQuantity,
-        bool isCorsiaCompliant,
-        bool isCCPcompliant,
-        string memory coBenefits,
-        string memory correspAdjustment,
-        string memory additionalCertification,
-        string memory uri
+        VintageData memory _vintageData
     ) external virtual onlyManagers whenNotPaused {
         require(_exists(tokenId), 'Project not yet minted');
-        vintageData[tokenId].name = name;
-        vintageData[tokenId].startTime = startTime;
-        vintageData[tokenId].endTime = endTime;
-        vintageData[tokenId].totalVintageQuantity = totalVintageQuantity;
-        vintageData[tokenId].isCorsiaCompliant = isCorsiaCompliant;
-        vintageData[tokenId].isCCPcompliant = isCCPcompliant;
-        vintageData[tokenId].coBenefits = coBenefits;
-        vintageData[tokenId].correspAdjustment = correspAdjustment;
-        vintageData[tokenId].additionalCertification = additionalCertification;
-        vintageData[tokenId].uri = uri;
+        // @dev very sensitive data, better update via separate function
+        _vintageData.projectTokenId = vintageData[tokenId].projectTokenId;
+        vintageData[tokenId] = _vintageData;
 
         emit ProjectVintageUpdated(tokenId);
     }

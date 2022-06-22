@@ -1,0 +1,94 @@
+// SPDX-FileCopyrightText: 2021 Toucan Labs
+//
+// SPDX-License-Identifier: UNLICENSED
+
+// If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
+pragma solidity >=0.8.4 <=0.8.14;
+
+import '@openzeppelin/contracts/access/Ownable.sol';
+
+import '../interfaces/IPoolFilter.sol';
+import '../interfaces/IToucanContractRegistry.sol';
+
+// Specific implementation of an external pool filter for the
+// BaseCarbonTonne (to be used by KlimaDAO)
+// Accepts ANY non-blacklisted Toucan contract
+// Can whitelist external ERC20 compliant carbon-offset token
+contract PoolFilterAddressWhitelist is Ownable, IPoolFilter {
+    address public contractRegistry;
+
+    // Mapping to whitelist external non-Toucan contracts by address
+    mapping(address => bool) public externalWhiteList;
+
+    // Mapping to exclude certain Toucan contracts by address
+    mapping(address => bool) public internalBlackList;
+
+    function setToucanContractRegistry(address _address) public onlyOwner {
+        contractRegistry = _address;
+    }
+
+    // Function can be updated (while keeping the same signature)
+    function checkEligible(address erc20Addr)
+        external
+        view
+        override
+        returns (bool)
+    {
+        bool isToucanContract = IToucanContractRegistry(contractRegistry)
+            .checkERC20(erc20Addr);
+
+        if (isToucanContract) {
+            require(
+                internalBlackList[erc20Addr] == false,
+                'Toucan contract blacklisted'
+            );
+        }
+        // If not Toucan native contract, check if address is whitelisted
+        else {
+            require(
+                externalWhiteList[erc20Addr] == true,
+                'Token not whitelisted'
+            );
+        }
+
+        return true;
+    }
+
+    // Whitelist selected external non-Toucan contracts by address
+    function addToExternalWhiteList(address[] memory erc20Addr)
+        public
+        onlyOwner
+    {
+        for (uint256 i; i < erc20Addr.length; ++i) {
+            externalWhiteList[erc20Addr[i]] = true;
+        }
+    }
+
+    // Blacklist (Reject) certain Toucan contracts by address
+    function addToInternalBlackList(address[] memory erc20Addr)
+        public
+        onlyOwner
+    {
+        for (uint256 i; i < erc20Addr.length; ++i) {
+            internalBlackList[erc20Addr[i]] = true;
+        }
+    }
+
+    function removeFromExternalWhiteList(address[] memory erc20Addr)
+        public
+        onlyOwner
+    {
+        for (uint256 i; i < erc20Addr.length; ++i) {
+            externalWhiteList[erc20Addr[i]] = false;
+        }
+    }
+
+    function removeFromInternalBlackList(address[] memory erc20Addr)
+        public
+        onlyOwner
+    {
+        for (uint256 i; i < erc20Addr.length; ++i) {
+            internalBlackList[erc20Addr[i]] = false;
+        }
+    }
+}

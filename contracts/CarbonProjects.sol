@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
@@ -21,6 +21,7 @@ import './libraries/Modifiers.sol';
 /// @dev Each project can have up to n vintages, with data stored in the
 /// `CarbonProjectVintages` contract. `vintageTokenId`s are mapped to `projectTokenId`s
 /// via `pvToTokenId` in the vintage contract.
+//slither-disable-next-line unprotected-upgrade
 contract CarbonProjects is
     ICarbonProjects,
     CarbonProjectsStorage,
@@ -46,11 +47,16 @@ contract CarbonProjects is
     event ProjectUpdated(uint256 tokenId);
     event ProjectIdUpdated(uint256 tokenId);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() public virtual initializer {
+    function initialize() external virtual initializer {
         __Context_init_unchained();
         __ERC721_init_unchained(
             'Toucan Protocol: Carbon Projects',
@@ -83,17 +89,17 @@ contract CarbonProjects is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() public virtual onlyBy(contractRegistry, owner()) {
+    function pause() external virtual onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() public virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external virtual onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
     function setToucanContractRegistry(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -209,7 +215,7 @@ contract CarbonProjects is
 
     /// @dev Returns the global project-id, for example'VCS-1418'
     function getProjectId(uint256 tokenId)
-        public
+        external
         view
         virtual
         override
@@ -220,7 +226,7 @@ contract CarbonProjects is
 
     /// @dev Function used by the utility function `checkProjectTokenExists`
     function isValidProjectTokenId(uint256 projectTokenId)
-        public
+        external
         view
         virtual
         override

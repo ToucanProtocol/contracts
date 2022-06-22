@@ -4,16 +4,15 @@
 
 pragma solidity >=0.8.4 <=0.8.14;
 
-import './CarbonOffsetBatchesTypes.sol';
+import '../../CarbonOffsetBatchesTypes.sol';
 
-/// @dev Separate storage contract to improve upgrade safety
-contract CarbonOffsetBatchesStorage {
+abstract contract CarbonOffsetBatchesStorageV1Test {
     //slither-disable-next-line constable-states
     uint256 public batchTokenCounter;
-    /// @custom:oz-upgrades-renamed-from serialNumberExist
-    mapping(string => bool) public serialNumberApproved;
+
+    mapping(string => bool) public serialNumberExist;
     mapping(string => bool) public URIs;
-    mapping(address => bool) public verifiers; // has been removed, but must stay here because of storage layout
+    mapping(address => bool) public verifiers;
 
     //slither-disable-next-line constable-states
     string public baseURI;

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity ^0.8.0;
+pragma solidity >=0.8.4 <=0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
@@ -22,6 +22,7 @@ import './BaseCarbonTonneStorage.sol';
 /// @notice Base Carbon Tonne for KlimaDAO
 /// Contract is an ERC20 compliant token that acts as a pool for TCO2 tokens
 /// It is possible to whitelist Toucan Protocol external tokenized carbon
+//slither-disable-next-line unprotected-upgrade
 contract BaseCarbonTonne is
     ContextUpgradeable,
     ERC20Upgradeable,
@@ -68,16 +69,21 @@ contract BaseCarbonTonne is
     event MinimumVintageStartTimeUpdated(uint256 minimumVintageStartTime);
     event TCO2ScoringUpdated(address[] tco2s);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
     /// @dev Returns the current version of the smart contract
-    function version() public pure virtual returns (string memory) {
-        return '1.2.0';
+    function version() external pure virtual returns (string memory) {
+        return '1.2.1';
     }
 
-    function initialize() public virtual initializer {
+    function initialize() external virtual initializer {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
@@ -107,17 +113,17 @@ contract BaseCarbonTonne is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() public virtual onlyWithRole(PAUSER_ROLE) {
+    function pause() external virtual onlyWithRole(PAUSER_ROLE) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() public virtual onlyWithRole(PAUSER_ROLE) {
+    function unpause() external virtual onlyWithRole(PAUSER_ROLE) {
         _unpause();
     }
 
     function setToucanContractRegistry(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -130,7 +136,7 @@ contract BaseCarbonTonne is
     /// @param _mappingName attribute mapping of project-vintage data
     /// @param accepted determines if mapping works as black or whitelist
     function switchMapping(string memory _mappingName, bool accepted)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -158,7 +164,8 @@ contract BaseCarbonTonne is
         string[] memory _regions,
         string[] memory _standards,
         string[] memory _methodologies
-    ) public virtual onlyOwner {
+    ) external virtual onlyOwner {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < _standards.length; ++i) {
             if (addToList == true) {
                 standards[_standards[i]] = true;
@@ -169,6 +176,7 @@ contract BaseCarbonTonne is
             }
         }
 
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < _methodologies.length; ++i) {
             if (addToList == true) {
                 methodologies[_methodologies[i]] = true;
@@ -179,6 +187,7 @@ contract BaseCarbonTonne is
             }
         }
 
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < _regions.length; ++i) {
             if (addToList == true) {
                 regions[_regions[i]] = true;
@@ -193,9 +202,10 @@ contract BaseCarbonTonne is
     /// @notice Function to whitelist selected external non-TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
     function addToExternalWhiteList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
             externalWhiteList[erc20Addr[i]] = true;
             emit ExternalAddressWhitelisted(erc20Addr[i]);
@@ -205,11 +215,11 @@ contract BaseCarbonTonne is
     /// @notice Function to whitelist certain TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
     function addToInternalWhiteList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            // @TODO check isContract
             internalWhiteList[erc20Addr[i]] = true;
             emit InternalAddressWhitelisted(erc20Addr[i]);
         }
@@ -218,11 +228,11 @@ contract BaseCarbonTonne is
     /// @notice Function to blacklist certain TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
     function addToInternalBlackList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            // @TODO check isContract
             internalBlackList[erc20Addr[i]] = true;
             emit InternalAddressBlacklisted(erc20Addr[i]);
         }
@@ -231,9 +241,10 @@ contract BaseCarbonTonne is
     /// @notice Function to remove ERC20 addresses from external whitelist
     /// @param erc20Addr accepts an array of contract addresses
     function removeFromExternalWhiteList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
             externalWhiteList[erc20Addr[i]] = false;
             emit ExternalAddressRemovedFromWhitelist(erc20Addr[i]);
@@ -243,9 +254,10 @@ contract BaseCarbonTonne is
     /// @notice Function to remove TCO2 addresses from internal blacklist
     /// @param erc20Addr accepts an array of contract addresses
     function removeFromInternalBlackList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
             internalBlackList[erc20Addr[i]] = false;
             emit InternalAddressRemovedFromBlackList(erc20Addr[i]);
@@ -255,9 +267,10 @@ contract BaseCarbonTonne is
     /// @notice Function to remove TCO2 addresses from internal whitelist
     /// @param erc20Addr accepts an array of contract addressesc
     function removeFromInternalWhiteList(address[] memory erc20Addr)
-        public
+        external
         onlyOwner
     {
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
             internalWhiteList[erc20Addr[i]] = false;
             emit InternalAddressRemovedFromWhitelist(erc20Addr[i]);
@@ -274,7 +287,7 @@ contract BaseCarbonTonne is
     /// @notice Determines the minimum vintage start time acceptance criteria of TCO2s
     /// @param _minimumVintageStartTime unix time format
     function setMinimumVintageStartTime(uint64 _minimumVintageStartTime)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -303,7 +316,7 @@ contract BaseCarbonTonne is
     /// @dev Eligibility is checked via `checkEligible`, balances are tracked
     /// for each TCO2 separately
     function deposit(address erc20Addr, uint256 amount)
-        public
+        external
         virtual
         whenNotPaused
     {
@@ -314,19 +327,19 @@ contract BaseCarbonTonne is
 
         if (amount > remainingSpace) amount = remainingSpace;
 
+        /// @dev Increase balance sheet of individual token
+        tokenBalances[erc20Addr] += amount;
+        _mint(msg.sender, amount);
+        emit Deposited(erc20Addr, amount);
+
         IERC20Upgradeable(erc20Addr).safeTransferFrom(
             msg.sender,
             address(this),
             amount
         );
-
-        /// @dev Increase balance sheet of individual token
-        tokenBalances[erc20Addr] += amount;
-        _mint(msg.sender, amount);
-        emit Deposited(erc20Addr, amount);
     }
 
-    /// @notice Internal function that checks if token to be deposited is eligible for this pool
+    /// @notice Checks if token to be deposited is eligible for this pool
     function checkEligible(address erc20Addr)
         public
         view
@@ -395,7 +408,7 @@ contract BaseCarbonTonne is
     /// @notice Update the fee redeem percentage
     /// @param _feeRedeemPercentageInBase percentage of fee in base
     function setFeeRedeemPercentage(uint256 _feeRedeemPercentageInBase)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -409,7 +422,7 @@ contract BaseCarbonTonne is
     /// @notice Update the fee redeem receiver
     /// @param _feeRedeemReceiver address to transfer the fees
     function setFeeRedeemReceiver(address _feeRedeemReceiver)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -420,7 +433,7 @@ contract BaseCarbonTonne is
     /// @notice Update the fee redeem burn percentage
     /// @param _feeRedeemBurnPercentageInBase percentage of fee in base
     function setFeeRedeemBurnPercentage(uint256 _feeRedeemBurnPercentageInBase)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -434,7 +447,7 @@ contract BaseCarbonTonne is
     /// @notice Update the fee redeem burn address
     /// @param _feeRedeemBurnAddress address to transfer the fees to burn
     function setFeeRedeemBurnAddress(address _feeRedeemBurnAddress)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -445,7 +458,7 @@ contract BaseCarbonTonne is
     /// @notice Adds a new address for redeem fees exemption
     /// @param _address address to be exempted on redeem fees
     function addRedeemFeeExemptedAddress(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -455,7 +468,7 @@ contract BaseCarbonTonne is
     /// @notice Removes a new address for redeem fees exemption
     /// @param _address address to be exempted on redeem fees
     function removeRedeemFeeExemptedAddress(address _address)
-        public
+        external
         virtual
         onlyOwner
     {
@@ -470,13 +483,16 @@ contract BaseCarbonTonne is
     function calculateRedeemFees(
         address[] memory tco2s,
         uint256[] memory amounts
-    ) public view virtual whenNotPaused returns (uint256) {
+    ) external view virtual whenNotPaused returns (uint256) {
         if (redeemFeeExemptedAddresses[msg.sender]) {
             return 0;
         }
-        uint256 totalFee;
         require(tco2s.length == amounts.length, 'Length of arrays differ');
 
+        //slither-disable-next-line uninitialized-local
+        uint256 totalFee;
+
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2s.length; ++i) {
             uint256 feeAmount = calculateFeeForSingleAmount(
                 amounts[i],
@@ -491,17 +507,20 @@ contract BaseCarbonTonne is
     /// @dev User specifies in front-end the addresses and amounts they want
     /// BCT Pool token in user's wallet get burned
     function redeemMany(address[] memory erc20s, uint256[] memory amounts)
-        public
+        external
         virtual
         whenNotPaused
     {
         require(erc20s.length == amounts.length, 'Length of arrays differ');
 
+        //slither-disable-next-line uninitialized-local
         uint256 totalFee;
         uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
         bool isExempted = redeemFeeExemptedAddresses[msg.sender];
 
+        //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20s.length; ++i) {
+            //slither-disable-next-line uninitialized-local
             uint256 feeAmount;
             if (!isExempted) {
                 feeAmount = calculateFeeForSingleAmount(
@@ -550,20 +569,26 @@ contract BaseCarbonTonne is
     /// starting from contract at index 0 until amount is satisfied
     /// @param amount Total amount to be redeemed
     /// @dev BCT Pool tokens in user's wallet get burned
-    function redeemAuto(uint256 amount) public virtual whenNotPaused {
+    function redeemAuto(uint256 amount) external virtual whenNotPaused {
         require(amount <= totalSupply(), 'Amount exceeds totalSupply');
         uint256 remainingAmount = amount;
+        //slither-disable-next-line uninitialized-local
         uint256 i;
 
         uint256 scoredTCO2Len = scoredTCO2s.length;
         while (remainingAmount > 0 && i < scoredTCO2Len) {
             address tco2 = scoredTCO2s[i];
             uint256 balance = tokenBalances[tco2];
-            uint256 amountToRedeem = remainingAmount > balance
-                ? balance
-                : remainingAmount;
-            redeemSingle(tco2, amountToRedeem);
-            remainingAmount -= amountToRedeem;
+
+            // Only TCO2s with a balance should be included for a redemption.
+            if (balance != 0) {
+                uint256 amountToRedeem = remainingAmount > balance
+                    ? balance
+                    : remainingAmount;
+                redeemSingle(tco2, amountToRedeem);
+                remainingAmount -= amountToRedeem;
+            }
+
             unchecked {
                 i += 1;
             }
@@ -581,23 +606,31 @@ contract BaseCarbonTonne is
     /// @return tco2s amounts The addresses and amounts of the TCO2s that were
     /// automatically redeemed
     function redeemAuto2(uint256 amount)
-        public
+        external
         virtual
         whenNotPaused
         returns (address[] memory tco2s, uint256[] memory amounts)
     {
         require(amount <= totalSupply(), 'Amount exceeds totalSupply');
         uint256 remainingAmount = amount;
+        //slither-disable-next-line uninitialized-local
         uint256 i;
 
         uint256 scoredTCO2Len = scoredTCO2s.length;
         while (remainingAmount > 0 && i < scoredTCO2Len) {
             address tco2 = scoredTCO2s[i];
             uint256 balance = tokenBalances[tco2];
-            uint256 amountToRedeem = remainingAmount > balance
-                ? balance
-                : remainingAmount;
-            remainingAmount -= amountToRedeem;
+            //slither-disable-next-line uninitialized-local
+            uint256 amountToRedeem;
+
+            // Only TCO2s with a balance should be included for a redemption.
+            if (balance != 0) {
+                amountToRedeem = remainingAmount > balance
+                    ? balance
+                    : remainingAmount;
+                remainingAmount -= amountToRedeem;
+            }
+
             unchecked {
                 i += 1;
             }
@@ -620,6 +653,7 @@ contract BaseCarbonTonne is
 
         // Execute the second iteration by avoiding to run the last index
         // since we have already executed that in the first iteration.
+        //slither-disable-next-line uninitialized-local
         for (uint256 j; j < i - 1; ++j) {
             address tco2 = scoredTCO2s[j];
             // This second loop only gets called when the `remainingAmount` is larger
@@ -628,6 +662,10 @@ contract BaseCarbonTonne is
             // the `remainingAmount` which is smaller than the tco2 balance, got redeemed
             // in the first loop.
             uint256 balance = tokenBalances[tco2];
+
+            // Ignore empty balances so we don't generate redundant transactions.
+            if (balance == 0) continue;
+
             tco2s[j] = tco2;
             amounts[j] = balance;
             redeemSingle(tco2, balance);
@@ -714,7 +752,7 @@ contract BaseCarbonTonne is
         return memcmp(bytes(a), bytes(b));
     }
 
-    function getScoredTCO2s() public view returns (address[] memory) {
+    function getScoredTCO2s() external view returns (address[] memory) {
         return scoredTCO2s;
     }
 }

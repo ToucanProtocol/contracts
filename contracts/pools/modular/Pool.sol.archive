@@ -1,0 +1,195 @@
+// SPDX-FileCopyrightText: 2021 Toucan Labs
+//
+// SPDX-License-Identifier: UNLICENSED
+
+// If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
+pragma solidity >=0.8.4 <=0.8.14;
+// import 'hardhat/console.sol'; // dev & testing
+
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/utils/Context.sol';
+import '@openzeppelin/contracts/security/Pausable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+
+import '../interfaces/ICarbonOffsetBatches.sol';
+import '../interfaces/IPoolFilter.sol';
+import '../interfaces/IToucanContractRegistry.sol';
+
+// General Pool contract that accepts
+contract Pool is Context, ERC20, Ownable, Pausable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    event Deposited(address erc20Addr, uint256 amount);
+    event Redeemed(address account, address erc20, uint256 amount);
+
+    address public poolFilter;
+
+    // Important if algorithmic redemption gets implemented
+    mapping(address => uint256) public tokenBalances;
+    uint256 public overallAmount;
+    bool public hasExternalFilter;
+
+    constructor(
+        string memory name_,
+        string memory _symbol,
+        bool externalFilter
+    ) ERC20(name_, _symbol) {
+        hasExternalFilter = externalFilter;
+    }
+
+    // ------------------------
+    //      Admin functions
+    // ------------------------
+
+    /// @notice Emergency function to disable contract's core functionality
+    /// @dev wraps _pause(), only Admin
+    function pause() public virtual onlyOwner {
+        _pause();
+    }
+
+    /// @dev unpause the system, wraps _unpause(), only Admin
+    function unpause() public virtual onlyOwner {
+        _unpause();
+    }
+
+    /// @dev Change the implementation address of the filtering check
+    function setPoolFilter(address newAddress) public virtual onlyOwner {
+        poolFilter = newAddress;
+    }
+
+    // ------------------------
+    // Permissionless functions
+    // ------------------------
+
+    /**
+     * @dev Generic deposit function for all Pool designs
+     *   Calls checkEligible, which either forwards the call to an external contract
+     *   or to an internal function, which is supposed to be overriden by
+     *   the implementing child contract
+     */
+    function deposit(address erc20Addr, uint256 amount)
+        public
+        virtual
+        whenNotPaused
+    {
+        require(checkEligible(erc20Addr), 'Token rejected');
+
+        IERC20Upgradeable(erc20Addr).safeTransferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
+
+        // Increasing balance sheet of individual token and overall
+        tokenBalances[erc20Addr] += amount;
+        overallAmount += amount;
+        // mints pool/index token to prev. owner(sender)
+        _mint(msg.sender, amount);
+        emit Deposited(erc20Addr, amount);
+    }
+
+    // Internal function that can forward to external filter contract
+    function checkEligible(address erc20Addr)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        if (hasExternalFilter) {
+            require(
+                poolFilter != address(0),
+                'Error: pool filter address not set'
+            );
+            require(IPoolFilter(poolFilter).checkEligible(erc20Addr));
+        } else {
+            _checkEligible(erc20Addr);
+        }
+        return true;
+    }
+
+    // Function shall be overriden by child contract
+    // Note: WIP: looking for better implementation
+    function _checkEligible(address erc20Addr)
+        internal
+        view
+        virtual
+        returns (bool)
+    {
+        // console.log(erc20Addr);
+        return false;
+    }
+
+    /// @notice Redeems Pool tokens for multiple underlying pERC20s 1:1
+    /// User specifies in front-end the addresses and amounts they want
+    /// Pool token in User's wallet get burned
+    function redeemMany(address[] memory erc20s, uint256[] memory amounts)
+        public
+        virtual
+        whenNotPaused
+    {
+        require(erc20s.length == amounts.length, 'Length of arrays differ');
+
+        for (uint256 i; i < erc20s.length; ++i) {
+            redeemSingle(erc20s[i], amounts[i]);
+        }
+    }
+
+    /// @dev internal function called that redeems a single underlying token
+    function redeemSingle(address erc20, uint256 amount)
+        internal
+        virtual
+        whenNotPaused
+    {
+        require(tokenBalances[erc20] >= amount, 'Amount exceeds supply');
+        _burn(msg.sender, amount);
+        tokenBalances[erc20] -= amount;
+        IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+        emit Redeemed(msg.sender, erc20, amount);
+    }
+
+    // Redeem, and call offset on underlying contracts
+    // Note: Not yet implemented
+    // function offset(uint256 amount) public virtual whenNotPaused {}
+
+    // Implemented in order to disable transfers when paused
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal override {
+        super._beforeTokenTransfer(from, to, amount);
+
+        require(!paused(), 'ERC20Pausable: token transfer while paused');
+    }
+
+    // -----------------------------
+    //      Locked ERC20 safety
+    // -----------------------------
+
+    modifier validDestination(address to) {
+        require(to != address(0x0));
+        require(to != address(this));
+        _;
+    }
+
+    function transfer(address recipient, uint256 amount)
+        public
+        override
+        validDestination(recipient)
+        returns (bool)
+    {
+        super.transfer(recipient, amount);
+        return true;
+    }
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) public override validDestination(recipient) returns (bool) {
+        super.transferFrom(sender, recipient, amount);
+        return true;
+    }
+}
