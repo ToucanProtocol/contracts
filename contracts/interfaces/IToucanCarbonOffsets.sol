@@ -9,6 +9,8 @@ import '../CarbonProjectVintageTypes.sol';
 import '../CarbonProjectTypes.sol';
 
 interface IToucanCarbonOffsets {
+    function burnFrom(address account, uint256 amount) external;
+
     function getAttributes()
         external
         view

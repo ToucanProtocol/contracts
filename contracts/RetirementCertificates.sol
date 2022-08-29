@@ -47,6 +47,7 @@ contract RetirementCertificates is
     event ToucanRegistrySet(address ContractRegistry);
     event BaseURISet(string baseURI);
     event MinValidAmountSet(uint256 previousAmount, uint256 newAmount);
+    event EventsAttached(uint256 tokenId, uint256[] eventIds);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -200,6 +201,7 @@ contract RetirementCertificates is
             claimedEvents[eventId] = true;
             certificates[tokenId].retirementEventIds.push(eventId);
         }
+        emit EventsAttached(tokenId, retirementEventIds);
     }
 
     /// @notice Mint new Retirement Certificate NFT that shows how many TCO2s have been retired.

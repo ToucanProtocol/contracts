@@ -5,8 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity >=0.8.4 <=0.8.14;
 
-/// @dev Storage for the UUPS Proxy upgradable NCT contract
-abstract contract NatureCarbonTonneStorageV1 {
+abstract contract PoolStorageV1 {
     uint256 public supplyCap;
     mapping(address => uint256) public tokenBalances;
     address public contractRegistry;
@@ -52,11 +51,25 @@ abstract contract NatureCarbonTonneStorageV1 {
     bool public methodologiesIsAcceptedMapping;
 }
 
-abstract contract NatureCarbonTonneStorageV1_1 {
+abstract contract PoolStorageV1_1 {
+    /// @notice End users exempted from redeem fees
     mapping(address => bool) public redeemFeeExemptedAddresses;
 }
 
-abstract contract NatureCarbonTonneStorage is
-    NatureCarbonTonneStorageV1,
-    NatureCarbonTonneStorageV1_1
+abstract contract PoolStorageV1_2 {
+    /// @notice TCO2s exempted from redeem fees
+    mapping(address => bool) public redeemFeeExemptedTCO2s;
+}
+
+abstract contract PoolStorageV1_3 {
+    /// @notice bridge router who has access to the bridgeMint & bridgeBurn functions which
+    /// mint/burn pool tokens for cross chain messenges
+    address public router;
+}
+
+abstract contract PoolStorage is
+    PoolStorageV1,
+    PoolStorageV1_1,
+    PoolStorageV1_2,
+    PoolStorageV1_3
 {}

@@ -24,12 +24,19 @@ abstract contract ToucanCarbonOffsetsFactoryStorageV2 {
     uint256 public totalRetired;
 }
 
+/// @dev V3 Storage contract for ToucanCarbonOffsetsFactory v.1.2
+abstract contract ToucanCarbonOffsetsFactoryStorageV3 {
+    /// @notice meant to be used only for cross-chain bridging
+    mapping(address => bool) public allowlist;
+}
+
 /// @dev Main storage contract inheriting new versions
 /// @dev V1 is not inherited as it was inherited in the main contract
 abstract contract ToucanCarbonOffsetsFactoryStorage is
-    ToucanCarbonOffsetsFactoryStorageV2
+    ToucanCarbonOffsetsFactoryStorageV2,
+    ToucanCarbonOffsetsFactoryStorageV3
 {
     /// @dev add a storage gap so future upgrades can introduce new variables
     /// This is also allows for other dependencies to be inherited after this one
-    uint256[45] private __gap; // reduced by 5, due to V2 of storage
+    uint256[44] private __gap;
 }

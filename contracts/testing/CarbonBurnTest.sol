@@ -49,20 +49,19 @@ contract CarbonBurnTest {
         }
     }
 
-    function testRedeemAuto2(uint256 _totalAmount) external {
+    function testRedeemAuto2(uint256 _totalAmount, uint256 expectedLength)
+        external
+    {
         // Redeem pool tokens
         (address[] memory tco2s, uint256[] memory amounts) = IToucanPoolTest(
             _poolToken
         ).redeemAuto2(_totalAmount);
 
+        require(tco2s.length == expectedLength, 'Unexpected tco2 length');
+        require(amounts.length == expectedLength, 'Unexpected amounts length');
+
         // Retire TCO2
         for (uint256 i = 0; i < tco2s.length; i++) {
-            if (amounts[i] < 1e15) {
-                // Dust check for less than a kilo amounts.
-                // These are invalid retirements since the retirement
-                // certificate's smallest denomination is in kilos.
-                continue;
-            }
             IToucanCarbonOffsetsTest(tco2s[i]).retire(amounts[i]);
         }
     }

@@ -17,20 +17,19 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '../interfaces/ICarbonOffsetBatches.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import '../interfaces/IToucanContractRegistry.sol';
-import './BaseCarbonTonneStorage.sol';
+import './PoolStorage.sol';
 
-/// @notice Base Carbon Tonne for KlimaDAO
-/// Contract is an ERC20 compliant token that acts as a pool for TCO2 tokens
-/// It is possible to whitelist Toucan Protocol external tokenized carbon
+/// @notice Pool template contract
+/// ERC20 compliant token that acts as a pool for TCO2 tokens
 //slither-disable-next-line unprotected-upgrade
-contract BaseCarbonTonne is
+abstract contract Pool is
     ContextUpgradeable,
     ERC20Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
     AccessControlUpgradeable,
     UUPSUpgradeable,
-    BaseCarbonTonneStorage
+    PoolStorage
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -38,7 +37,6 @@ contract BaseCarbonTonne is
     //      Constants
     // ----------------------------------------
 
-    string public constant VERSION = '1.5.0';
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
     /// @dev fees redeem percentage with 2 fixed decimals precision
@@ -82,14 +80,6 @@ contract BaseCarbonTonne is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __Pausable_init_unchained();
-        __ERC20_init_unchained('Toucan Protocol: Base Carbon Tonne', 'BCT');
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-    }
-
     function _authorizeUpgrade(address newImplementation)
         internal
         virtual
@@ -116,7 +106,7 @@ contract BaseCarbonTonne is
         _pause();
     }
 
-    /// @dev unpause the system, wraps _unpause(), only Admin
+    /// @dev Unpause the system, wraps _unpause(), only Admin
     function unpause() external virtual onlyWithRole(PAUSER_ROLE) {
         _unpause();
     }
@@ -368,7 +358,7 @@ contract BaseCarbonTonne is
         emit RemoveFeeExemptedTCO2(_tco2);
     }
 
-    /// @notice Function to limit the maximum BCT supply
+    /// @notice Function to limit the maximum pool supply
     /// @dev supplyCap is initially set to 0 and must be increased before deposits
     function setSupplyCap(uint256 newCap) external virtual onlyOwner {
         supplyCap = newCap;
@@ -398,51 +388,11 @@ contract BaseCarbonTonne is
         emit TCO2ScoringUpdated(tco2s);
     }
 
-    /**
-     * @notice method to set router address
-     * @dev use this method to set router address
-     * @param _router address of ToucanCrosschainMessenger
-     */
-    function setRouter(address _router) external onlyOwner {
-        // router address can be set to zero to make bridgeMint and bridgeBurn unusable
-        router = _router;
-        emit RouterUpdated(_router);
-    }
-
-    // -------------------------------------
-    //   ToucanCrosschainMessenger functions
-    // -------------------------------------
-
-    modifier onlyRouter() {
-        require(msg.sender == router, 'Only Router functionality');
-        _;
-    }
-
-    /**
-     * @notice mint tokens to receiver account that were cross-chain bridged
-     * @dev invoked only by the ToucanCrosschainMessenger (Router)
-     * @param _account account that will be minted with corss-chain bridged tokens
-     * @param _amount amount of tokens that will be minted
-     */
-    function bridgeMint(address _account, uint256 _amount) external onlyRouter {
-        _mint(_account, _amount);
-    }
-
-    /**
-     * @notice burn tokens from account to be cross-chain bridged
-     * @dev invoked only by the ToucanCrosschainMessenger (Router)
-     * @param _account account that will be burned with corss-chain bridged tokens
-     * @param _amount amount of tokens that will be burned
-     */
-    function bridgeBurn(address _account, uint256 _amount) external onlyRouter {
-        _burn(_account, _amount);
-    }
-
     // ----------------------------
     //   Permissionless functions
     // ----------------------------
 
-    /// @notice Deposit function for BCT pool that accepts TCO2s and mints BCT 1:1
+    /// @notice Deposit function for pool that accepts TCO2s and mints pool token 1:1
     /// @param erc20Addr ERC20 contract address to be deposited, requires approve
     /// @dev Eligibility is checked via `checkEligible`, balances are tracked
     /// for each TCO2 separately
@@ -451,7 +401,7 @@ contract BaseCarbonTonne is
         virtual
         whenNotPaused
     {
-        require(checkEligible(erc20Addr), 'Token rejected');
+        require(checkEligible(erc20Addr));
 
         uint256 remainingSpace = getRemaining();
         require(remainingSpace > 0, 'Full pool');
@@ -487,10 +437,7 @@ contract BaseCarbonTonne is
 
             require(internalBlackList[erc20Addr] == false, 'Blacklisted TCO2');
 
-            require(
-                checkAttributeMatching(erc20Addr) == true,
-                'Non-matching attributes'
-            );
+            require(checkAttributeMatching(erc20Addr) == true);
         }
         /// @dev If not Toucan native contract, check if address is whitelisted
         else {
@@ -501,7 +448,7 @@ contract BaseCarbonTonne is
         return true;
     }
 
-    /// @notice checks whether incoming project-vintage-ERC20 token matches the accepted criteria/attributes
+    /// @notice Checks whether incoming TCO2s match the accepted criteria/attributes
     function checkAttributeMatching(address erc20Addr)
         public
         view
@@ -585,7 +532,7 @@ contract BaseCarbonTonne is
     /// @dev User specifies in front-end the addresses and amounts they want
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of amounts to redeem for each tco2s
-    /// BCT Pool token in user's wallet get burned
+    /// Pool token in user's wallet get burned
     function redeemMany(address[] memory tco2s, uint256[] memory amounts)
         external
         virtual
@@ -630,7 +577,7 @@ contract BaseCarbonTonne is
     /// TCO2s from an array of ranked TCO2 contracts
     /// starting from contract at index 0 until amount is satisfied
     /// @param amount Total amount to be redeemed
-    /// @dev BCT Pool tokens in user's wallet get burned
+    /// @dev Pool tokens in user's wallet get burned
     function redeemAuto(uint256 amount) external virtual whenNotPaused {
         //slither-disable-next-line uninitialized-local
         uint256 i;
@@ -763,6 +710,46 @@ contract BaseCarbonTonne is
     /// @dev Returns the remaining space in pool before hitting the cap
     function getRemaining() public view returns (uint256) {
         return (supplyCap - totalSupply());
+    }
+
+    /**
+     * @notice method to set router address
+     * @dev use this method to set router address
+     * @param _router address of ToucanCrosschainMessenger
+     */
+    function setRouter(address _router) external onlyOwner {
+        // router address can be set to zero to make bridgeMint and bridgeBurn unusable
+        router = _router;
+        emit RouterUpdated(_router);
+    }
+
+    // -------------------------------------
+    //   ToucanCrosschainMessenger functions
+    // -------------------------------------
+
+    modifier onlyRouter() {
+        require(msg.sender == router, 'Only Router functionality');
+        _;
+    }
+
+    /**
+     * @notice mint tokens to receiver account that were cross-chain bridged
+     * @dev invoked only by the ToucanCrosschainMessenger (Router)
+     * @param _account account that will be minted with corss-chain bridged tokens
+     * @param _amount amount of tokens that will be minted
+     */
+    function bridgeMint(address _account, uint256 _amount) external onlyRouter {
+        _mint(_account, _amount);
+    }
+
+    /**
+     * @notice burn tokens from account to be cross-chain bridged
+     * @dev invoked only by the ToucanCrosschainMessenger (Router)
+     * @param _account account that will be burned with corss-chain bridged tokens
+     * @param _amount amount of tokens that will be burned
+     */
+    function bridgeBurn(address _account, uint256 _amount) external onlyRouter {
+        _burn(_account, _amount);
     }
 
     // -----------------------------

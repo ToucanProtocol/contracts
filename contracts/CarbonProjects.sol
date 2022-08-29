@@ -36,6 +36,7 @@ contract CarbonProjects is
     //      Constants
     // ----------------------------------------
 
+    string public constant VERSION = '1.1.0';
     /// @dev All roles related to Access Control
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 
@@ -118,12 +119,11 @@ contract CarbonProjects is
         string memory method,
         string memory emissionType,
         string memory category,
-        string memory uri
+        string memory uri,
+        address beneficiary
     ) external virtual override onlyManagers whenNotPaused returns (uint256) {
         require(!strcmp(projectId, ''), 'ProjectId cannot be empty');
-
-        /// @FIXME can we deprecate this check?
-        require(projectIds[projectId] == false, 'Project already exists');
+        require(!projectIds[projectId], 'Project already exists');
         projectIds[projectId] = true;
 
         uint256 newItemId = projectTokenCounter;
@@ -146,6 +146,7 @@ contract CarbonProjects is
         projectData[newItemId].emissionType = emissionType;
         projectData[newItemId].category = category;
         projectData[newItemId].uri = uri;
+        projectData[newItemId].beneficiary = beneficiary;
 
         emit ProjectMinted(to, newItemId);
         pidToTokenId[projectId] = newItemId;
@@ -163,7 +164,8 @@ contract CarbonProjects is
         string memory newMethod,
         string memory newEmissionType,
         string memory newCategory,
-        string memory newUri
+        string memory newUri,
+        address beneficiary
     ) external virtual onlyManagers whenNotPaused {
         require(_exists(tokenId), 'Project not yet minted');
         projectData[tokenId].standard = newStandard;
@@ -174,6 +176,7 @@ contract CarbonProjects is
         projectData[tokenId].emissionType = newEmissionType;
         projectData[tokenId].category = newCategory;
         projectData[tokenId].uri = newUri;
+        projectData[tokenId].beneficiary = beneficiary;
 
         emit ProjectUpdated(tokenId);
     }

@@ -19,4 +19,6 @@ interface IToucanCarbonOffsetsFactory {
         returns (uint256 feeAmount, uint256 burnAmount);
 
     function increaseTotalRetired(uint256 amount) external;
+
+    function allowlist(address user) external view returns (bool);
 }
