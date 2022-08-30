@@ -25,7 +25,8 @@ interface ICarbonProjects is IERC721Upgradeable {
         string memory method,
         string memory emissionType,
         string memory category,
-        string memory metaDataHash
+        string memory uri,
+        address beneficiary
     ) external returns (uint256);
 
     function isValidProjectTokenId(uint256 tokenId) external returns (bool);

@@ -47,6 +47,8 @@ contract ToucanCarbonOffsetsFactory is
     // ----------------------------------------
 
     event TokenCreated(uint256 vintageTokenId, address tokenAddress);
+    event AddedToAllowlist(address account);
+    event RemovedFromAllowlist(address account);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -59,7 +61,7 @@ contract ToucanCarbonOffsetsFactory is
 
     /// @dev Returns the current version of the smart contract
     function version() external pure returns (string memory) {
-        return '1.1.0';
+        return '1.2.0';
     }
 
     function initialize(address _contractRegistry)
@@ -73,6 +75,10 @@ contract ToucanCarbonOffsetsFactory is
         contractRegistry = _contractRegistry;
     }
 
+    // ----------------------------------------
+    //           Admin functions
+    // ----------------------------------------
+
     function _authorizeUpgrade(address newImplementation)
         internal
         virtual
@@ -84,10 +90,6 @@ contract ToucanCarbonOffsetsFactory is
     function setBeacon(address _beacon) external virtual onlyOwner {
         beacon = _beacon;
     }
-
-    // ----------------------------------------
-    //           Admin functions
-    // ----------------------------------------
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
@@ -107,6 +109,26 @@ contract ToucanCarbonOffsetsFactory is
         onlyOwner
     {
         contractRegistry = _address;
+    }
+
+    /// @notice adds account to the allowlist
+    /// meant to be used only for cross-chain bridging
+    function addToAllowlist(address account) external virtual onlyOwner {
+        bool isAllowed = allowlist[account];
+        require(!isAllowed, 'Already allowed');
+
+        allowlist[account] = true;
+        emit AddedToAllowlist(account);
+    }
+
+    /// @notice removes account from the allowlist
+    /// meant to be used only for cross-chain bridging
+    function removeFromAllowlist(address account) external virtual onlyOwner {
+        bool isAllowed = allowlist[account];
+        require(isAllowed, 'Already not allowed');
+
+        allowlist[account] = false;
+        emit RemovedFromAllowlist(account);
     }
 
     // ----------------------------------------

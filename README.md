@@ -6,15 +6,11 @@ SPDX-License-Identifier: LicenseRef-Proprietary
 
 # Smart contracts of the Toucan Protocol
 This repository contains only the smart contracts of Toucan Protocol. 
+Since Toucan Protocol has upgradable smart contracts built with the UUPS proxy system by Open Zeppelin, changes of already deployed contracts are realized on-chain by an upgrade process, which is subject to scheduling. In order to view the latest state, we recommend viewing the implementation contract's source code on the respective block explorer (e.g. Polygonscan).
 
 [toucan.earth](https://toucan.earth/)
 
 ---
-
-![Tests](https://github.com/ToucanProtocol/tokenizer/actions/workflows/yarn-test.yml/badge.svg)
-![hardhat deploy](https://github.com/ToucanProtocol/tokenizer/actions/workflows/hardhat-deploy.yml/badge.svg)
-![Linting](https://github.com/ToucanProtocol/tokenizer/actions/workflows/lint.yml/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/ToucanProtocol/tokenizer/badge.svg?branch=master&t=JDU6s7)](https://coveralls.io/github/ToucanProtocol/tokenizer?branch=master)
 
 # Toucan Protocol tokenizer
 

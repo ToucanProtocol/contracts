@@ -51,14 +51,28 @@ abstract contract BaseCarbonTonneStorageV1_1 {
 }
 
 abstract contract BaseCarbonTonneStorageV1_2 {
+    /// @notice End users exempted from redeem fees
     mapping(address => bool) public redeemFeeExemptedAddresses;
 
     /// @notice array used to read from when redeeming TCO2s automatically
     address[] public scoredTCO2s;
 }
 
+abstract contract BaseCarbonTonneStorageV1_3 {
+    /// @notice TCO2s exempted from redeem fees
+    mapping(address => bool) public redeemFeeExemptedTCO2s;
+}
+
+abstract contract BaseCarbonTonneStorageV1_4 {
+    /// @notice bridge router who has access to the bridgeMint & bridgeBurn functions which
+    /// mint/burn pool tokens for cross chain messenges
+    address public router;
+}
+
 abstract contract BaseCarbonTonneStorage is
     BaseCarbonTonneStorageV1,
     BaseCarbonTonneStorageV1_1,
-    BaseCarbonTonneStorageV1_2
+    BaseCarbonTonneStorageV1_2,
+    BaseCarbonTonneStorageV1_3,
+    BaseCarbonTonneStorageV1_4
 {}

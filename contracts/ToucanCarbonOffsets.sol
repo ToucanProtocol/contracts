@@ -55,6 +55,17 @@ contract ToucanCarbonOffsets is
         _;
     }
 
+    modifier onlyAllowed() {
+        address ToucanCarbonOffsetsFactoryAddress = IToucanContractRegistry(
+            contractRegistry
+        ).toucanCarbonOffsetsFactoryAddress();
+        bool isAllowed = IToucanCarbonOffsetsFactory(
+            ToucanCarbonOffsetsFactoryAddress
+        ).allowlist(msg.sender);
+        require(isAllowed, 'Not allowed');
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -66,7 +77,41 @@ contract ToucanCarbonOffsets is
 
     /// @dev Returns the current version of the smart contract
     function version() external pure virtual returns (string memory) {
-        return '1.2.0';
+        return '1.4.0';
+    }
+
+    // ----------------------------------------
+    //      Bridge-related functions
+    // ----------------------------------------
+
+    /// @notice Burn TCO2 on behalf of a user. msg.sender does not require approval
+    /// by the account for the burn to be successfull. This function is exposed so it
+    /// can be utilized in cross-chain transfers of TCO2 where we want to burn the
+    /// TCO2 in the source chain but not retire it.
+    /// @param account The user for whom to burn TCO2
+    /// @param amount The amount to burn.
+    function bridgeBurn(address account, uint256 amount)
+        external
+        virtual
+        whenNotPaused
+        onlyAllowed
+    {
+        _burn(account, amount);
+    }
+
+    /// @notice Mint TCO2 on behalf of a user. This function is exposed to
+    /// be called by authorized message bridge systems and utilized for
+    /// cross-chain transfers of TCO2 where we want to mint the TCO2 in the
+    /// source chain.
+    /// @param account The user for whom to mint TCO2
+    /// @param amount The amount to mint.
+    function bridgeMint(address account, uint256 amount)
+        external
+        virtual
+        whenNotPaused
+        onlyAllowed
+    {
+        _mint(account, amount);
     }
 
     // ----------------------------------------
@@ -147,7 +192,7 @@ contract ToucanCarbonOffsets is
     }
 
     /// @notice Receive hook to fractionalize Batch-NFTs into ERC20's
-    /// @dev Function is called with `operator` as `_msgSender()` in a reference implementation by OZ
+    /// @dev Function is called with `operator` as `msg.sender` in a reference implementation by OZ
     /// `from` is the previous owner, not necessarily the same as operator.
     /// The hook checks if NFT collection is whitelisted and next if attributes are matching this ERC20 contract
     function onERC721Received(
@@ -275,6 +320,20 @@ contract ToucanCarbonOffsets is
         );
     }
 
+    /// @notice Burn TCO2 on behalf of a user. msg.sender needs to be approved by
+    /// the account for the burn to be successfull. This function is exposed so it
+    /// can be utilized to burn credits without retiring them (eg. dispose HFC-23).
+    /// @param account The user for whom to burn TCO2
+    /// @param amount The amount to burn
+    function burnFrom(address account, uint256 amount)
+        external
+        virtual
+        whenNotPaused
+    {
+        _spendAllowance(account, msg.sender, amount);
+        _burn(account, amount);
+    }
+
     /// @notice Retirement/Cancellation of TCO2 tokens (the actual offsetting),
     /// which results in the tokens being burnt
     function retire(uint256 amount)
@@ -283,7 +342,7 @@ contract ToucanCarbonOffsets is
         whenNotPaused
         returns (uint256 retirementEventId)
     {
-        retirementEventId = _retire(_msgSender(), amount);
+        retirementEventId = _retire(msg.sender, amount);
     }
 
     /// @dev Allow for pools or third party contracts to retire for the user
@@ -294,14 +353,7 @@ contract ToucanCarbonOffsets is
         whenNotPaused
         returns (uint256 retirementEventId)
     {
-        uint256 currentAllowance = allowance(account, _msgSender());
-        require(
-            currentAllowance >= amount,
-            'TCO2: retire amount exceeds allowance'
-        );
-        unchecked {
-            _approve(account, _msgSender(), currentAllowance - amount);
-        }
+        _spendAllowance(account, msg.sender, amount);
         retirementEventId = _retire(account, amount);
     }
 

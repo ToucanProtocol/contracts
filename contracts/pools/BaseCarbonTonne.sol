@@ -38,6 +38,7 @@ contract BaseCarbonTonne is
     //      Constants
     // ----------------------------------------
 
+    string public constant VERSION = '1.5.0';
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
     /// @dev fees redeem percentage with 2 fixed decimals precision
@@ -68,6 +69,9 @@ contract BaseCarbonTonne is
     event SupplyCapUpdated(uint256 newCap);
     event MinimumVintageStartTimeUpdated(uint256 minimumVintageStartTime);
     event TCO2ScoringUpdated(address[] tco2s);
+    event AddFeeExemptedTCO2(address tco2);
+    event RemoveFeeExemptedTCO2(address tco2);
+    event RouterUpdated(address router);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -77,11 +81,6 @@ contract BaseCarbonTonne is
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
-
-    /// @dev Returns the current version of the smart contract
-    function version() external pure virtual returns (string memory) {
-        return '1.2.1';
-    }
 
     function initialize() external virtual initializer {
         __Context_init_unchained();
@@ -277,6 +276,98 @@ contract BaseCarbonTonne is
         }
     }
 
+    /// @notice Update the fee redeem percentage
+    /// @param _feeRedeemPercentageInBase percentage of fee in base
+    function setFeeRedeemPercentage(uint256 _feeRedeemPercentageInBase)
+        external
+        virtual
+        onlyOwner
+    {
+        require(
+            _feeRedeemPercentageInBase < feeRedeemDivider,
+            'Invalid fee percentage'
+        );
+        feeRedeemPercentageInBase = _feeRedeemPercentageInBase;
+    }
+
+    /// @notice Update the fee redeem receiver
+    /// @param _feeRedeemReceiver address to transfer the fees
+    function setFeeRedeemReceiver(address _feeRedeemReceiver)
+        external
+        virtual
+        onlyOwner
+    {
+        require(_feeRedeemReceiver != address(0), 'Invalid fee address');
+        feeRedeemReceiver = _feeRedeemReceiver;
+    }
+
+    /// @notice Update the fee redeem burn percentage
+    /// @param _feeRedeemBurnPercentageInBase percentage of fee in base
+    function setFeeRedeemBurnPercentage(uint256 _feeRedeemBurnPercentageInBase)
+        external
+        virtual
+        onlyOwner
+    {
+        require(
+            _feeRedeemBurnPercentageInBase < feeRedeemDivider,
+            'Invalid burn percentage'
+        );
+        feeRedeemBurnPercentageInBase = _feeRedeemBurnPercentageInBase;
+    }
+
+    /// @notice Update the fee redeem burn address
+    /// @param _feeRedeemBurnAddress address to transfer the fees to burn
+    function setFeeRedeemBurnAddress(address _feeRedeemBurnAddress)
+        external
+        virtual
+        onlyOwner
+    {
+        require(_feeRedeemBurnAddress != address(0), 'Invalid burn address');
+        feeRedeemBurnAddress = _feeRedeemBurnAddress;
+    }
+
+    /// @notice Adds a new address for redeem fees exemption
+    /// @param _address address to be exempted on redeem fees
+    function addRedeemFeeExemptedAddress(address _address)
+        external
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedAddresses[_address] = true;
+    }
+
+    /// @notice Removes an address from redeem fees exemption
+    /// @param _address address to be removed from exemption
+    function removeRedeemFeeExemptedAddress(address _address)
+        external
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedAddresses[_address] = false;
+    }
+
+    /// @notice Adds a new TCO2 for redeem fees exemption
+    /// @param _tco2 TCO2 to be exempted on redeem fees
+    function addRedeemFeeExemptedTCO2(address _tco2)
+        external
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedTCO2s[_tco2] = true;
+        emit AddFeeExemptedTCO2(_tco2);
+    }
+
+    /// @notice Removes a TCO2 from redeem fees exemption
+    /// @param _tco2 TCO2 to be removed from exemption
+    function removeRedeemFeeExemptedTCO2(address _tco2)
+        external
+        virtual
+        onlyOwner
+    {
+        redeemFeeExemptedTCO2s[_tco2] = false;
+        emit RemoveFeeExemptedTCO2(_tco2);
+    }
+
     /// @notice Function to limit the maximum BCT supply
     /// @dev supplyCap is initially set to 0 and must be increased before deposits
     function setSupplyCap(uint256 newCap) external virtual onlyOwner {
@@ -305,6 +396,46 @@ contract BaseCarbonTonne is
         require(tco2s.length > 0, '!tco2s');
         scoredTCO2s = tco2s;
         emit TCO2ScoringUpdated(tco2s);
+    }
+
+    /**
+     * @notice method to set router address
+     * @dev use this method to set router address
+     * @param _router address of ToucanCrosschainMessenger
+     */
+    function setRouter(address _router) external onlyOwner {
+        // router address can be set to zero to make bridgeMint and bridgeBurn unusable
+        router = _router;
+        emit RouterUpdated(_router);
+    }
+
+    // -------------------------------------
+    //   ToucanCrosschainMessenger functions
+    // -------------------------------------
+
+    modifier onlyRouter() {
+        require(msg.sender == router, 'Only Router functionality');
+        _;
+    }
+
+    /**
+     * @notice mint tokens to receiver account that were cross-chain bridged
+     * @dev invoked only by the ToucanCrosschainMessenger (Router)
+     * @param _account account that will be minted with corss-chain bridged tokens
+     * @param _amount amount of tokens that will be minted
+     */
+    function bridgeMint(address _account, uint256 _amount) external onlyRouter {
+        _mint(_account, _amount);
+    }
+
+    /**
+     * @notice burn tokens from account to be cross-chain bridged
+     * @dev invoked only by the ToucanCrosschainMessenger (Router)
+     * @param _account account that will be burned with corss-chain bridged tokens
+     * @param _amount amount of tokens that will be burned
+     */
+    function bridgeBurn(address _account, uint256 _amount) external onlyRouter {
+        _burn(_account, _amount);
     }
 
     // ----------------------------
@@ -405,76 +536,6 @@ contract BaseCarbonTonne is
         return true;
     }
 
-    /// @notice Update the fee redeem percentage
-    /// @param _feeRedeemPercentageInBase percentage of fee in base
-    function setFeeRedeemPercentage(uint256 _feeRedeemPercentageInBase)
-        external
-        virtual
-        onlyOwner
-    {
-        require(
-            _feeRedeemPercentageInBase < feeRedeemDivider,
-            'Invalid fee percentage'
-        );
-        feeRedeemPercentageInBase = _feeRedeemPercentageInBase;
-    }
-
-    /// @notice Update the fee redeem receiver
-    /// @param _feeRedeemReceiver address to transfer the fees
-    function setFeeRedeemReceiver(address _feeRedeemReceiver)
-        external
-        virtual
-        onlyOwner
-    {
-        require(_feeRedeemReceiver != address(0), 'Invalid fee address');
-        feeRedeemReceiver = _feeRedeemReceiver;
-    }
-
-    /// @notice Update the fee redeem burn percentage
-    /// @param _feeRedeemBurnPercentageInBase percentage of fee in base
-    function setFeeRedeemBurnPercentage(uint256 _feeRedeemBurnPercentageInBase)
-        external
-        virtual
-        onlyOwner
-    {
-        require(
-            _feeRedeemBurnPercentageInBase < feeRedeemDivider,
-            'Invalid burn percentage'
-        );
-        feeRedeemBurnPercentageInBase = _feeRedeemBurnPercentageInBase;
-    }
-
-    /// @notice Update the fee redeem burn address
-    /// @param _feeRedeemBurnAddress address to transfer the fees to burn
-    function setFeeRedeemBurnAddress(address _feeRedeemBurnAddress)
-        external
-        virtual
-        onlyOwner
-    {
-        require(_feeRedeemBurnAddress != address(0), 'Invalid burn address');
-        feeRedeemBurnAddress = _feeRedeemBurnAddress;
-    }
-
-    /// @notice Adds a new address for redeem fees exemption
-    /// @param _address address to be exempted on redeem fees
-    function addRedeemFeeExemptedAddress(address _address)
-        external
-        virtual
-        onlyOwner
-    {
-        redeemFeeExemptedAddresses[_address] = true;
-    }
-
-    /// @notice Removes a new address for redeem fees exemption
-    /// @param _address address to be exempted on redeem fees
-    function removeRedeemFeeExemptedAddress(address _address)
-        external
-        virtual
-        onlyOwner
-    {
-        redeemFeeExemptedAddresses[_address] = false;
-    }
-
     /// @notice View function to calculate fees pre-execution
     /// @dev User specifies in front-end the addresses and amounts they want
     /// @param tco2s Array of TCO2 contract addresses
@@ -491,51 +552,70 @@ contract BaseCarbonTonne is
 
         //slither-disable-next-line uninitialized-local
         uint256 totalFee;
+        uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
 
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2s.length; ++i) {
-            uint256 feeAmount = calculateFeeForSingleAmount(
-                amounts[i],
-                feeRedeemPercentageInBase
-            );
+            uint256 feeAmount = (amounts[i] * _feeRedeemPercentageInBase) /
+                feeRedeemDivider;
             totalFee += feeAmount;
         }
         return totalFee;
     }
 
-    /// @notice Redeems Pool tokens for multiple underlying TCO2s 1:1
+    /// @notice Redeem a whitelisted TCO2 without paying any fees and burn
+    /// the TCO2. Initially added to burn HFC-23 credits, can be used in the
+    /// future to dispose of any other whitelisted credits.
+    /// @dev User needs to approve the pool contract in the TCO2 contract for
+    /// the amount to be burnt before executing this function.
+    /// @param tco2 TCO2 to redeem and burn
+    /// @param amount Amount to redeem and burn
+    function redeemAndBurn(address tco2, uint256 amount)
+        external
+        whenNotPaused
+    {
+        require(redeemFeeExemptedTCO2s[tco2], 'Not exempted');
+        redeemSingle(tco2, amount);
+        // User has to approve the pool contract in the TCO2 contract
+        // in order for this function to successfully burn the tokens
+        IToucanCarbonOffsets(tco2).burnFrom(msg.sender, amount);
+    }
+
+    /// @notice Redeems Pool tokens for multiple underlying TCO2s 1:1 minus fees
     /// @dev User specifies in front-end the addresses and amounts they want
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of amounts to redeem for each tco2s
     /// BCT Pool token in user's wallet get burned
-    function redeemMany(address[] memory erc20s, uint256[] memory amounts)
+    function redeemMany(address[] memory tco2s, uint256[] memory amounts)
         external
         virtual
         whenNotPaused
     {
-        require(erc20s.length == amounts.length, 'Length of arrays differ');
+        uint256 tco2Length = tco2s.length;
+        require(tco2Length == amounts.length, 'Length of arrays differ');
 
         //slither-disable-next-line uninitialized-local
         uint256 totalFee;
         uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
         bool isExempted = redeemFeeExemptedAddresses[msg.sender];
+        //slither-disable-next-line uninitialized-local
+        uint256 feeAmount;
 
         //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20s.length; ++i) {
-            //slither-disable-next-line uninitialized-local
-            uint256 feeAmount;
+        for (uint256 i; i < tco2Length; ++i) {
             if (!isExempted) {
-                feeAmount = calculateFeeForSingleAmount(
-                    amounts[i],
-                    _feeRedeemPercentageInBase
-                );
+                feeAmount =
+                    (amounts[i] * _feeRedeemPercentageInBase) /
+                    feeRedeemDivider;
                 totalFee += feeAmount;
+            } else {
+                feeAmount = 0;
             }
-            redeemSingle(erc20s[i], amounts[i] - feeAmount);
+            redeemSingle(tco2s[i], amounts[i] - feeAmount);
         }
         if (totalFee != 0) {
-            uint256 burnAmount = calculateRedeemFeeBurnAmount(
-                totalFee,
-                feeRedeemBurnPercentageInBase
-            );
+            uint256 burnAmount = (totalFee * feeRedeemBurnPercentageInBase) /
+                feeRedeemDivider;
             totalFee -= burnAmount;
             transfer(feeRedeemReceiver, totalFee);
             emit RedeemFeePaid(msg.sender, totalFee);
@@ -546,47 +626,25 @@ contract BaseCarbonTonne is
         }
     }
 
-    function calculateRedeemFeeBurnAmount(
-        uint256 _totalFee,
-        uint256 feeRedeemBurnBp
-    ) internal pure returns (uint256 _burnAmount) {
-        return (_totalFee * feeRedeemBurnBp) / feeRedeemDivider;
-    }
-
-    function calculateFeeForSingleAmount(uint256 _amount, uint256 feeRedeemBp)
-        internal
-        view
-        returns (uint256 _fees)
-    {
-        if (feeRedeemBp == 0 || redeemFeeExemptedAddresses[msg.sender]) {
-            return 0;
-        }
-        _fees = (_amount * feeRedeemBp) / feeRedeemDivider;
-    }
-
     /// @notice Automatically redeems an amount of Pool tokens for underlying
     /// TCO2s from an array of ranked TCO2 contracts
     /// starting from contract at index 0 until amount is satisfied
     /// @param amount Total amount to be redeemed
     /// @dev BCT Pool tokens in user's wallet get burned
     function redeemAuto(uint256 amount) external virtual whenNotPaused {
-        require(amount <= totalSupply(), 'Amount exceeds totalSupply');
-        uint256 remainingAmount = amount;
         //slither-disable-next-line uninitialized-local
         uint256 i;
 
         uint256 scoredTCO2Len = scoredTCO2s.length;
-        while (remainingAmount > 0 && i < scoredTCO2Len) {
+        while (amount > 0 && i < scoredTCO2Len) {
             address tco2 = scoredTCO2s[i];
             uint256 balance = tokenBalances[tco2];
 
             // Only TCO2s with a balance should be included for a redemption.
             if (balance != 0) {
-                uint256 amountToRedeem = remainingAmount > balance
-                    ? balance
-                    : remainingAmount;
+                uint256 amountToRedeem = amount > balance ? balance : amount;
                 redeemSingle(tco2, amountToRedeem);
-                remainingAmount -= amountToRedeem;
+                amount -= amountToRedeem;
             }
 
             unchecked {
@@ -594,7 +652,7 @@ contract BaseCarbonTonne is
             }
         }
 
-        require(remainingAmount == 0, 'Non-zero remaining amount');
+        require(amount == 0, 'Non-zero remaining amount');
     }
 
     /// @notice Automatically redeems an amount of Pool tokens for underlying
@@ -611,13 +669,14 @@ contract BaseCarbonTonne is
         whenNotPaused
         returns (address[] memory tco2s, uint256[] memory amounts)
     {
-        require(amount <= totalSupply(), 'Amount exceeds totalSupply');
-        uint256 remainingAmount = amount;
         //slither-disable-next-line uninitialized-local
         uint256 i;
+        // Non-zero count tracks TCO2s with a balance
+        //slither-disable-next-line uninitialized-local
+        uint256 nonZeroCount;
 
         uint256 scoredTCO2Len = scoredTCO2s.length;
-        while (remainingAmount > 0 && i < scoredTCO2Len) {
+        while (amount > 0 && i < scoredTCO2Len) {
             address tco2 = scoredTCO2s[i];
             uint256 balance = tokenBalances[tco2];
             //slither-disable-next-line uninitialized-local
@@ -625,50 +684,55 @@ contract BaseCarbonTonne is
 
             // Only TCO2s with a balance should be included for a redemption.
             if (balance != 0) {
-                amountToRedeem = remainingAmount > balance
-                    ? balance
-                    : remainingAmount;
-                remainingAmount -= amountToRedeem;
+                amountToRedeem = amount > balance ? balance : amount;
+                amount -= amountToRedeem;
+                unchecked {
+                    ++nonZeroCount;
+                }
             }
 
             unchecked {
-                i += 1;
+                ++i;
             }
 
             // Create return arrays statically since Solidity does not
             // support dynamic arrays or mappings in-memory (EIP-1153).
             // Do it here to avoid having to fill out the last indexes
             // during the second iteration.
-            if (remainingAmount == 0) {
-                tco2s = new address[](i);
-                amounts = new uint256[](i);
+            if (amount == 0) {
+                tco2s = new address[](nonZeroCount);
+                amounts = new uint256[](nonZeroCount);
 
-                tco2s[i - 1] = tco2;
-                amounts[i - 1] = amountToRedeem;
+                tco2s[nonZeroCount - 1] = tco2;
+                amounts[nonZeroCount - 1] = amountToRedeem;
                 redeemSingle(tco2, amountToRedeem);
             }
         }
 
-        require(remainingAmount == 0, 'Non-zero remaining amount');
+        require(amount == 0, 'Non-zero remaining amount');
 
         // Execute the second iteration by avoiding to run the last index
         // since we have already executed that in the first iteration.
+        nonZeroCount = 0;
         //slither-disable-next-line uninitialized-local
         for (uint256 j; j < i - 1; ++j) {
             address tco2 = scoredTCO2s[j];
-            // This second loop only gets called when the `remainingAmount` is larger
+            // This second loop only gets called when the `amount` is larger
             // than the first tco2 balance in the array. Here, in every iteration the
             // tco2 balance is smaller than the remaining amount while the last bit of
-            // the `remainingAmount` which is smaller than the tco2 balance, got redeemed
+            // the `amount` which is smaller than the tco2 balance, got redeemed
             // in the first loop.
             uint256 balance = tokenBalances[tco2];
 
             // Ignore empty balances so we don't generate redundant transactions.
             if (balance == 0) continue;
 
-            tco2s[j] = tco2;
-            amounts[j] = balance;
+            tco2s[nonZeroCount] = tco2;
+            amounts[nonZeroCount] = balance;
             redeemSingle(tco2, balance);
+            unchecked {
+                ++nonZeroCount;
+            }
         }
     }
 

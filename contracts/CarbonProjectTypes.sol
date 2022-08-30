@@ -17,5 +17,5 @@ struct ProjectData {
     string emissionType;
     string category;
     string uri;
-    address controller;
+    address beneficiary;
 }
