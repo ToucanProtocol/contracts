@@ -12,7 +12,6 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 
 import './CarbonProjectsStorage.sol';
 import './interfaces/ICarbonProjects.sol';
-import './libraries/Modifiers.sol';
 
 /// @notice The CarbonProjects contract stores carbon project-specific data
 /// The data is stored in structs via ERC721 tokens
@@ -28,7 +27,6 @@ contract CarbonProjects is
     ERC721Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    Modifiers,
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
@@ -69,84 +67,90 @@ contract CarbonProjects is
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function _authorizeUpgrade(address newImplementation)
-        internal
-        virtual
-        override
-        onlyOwner
-    {}
+    function _authorizeUpgrade(address) internal virtual override {
+        _onlyOwner();
+    }
 
     // ------------------------
     //      Admin functions
     // ------------------------
     /// @dev modifier that only lets the contract's owner and elected managers add/update/remove project data
-    modifier onlyManagers() {
-        require(
-            hasRole(MANAGER_ROLE, msg.sender) || owner() == msg.sender,
-            'Caller is not authorized'
-        );
-        _;
+
+    function _onlyBy(address _contract, address _owner) internal view {
+        if (_contract != msg.sender && _owner != msg.sender) {
+            revert CallerNotAllowed();
+        }
     }
 
-    /// @notice Emergency function to disable contract's core functionality
-    /// @dev wraps _pause(), only Admin
-    function pause() external virtual onlyBy(contractRegistry, owner()) {
+    function _onlyOwner() internal view {
+        if (_msgSender() != owner()) {
+            revert OnlyOwner();
+        }
+    }
+
+    function _onlyManagers() internal view {
+        if (!hasRole(MANAGER_ROLE, _msgSender()) && owner() != _msgSender()) {
+            revert NotManagerOrOwner();
+        }
+    }
+
+    function _tokenExists(uint256 _tokenId) internal view {
+        if (!_exists(_tokenId)) {
+            revert TokenDoesNotExist();
+        }
+    }
+
+    function _notPaused() internal view {
+        if (paused()) {
+            revert ContractPaused();
+        }
+    }
+
+    function pause() external virtual {
+        _onlyBy(contractRegistry, owner());
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() external virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external virtual {
+        _onlyBy(contractRegistry, owner());
         _unpause();
     }
 
-    function setToucanContractRegistry(address _address)
-        external
-        virtual
-        onlyOwner
-    {
+    function setToucanContractRegistry(address _address) external virtual {
+        _onlyOwner();
         contractRegistry = _address;
     }
 
     /// @notice Adds a new carbon project along with attributes/data
     /// @dev Projects can be added by data-managers
-    function addNewProject(
-        address to,
-        string memory projectId,
-        string memory standard,
-        string memory methodology,
-        string memory region,
-        string memory storageMethod,
-        string memory method,
-        string memory emissionType,
-        string memory category,
-        string memory uri,
-        address beneficiary
-    ) external virtual override onlyManagers whenNotPaused returns (uint256) {
-        require(!strcmp(projectId, ''), 'ProjectId cannot be empty');
-        require(!projectIds[projectId], 'Project already exists');
+    function addNewProject(address to, ProjectData calldata _projectData)
+        external
+        virtual
+        override
+        returns (uint256)
+    {
+        _notPaused();
+        _onlyManagers();
+
+        string memory projectId = _projectData.projectId;
+
+        if (strcmp(projectId, '')) revert ProjectIdCannotBeEmpty();
+        if (projectIds[projectId]) revert ProjectIdAlreadyExists();
+
         projectIds[projectId] = true;
 
         uint256 newItemId = projectTokenCounter;
-        unchecked {
-            ++newItemId;
-            ++totalSupply;
-        }
+        ++newItemId;
+        ++totalSupply;
+
         projectTokenCounter = uint128(newItemId);
 
         validProjectTokenIds[newItemId] = true;
 
         _mint(to, newItemId);
 
-        projectData[newItemId].projectId = projectId;
-        projectData[newItemId].standard = standard;
-        projectData[newItemId].methodology = methodology;
-        projectData[newItemId].region = region;
-        projectData[newItemId].storageMethod = storageMethod;
-        projectData[newItemId].method = method;
-        projectData[newItemId].emissionType = emissionType;
-        projectData[newItemId].category = category;
-        projectData[newItemId].uri = uri;
-        projectData[newItemId].beneficiary = beneficiary;
+        projectData[newItemId] = _projectData;
 
         emit ProjectMinted(to, newItemId);
         pidToTokenId[projectId] = newItemId;
@@ -155,64 +159,47 @@ contract CarbonProjects is
 
     /// @notice Updates and existing carbon project
     /// @dev Projects can be updated by data-managers
-    function updateProject(
-        uint256 tokenId,
-        string memory newStandard,
-        string memory newMethodology,
-        string memory newRegion,
-        string memory newStorageMethod,
-        string memory newMethod,
-        string memory newEmissionType,
-        string memory newCategory,
-        string memory newUri,
-        address beneficiary
-    ) external virtual onlyManagers whenNotPaused {
-        require(_exists(tokenId), 'Project not yet minted');
-        projectData[tokenId].standard = newStandard;
-        projectData[tokenId].methodology = newMethodology;
-        projectData[tokenId].region = newRegion;
-        projectData[tokenId].storageMethod = newStorageMethod;
-        projectData[tokenId].method = newMethod;
-        projectData[tokenId].emissionType = newEmissionType;
-        projectData[tokenId].category = newCategory;
-        projectData[tokenId].uri = newUri;
-        projectData[tokenId].beneficiary = beneficiary;
+    function updateProject(uint256 tokenId, ProjectData calldata _projectData)
+        external
+        virtual
+    {
+        _notPaused();
+        _onlyManagers();
+        _tokenExists(tokenId);
+
+        projectData[tokenId] = _projectData;
 
         emit ProjectUpdated(tokenId);
     }
 
     /// @dev Projects and their projectId's must be unique, changing them must be handled carefully
-    function updateProjectId(uint256 tokenId, string memory newProjectId)
+    function updateProjectId(uint256 tokenId, string calldata newProjectId)
         external
         virtual
-        onlyManagers
-        whenNotPaused
     {
-        require(_exists(tokenId), 'Project not yet minted');
-        require(
-            projectIds[newProjectId] == false,
-            'Cant change current projectId to an existing one'
-        );
+        _notPaused();
+        _onlyManagers();
+        _tokenExists(tokenId);
+        if (projectIds[newProjectId]) revert ProjectIdAlreadyExists();
 
-        string memory oldProjectId = projectData[tokenId].projectId;
+        ProjectData storage pData = projectData[tokenId];
+
+        string memory oldProjectId = pData.projectId;
         projectIds[oldProjectId] = false;
 
-        projectData[tokenId].projectId = newProjectId;
+        pData.projectId = newProjectId;
         projectIds[newProjectId] = true;
 
         emit ProjectIdUpdated(tokenId);
     }
 
     /// @dev Removes a project and corresponding data, sets projectTokenId invalid
-    function removeProject(uint256 projectTokenId)
-        external
-        virtual
-        onlyManagers
-        whenNotPaused
-    {
+    function removeProject(uint256 projectTokenId) external virtual {
+        _notPaused();
+        _onlyManagers();
         delete projectData[projectTokenId];
         /// @dev set projectTokenId to invalid
-        totalSupply--;
+        --totalSupply;
         validProjectTokenIds[projectTokenId] = false;
     }
 
@@ -269,7 +256,8 @@ contract CarbonProjects is
         return baseURI;
     }
 
-    function setBaseURI(string memory gateway) external virtual onlyOwner {
+    function setBaseURI(string calldata gateway) external virtual {
+        _onlyOwner();
         baseURI = gateway;
     }
 
@@ -282,10 +270,7 @@ contract CarbonProjects is
         override
         returns (string memory)
     {
-        require(
-            _exists(tokenId),
-            'ERC721URIStorage: URI query for nonexistent token'
-        );
+        _tokenExists(tokenId);
 
         string memory uri = projectData[tokenId].uri;
         string memory base = _baseURI();
@@ -317,4 +302,12 @@ contract CarbonProjects is
     {
         return memcmp(bytes(a), bytes(b));
     }
+
+    error CallerNotAllowed();
+    error OnlyOwner();
+    error NotManagerOrOwner();
+    error TokenDoesNotExist();
+    error ProjectIdAlreadyExists();
+    error ProjectIdCannotBeEmpty();
+    error ContractPaused();
 }
