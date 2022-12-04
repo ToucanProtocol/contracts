@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.9;
+pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/extensions/ERC721EnumerableUpgradeable.sol';
@@ -21,7 +21,6 @@ import './libraries/Modifiers.sol';
 
 /// @notice Also referred to as Batch-Contract (formerly BatchCollection)
 /// Contract that tokenizes retired/cancelled CO2 credits into NFTs via a claims process
-//slither-disable-next-line unprotected-upgrade
 contract CarbonOffsetBatches is
     ICarbonOffsetBatches,
     ERC721EnumerableUpgradeable,
@@ -39,6 +38,8 @@ contract CarbonOffsetBatches is
     //      Constants
     // ----------------------------------------
 
+    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    string public constant VERSION = '1.2.0';
     bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
 
     // ----------------------------------------
@@ -67,11 +68,6 @@ contract CarbonOffsetBatches is
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
-
-    /// @dev Returns the current version of the smart contract
-    function version() external pure returns (string memory) {
-        return '1.2.0';
-    }
 
     function initialize(address _contractRegistry)
         external
@@ -342,8 +338,9 @@ contract CarbonOffsetBatches is
         emit BatchUpdated(tokenId, serialNumber, quantity);
     }
 
-    /// @dev Function to just update serial number and quantity and not the URI,
-    /// does not work for rejected bat
+    /// @dev Convenience function to only update serial number and quantity and not the serial/URI
+    /// @param newSerialNumber the serial number received from the registry/credit cancellation
+    /// @param newQuantity quantity in tCO2e
     function setSerialandQuantity(
         uint256 tokenId,
         string memory newSerialNumber,
@@ -417,7 +414,7 @@ contract CarbonOffsetBatches is
         address from,
         address to,
         uint256 tokenId
-    ) public virtual override {
+    ) public virtual override(ERC721Upgradeable, IERC721Upgradeable) {
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: transfer caller is not owner nor approved'
@@ -432,10 +429,6 @@ contract CarbonOffsetBatches is
         require(
             _isApprovedOrOwner(_msgSender(), tokenId),
             'ERC721: transfer caller is not owner nor approved'
-        );
-        require(
-            nftList[tokenId].status == RetirementStatus.Confirmed,
-            'Error: cannot fractionalize before confirmation'
         );
 
         address ERC20Factory = IToucanContractRegistry(contractRegistry)

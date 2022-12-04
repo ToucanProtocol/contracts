@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 /// @dev Storage for UUPS Proxy upgradable BaseCarbonTonne
 abstract contract BaseCarbonTonneStorageV1 {
+    /// @notice The supply cap is used as a measure to guard deposits
+    /// in the pool. It is meant to minimize the impact a potential
+    /// compromise in the source registry (eg. Verra) can have to the pool.
     uint256 public supplyCap;
-    mapping(address => uint256) public tokenBalances;
+    mapping(address => uint256) private DEPRECATED_tokenBalances;
     address public contractRegistry;
 
     uint64 public minimumVintageStartTime;

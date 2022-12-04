@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -33,6 +33,13 @@ contract ToucanCarbonOffsets is
     ToucanCarbonOffsetsStorage
 {
     // ----------------------------------------
+    //      Constants
+    // ----------------------------------------
+
+    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    string public constant VERSION = '1.4.0';
+
+    // ----------------------------------------
     //      Events
     // ----------------------------------------
 
@@ -47,37 +54,33 @@ contract ToucanCarbonOffsets is
     /// @dev modifier checks whether the `ToucanCarbonOffsetsFactory` is paused
     /// Since TCO2 contracts are permissionless, pausing does not function individually
     modifier whenNotPaused() {
-        address ToucanCarbonOffsetsFactoryAddress = IToucanContractRegistry(
-            contractRegistry
-        ).toucanCarbonOffsetsFactoryAddress();
-        bool _paused = IPausable(ToucanCarbonOffsetsFactoryAddress).paused();
+        address tco2Factory = IToucanContractRegistry(contractRegistry)
+            .toucanCarbonOffsetsFactoryAddress();
+        bool _paused = IPausable(tco2Factory).paused();
         require(!_paused, 'Paused TCO2');
         _;
     }
 
-    modifier onlyAllowed() {
-        address ToucanCarbonOffsetsFactoryAddress = IToucanContractRegistry(
-            contractRegistry
-        ).toucanCarbonOffsetsFactoryAddress();
-        bool isAllowed = IToucanCarbonOffsetsFactory(
-            ToucanCarbonOffsetsFactoryAddress
-        ).allowlist(msg.sender);
+    modifier onlyBridges() {
+        address tco2Factory = IToucanContractRegistry(contractRegistry)
+            .toucanCarbonOffsetsFactoryAddress();
+        bool isAllowed = IToucanCarbonOffsetsFactory(tco2Factory)
+            .allowedBridges(msg.sender);
         require(isAllowed, 'Not allowed');
+        _;
+    }
+
+    modifier onlyFactoryOwner() {
+        address tco2Factory = IToucanContractRegistry(contractRegistry)
+            .toucanCarbonOffsetsFactoryAddress();
+        address owner = IToucanCarbonOffsetsFactory(tco2Factory).owner();
+        require(owner == msg.sender, 'Not factory owner');
         _;
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
-    }
-
-    // ----------------------------------------
-    //      Upgradable related functions
-    // ----------------------------------------
-
-    /// @dev Returns the current version of the smart contract
-    function version() external pure virtual returns (string memory) {
-        return '1.4.0';
     }
 
     // ----------------------------------------
@@ -94,7 +97,7 @@ contract ToucanCarbonOffsets is
         external
         virtual
         whenNotPaused
-        onlyAllowed
+        onlyBridges
     {
         _burn(account, amount);
     }
@@ -109,9 +112,36 @@ contract ToucanCarbonOffsets is
         external
         virtual
         whenNotPaused
-        onlyAllowed
+        onlyBridges
     {
         _mint(account, amount);
+    }
+
+    // ----------------------------------------
+    //       Admin functions
+    // ----------------------------------------
+
+    /// @notice Defractionalize batch NFT by burning the amount
+    /// of TCO2 from the sender and transfer the batch NFT that
+    /// was selected to the sender.
+    /// The only valid sender currently is the TCO2 factory owner.
+    /// @param tokenId The batch NFT to defractionalize from the TCO2
+    function defractionalize(uint256 tokenId)
+        external
+        whenNotPaused
+        onlyFactoryOwner
+    {
+        address batchNFT = IToucanContractRegistry(contractRegistry)
+            .carbonOffsetBatchesAddress();
+
+        // Fetch and burn amount of the NFT to be defractionalized
+        (, uint256 quantity, ) = ICarbonOffsetBatches(batchNFT).getBatchNFTData(
+            tokenId
+        );
+        _burn(msg.sender, quantity);
+
+        // Transfer batch NFT to sender
+        IERC721(batchNFT).transferFrom(address(this), msg.sender, tokenId);
     }
 
     // ----------------------------------------

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
@@ -52,6 +52,11 @@ contract CarbonProjectVintages is
     );
     event ProjectVintageUpdated(uint256 tokenId);
     event ProjectVintageIdUpdated(uint256 tokenId);
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
     // ----------------------------------------
     //      Upgradable related functions

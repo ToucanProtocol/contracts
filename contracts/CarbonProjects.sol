@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
@@ -21,7 +21,6 @@ import './libraries/Modifiers.sol';
 /// @dev Each project can have up to n vintages, with data stored in the
 /// `CarbonProjectVintages` contract. `vintageTokenId`s are mapped to `projectTokenId`s
 /// via `pvToTokenId` in the vintage contract.
-//slither-disable-next-line unprotected-upgrade
 contract CarbonProjects is
     ICarbonProjects,
     CarbonProjectsStorage,
@@ -36,6 +35,7 @@ contract CarbonProjects is
     //      Constants
     // ----------------------------------------
 
+    /// @dev auto-created getter VERSION() returns the current version of the smart contract
     string public constant VERSION = '1.1.0';
     /// @dev All roles related to Access Control
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
@@ -47,6 +47,11 @@ contract CarbonProjects is
     event ProjectMinted(address receiver, uint256 tokenId);
     event ProjectUpdated(uint256 tokenId);
     event ProjectIdUpdated(uint256 tokenId);
+    event BeneficiaryUpdated(
+        uint256 indexed tokenId,
+        address oldBeneficiary,
+        address newBeneficiary
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -203,6 +208,19 @@ contract CarbonProjects is
         emit ProjectIdUpdated(tokenId);
     }
 
+    /// @notice Updates the project beneficiary
+    function updateBeneficiary(uint256 tokenId, address beneficiary)
+        external
+        virtual
+        onlyManagers
+        whenNotPaused
+    {
+        require(_exists(tokenId), 'Project not yet minted');
+        address oldBeneficiary = projectData[tokenId].beneficiary;
+        projectData[tokenId].beneficiary = beneficiary;
+        emit BeneficiaryUpdated(tokenId, oldBeneficiary, beneficiary);
+    }
+
     /// @dev Removes a project and corresponding data, sets projectTokenId invalid
     function removeProject(uint256 projectTokenId)
         external
@@ -214,17 +232,6 @@ contract CarbonProjects is
         /// @dev set projectTokenId to invalid
         totalSupply--;
         validProjectTokenIds[projectTokenId] = false;
-    }
-
-    /// @dev Returns the global project-id, for example'VCS-1418'
-    function getProjectId(uint256 tokenId)
-        external
-        view
-        virtual
-        override
-        returns (string memory)
-    {
-        return projectData[tokenId].projectId;
     }
 
     /// @dev Function used by the utility function `checkProjectTokenExists`

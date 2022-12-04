@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
@@ -18,7 +18,6 @@ import './RetirementCertificatesStorage.sol';
 /// These Retirement Certificate NFTs display how many TCO2s a user has burnt
 /// @dev The amount of RetirementEvents is denominated in the 18-decimal form
 /// @dev Getters in this contract return the corresponding amount in tonnes or kilos
-//slither-disable-next-line unprotected-upgrade
 contract RetirementCertificates is
     ERC721Upgradeable,
     OwnableUpgradeable,
@@ -35,6 +34,8 @@ contract RetirementCertificates is
     //      Constants
     // ----------------------------------------
 
+    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    string public constant VERSION = '1.0.0';
     uint256 public constant tonneDenomination = 1e18;
     uint256 public constant kiloDenomination = 1e15;
 
@@ -57,11 +58,6 @@ contract RetirementCertificates is
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
-
-    /// @dev Returns the current version of the smart contract
-    function version() external pure virtual returns (string memory) {
-        return '1.0.0';
-    }
 
     function initialize(address _contractRegistry, string memory _baseURI)
         external
@@ -179,8 +175,7 @@ contract RetirementCertificates is
     /// @notice Attach retirement events to an NFT.
     /// @param tokenId The id of the NFT to attach events to.
     /// @param retiringEntity The entity that has retired TCO2 and is eligible to mint an NFT.
-    /// @param retirementEventIds An array of event ids to associate with the NFT. Currently
-    /// only 1 event is allowed to be provided here.
+    /// @param retirementEventIds An array of event ids to associate with the NFT.
     function _attachRetirementEvents(
         uint256 tokenId,
         address retiringEntity,
@@ -210,8 +205,7 @@ contract RetirementCertificates is
     /// @param beneficiary The beneficiary address for whom the TCO2 amount was retired.
     /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name.
     /// @param retirementMessage A message to accompany the retirement.
-    /// @param retirementEventIds An array of event ids to associate with the NFT. Currently
-    /// only 1 event is allowed to be provided here.
+    /// @param retirementEventIds An array of event ids to associate with the NFT.
     /// @dev    The function can either be called by a valid TCO2 contract or by someone who
     ///         owns retirement events.
     function mintCertificate(

@@ -4,7 +4,7 @@
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 /// @dev V1 Storage contract for ToucanCarbonOffsetsFactory v.1.0
 abstract contract ToucanCarbonOffsetsFactoryStorageV1 {
@@ -27,7 +27,7 @@ abstract contract ToucanCarbonOffsetsFactoryStorageV2 {
 /// @dev V3 Storage contract for ToucanCarbonOffsetsFactory v.1.2
 abstract contract ToucanCarbonOffsetsFactoryStorageV3 {
     /// @notice meant to be used only for cross-chain bridging
-    mapping(address => bool) public allowlist;
+    mapping(address => bool) public allowedBridges;
 }
 
 /// @dev Main storage contract inheriting new versions

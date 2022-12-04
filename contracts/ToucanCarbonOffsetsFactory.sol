@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 // ============ External Imports ============
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
@@ -19,13 +19,11 @@ import './interfaces/ICarbonOffsetBatches.sol';
 import './libraries/ProjectUtils.sol';
 import './libraries/ProjectVintageUtils.sol';
 import './libraries/Modifiers.sol';
-import './ToucanCarbonOffsets.sol';
 import './ToucanCarbonOffsetsFactoryStorage.sol';
 
 /// @notice This TCO2 factory creates project-vintage-specific ERC20 contracts for Batch-NFT fractionalization
 /// Locks in received ERC721 Batch-NFTs and can mint corresponding quantity of ERC20s
 /// Permissionless, anyone can deploy new ERC20s unless they do not yet exist and pid exists
-//slither-disable-next-line unprotected-upgrade
 contract ToucanCarbonOffsetsFactory is
     ToucanCarbonOffsetsFactoryStorageV1,
     OwnableUpgradeable,
@@ -40,6 +38,8 @@ contract ToucanCarbonOffsetsFactory is
     //      Constants
     // ----------------------------------------
 
+    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    string public constant VERSION = '1.2.1';
     uint256 public constant bridgeFeeDivider = 1e4;
 
     // ----------------------------------------
@@ -47,8 +47,8 @@ contract ToucanCarbonOffsetsFactory is
     // ----------------------------------------
 
     event TokenCreated(uint256 vintageTokenId, address tokenAddress);
-    event AddedToAllowlist(address account);
-    event RemovedFromAllowlist(address account);
+    event AddedToAllowedBridges(address account);
+    event RemovedFromallowedBridges(address account);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -58,11 +58,6 @@ contract ToucanCarbonOffsetsFactory is
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
-
-    /// @dev Returns the current version of the smart contract
-    function version() external pure returns (string memory) {
-        return '1.2.0';
-    }
 
     function initialize(address _contractRegistry)
         external
@@ -111,24 +106,28 @@ contract ToucanCarbonOffsetsFactory is
         contractRegistry = _address;
     }
 
-    /// @notice adds account to the allowlist
+    /// @notice adds account to the allowedBridges list
     /// meant to be used only for cross-chain bridging
-    function addToAllowlist(address account) external virtual onlyOwner {
-        bool isAllowed = allowlist[account];
+    function addToAllowedBridges(address account) external virtual onlyOwner {
+        bool isAllowed = allowedBridges[account];
         require(!isAllowed, 'Already allowed');
 
-        allowlist[account] = true;
-        emit AddedToAllowlist(account);
+        allowedBridges[account] = true;
+        emit AddedToAllowedBridges(account);
     }
 
-    /// @notice removes account from the allowlist
+    /// @notice removes account from the allowedBridges list
     /// meant to be used only for cross-chain bridging
-    function removeFromAllowlist(address account) external virtual onlyOwner {
-        bool isAllowed = allowlist[account];
+    function removeFromAllowedBridges(address account)
+        external
+        virtual
+        onlyOwner
+    {
+        bool isAllowed = allowedBridges[account];
         require(isAllowed, 'Already not allowed');
 
-        allowlist[account] = false;
-        emit RemovedFromAllowlist(account);
+        allowedBridges[account] = false;
+        emit RemovedFromallowedBridges(account);
     }
 
     // ----------------------------------------

@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
-pragma solidity >=0.8.4 <=0.8.14;
+pragma solidity 0.8.14;
 
 import '../interfaces/IToucanContractRegistry.sol';
 import '../interfaces/ICarbonProjects.sol';
@@ -19,16 +19,5 @@ contract ProjectUtils {
             tokenId
         );
         require(isValidProjectTokenId == true, 'Error: Project does not exist');
-    }
-
-    function getProjectId(address contractRegistry, uint256 tokenId)
-        internal
-        view
-        virtual
-        returns (string memory)
-    {
-        address c = IToucanContractRegistry(contractRegistry)
-            .carbonProjectsAddress();
-        return ICarbonProjects(c).getProjectId(tokenId);
     }
 }
