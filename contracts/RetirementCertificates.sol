@@ -10,6 +10,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
 import './interfaces/IToucanContractRegistry.sol';
 import './RetirementCertificatesStorage.sol';
@@ -22,6 +23,8 @@ contract RetirementCertificates is
     ERC721Upgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
+    RetirementCertificatesStorageV1,
+    ReentrancyGuardUpgradeable,
     RetirementCertificatesStorage
 {
     // ----------------------------------------
@@ -35,7 +38,8 @@ contract RetirementCertificates is
     // ----------------------------------------
 
     /// @dev auto-created getter VERSION() returns the current version of the smart contract
-    string public constant VERSION = '1.0.0';
+    string public constant VERSION = '1.0.1';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
     uint256 public constant tonneDenomination = 1e18;
     uint256 public constant kiloDenomination = 1e15;
 
@@ -70,6 +74,7 @@ contract RetirementCertificates is
             'TOUCAN-CERT'
         );
         __Ownable_init_unchained();
+        __ReentrancyGuard_init_unchained();
         contractRegistry = _contractRegistry;
         baseURI = _baseURI;
     }
@@ -215,7 +220,7 @@ contract RetirementCertificates is
         string calldata beneficiaryString,
         string calldata retirementMessage,
         uint256[] calldata retirementEventIds
-    ) external virtual {
+    ) external virtual nonReentrant {
         // If the provided retiring entity is not the caller, then
         // ensure the caller is at least a TCO2 contract. This is to
         // allow TCO2 contracts to call retireAndMintCertificate.

@@ -39,7 +39,8 @@ contract CarbonOffsetBatches is
     // ----------------------------------------
 
     /// @dev auto-created getter VERSION() returns the current version of the smart contract
-    string public constant VERSION = '1.2.0';
+    string public constant VERSION = '1.3.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
     bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
 
     // ----------------------------------------
@@ -137,30 +138,35 @@ contract CarbonOffsetBatches is
     /// Fractionalization requires status Confirmed.
     /// @dev    This flow requires a previous linking with a `projectVintageTokenId`.
     function confirmRetirement(uint256 tokenId)
-        public
+        external
         virtual
         onlyVerifier
         whenNotPaused
     {
+        _confirmRetirement(tokenId);
+    }
+
+    /// @dev    Internal function that is required a previous linking with a `projectVintageTokenId`.
+    function _confirmRetirement(uint256 _tokenId) internal {
         require(
-            _exists(tokenId),
+            _exists(_tokenId),
             'ERC721: approved query for nonexistent token'
         );
         require(
-            nftList[tokenId].status != RetirementStatus.Confirmed,
+            nftList[_tokenId].status != RetirementStatus.Confirmed,
             'Batch retirement is already confirmed'
         );
         require(
-            nftList[tokenId].projectVintageTokenId != 0,
+            nftList[_tokenId].projectVintageTokenId != 0,
             'Cannot retire batch without project vintage'
         );
         require(
-            serialNumberApproved[nftList[tokenId].serialNumber] == false,
+            serialNumberApproved[nftList[_tokenId].serialNumber] == false,
             'Serialnumber has already been approved'
         );
         /// @dev setting serialnumber as unique after confirmation
-        serialNumberApproved[nftList[tokenId].serialNumber] = true;
-        updateStatus(tokenId, RetirementStatus.Confirmed);
+        serialNumberApproved[nftList[_tokenId].serialNumber] = true;
+        updateStatus(_tokenId, RetirementStatus.Confirmed);
     }
 
     /// @notice Function to reject Batch-NFTs, e.g. if the serial number entered is incorrect.
@@ -230,14 +236,24 @@ contract CarbonOffsetBatches is
 
     /// @dev Function for alternative flow where Batch-NFT approval is done separately.
     function linkWithVintage(uint256 tokenId, uint256 projectVintageTokenId)
-        public
+        external
         virtual
         onlyVerifier
         whenNotPaused
     {
-        checkProjectVintageTokenExists(contractRegistry, projectVintageTokenId);
-        nftList[tokenId].projectVintageTokenId = projectVintageTokenId;
-        emit BatchLinkedWithVintage(tokenId, projectVintageTokenId);
+        _linkWithVintage(tokenId, projectVintageTokenId);
+    }
+
+    // @dev Function to internally link with Vintage when Batch-NFT approval is done seperately.
+    function _linkWithVintage(uint256 _tokenId, uint256 _projectVintageTokenId)
+        internal
+    {
+        checkProjectVintageTokenExists(
+            contractRegistry,
+            _projectVintageTokenId
+        );
+        nftList[_tokenId].projectVintageTokenId = _projectVintageTokenId;
+        emit BatchLinkedWithVintage(_tokenId, _projectVintageTokenId);
     }
 
     /// @dev Function for main approval flow, which requires passing a `projectVintageTokenId`.
@@ -257,8 +273,8 @@ contract CarbonOffsetBatches is
             nftList[tokenId].projectVintageTokenId == 0,
             'Vintage is already set and cannot be changed; use confirmRetirement instead'
         );
-        linkWithVintage(tokenId, projectVintageTokenId);
-        confirmRetirement(tokenId);
+        _linkWithVintage(tokenId, projectVintageTokenId);
+        _confirmRetirement(tokenId);
     }
 
     /// @dev Function to remove uniqueness for previously set serialnumbers.
@@ -282,7 +298,7 @@ contract CarbonOffsetBatches is
     /// Entry point to the carbon bridging process.
     /// @dev        To be updated by NFT owner after serial number has been provided
     /// @param to   The address the NFT should be minted to. This should be the user.
-    function mintEmptyBatch(address to) external virtual whenNotPaused {
+    function mintEmptyBatch(address to) public virtual whenNotPaused {
         uint256 newItemId = batchTokenCounter;
         unchecked {
             ++newItemId;
@@ -312,6 +328,16 @@ contract CarbonOffsetBatches is
                 hasRole(VERIFIER_ROLE, _msgSender()),
             'Error: update only by owner or verifier'
         );
+        _updateBatchWithData(tokenId, serialNumber, quantity, uri);
+    }
+
+    /// @notice Internal function that updates BatchNFT after serial number has been verified
+    function _updateBatchWithData(
+        uint256 tokenId,
+        string memory serialNumber,
+        uint256 quantity,
+        string memory uri
+    ) internal {
         RetirementStatus status = nftList[tokenId].status;
         require(
             status != RetirementStatus.Confirmed,
@@ -324,11 +350,8 @@ contract CarbonOffsetBatches is
         nftList[tokenId].serialNumber = serialNumber;
         nftList[tokenId].quantity = quantity;
 
-        /// @dev Make sure metadata does not exist twice
         if (!strcmp(uri, nftList[tokenId].uri)) {
-            require(URIs[uri] == false, 'Error: uri already exists');
             nftList[tokenId].uri = uri;
-            URIs[uri] = true;
         }
 
         if (status == RetirementStatus.Rejected) {
@@ -521,6 +544,27 @@ contract CarbonOffsetBatches is
             _msgSender(),
             comment
         );
+    }
+
+    /**
+     * @notice This function allows external APIs to tokenize their carbon credits to validated NFTs
+     * @param to  Address to empty NFT is minted to
+     * @param serialNumber  serialNumber recieved from the registry/credit cancellation
+     * @param quantity  quantity in tC02e
+     * @param uri  optional tokenURI information with additional data
+     * @param projectVintageTokenId Project Vintage Token ID
+     */
+    function tokenize(
+        address to,
+        string calldata serialNumber,
+        uint256 quantity,
+        string calldata uri,
+        uint256 projectVintageTokenId
+    ) external virtual onlyVerifier whenNotPaused {
+        mintEmptyBatch(to);
+        _updateBatchWithData(batchTokenCounter, serialNumber, quantity, uri);
+        _linkWithVintage(batchTokenCounter, projectVintageTokenId);
+        _confirmRetirement(batchTokenCounter);
     }
 
     // -----------------------------

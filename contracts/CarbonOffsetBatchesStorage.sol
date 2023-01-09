@@ -7,17 +7,14 @@ pragma solidity 0.8.14;
 import './CarbonOffsetBatchesTypes.sol';
 
 /// @dev Separate storage contract to improve upgrade safety
-contract CarbonOffsetBatchesStorage {
-    //slither-disable-next-line constable-states
+abstract contract CarbonOffsetBatchesStorageV1 {
     uint256 public batchTokenCounter;
     /// @custom:oz-upgrades-renamed-from serialNumberExist
     mapping(string => bool) public serialNumberApproved;
-    mapping(string => bool) public URIs;
+    mapping(string => bool) public DEPRECATED_URIs;
     mapping(address => bool) public verifiers; // has been removed, but must stay here because of storage layout
 
-    //slither-disable-next-line constable-states
     string public baseURI;
-    //slither-disable-next-line constable-states
     address public contractRegistry;
 
     struct NFTData {
@@ -32,3 +29,5 @@ contract CarbonOffsetBatchesStorage {
 
     mapping(uint256 => NFTData) public nftList;
 }
+
+abstract contract CarbonOffsetBatchesStorage is CarbonOffsetBatchesStorageV1 {}

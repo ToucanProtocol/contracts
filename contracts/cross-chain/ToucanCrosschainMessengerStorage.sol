@@ -5,6 +5,15 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earthz
 pragma solidity 0.8.14;
 
+struct RemoteTokenInformation {
+    /// @notice address of the token in the remote chain
+    address tokenAddress;
+    /// @notice timer keeps track of when the token pair
+    /// was created in order to disallow updates to the
+    /// pair after a specific amount of time elapses
+    uint256 timer;
+}
+
 /// @dev Separate storage contract to improve upgrade safety
 abstract contract ToucanCrosschainMessengerStorageV1 {
     enum BridgeRequestType {
@@ -24,14 +33,6 @@ abstract contract ToucanCrosschainMessengerStorageV1 {
         MessageTypes messageType;
     }
 
-    struct RemoteTokenInformation {
-        /// @notice address of the token in the remote chain
-        address tokenAddress;
-        /// @notice timer keeps track of when the token pair
-        /// was created in order to disallow updates to the
-        /// pair after a specific amount of time elapses
-        uint256 timer;
-    }
     /// @dev nonce is used to serialize requests executed
     /// by the source chain in order to avoid duplicates
     /// from being processed in the remote chain

@@ -15,7 +15,7 @@ contract NatureCarbonTonne is Pool {
     // ----------------------------------------
 
     string public constant VERSION = '1.4.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
     // ----------------------------------------
     //      Upgradable related functions

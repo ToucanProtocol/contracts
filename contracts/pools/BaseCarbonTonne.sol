@@ -40,7 +40,7 @@ contract BaseCarbonTonne is
     // ----------------------------------------
 
     string public constant VERSION = '1.5.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
     /// @dev fees redeem percentage with 2 fixed decimals precision
@@ -441,10 +441,10 @@ contract BaseCarbonTonne is
         // Read the address of the remote pool from ToucanCrosschainMessenger
         // and set that as a recipient in our cross-chain messages.
         address tcm = router;
-        address recipient = IToucanCrosschainMessenger(tcm).remoteTokens(
-            address(this),
-            destinationDomain
-        );
+        RemoteTokenInformation memory remoteInfo = IToucanCrosschainMessenger(
+            tcm
+        ).remoteTokens(address(this), destinationDomain);
+        address recipient = remoteInfo.tokenAddress;
         require(recipient != address(0), Errors.CP_EMPTY_ADDRESS);
 
         //slither-disable-next-line uninitialized-local

@@ -23,6 +23,7 @@ contract ToucanCrosschainMessenger is
     // ----------------------------------------
 
     string public constant VERSION = '1.1.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
     uint256 public constant TIMER = 1209600; // 14 Days
     bytes32 public constant EIP712DomainHash =
         keccak256('EIP712Domain(string name,string version,uint256 chainId)');
@@ -98,6 +99,24 @@ contract ToucanCrosschainMessenger is
     //      Admin functions
     // ----------------------------------------
 
+    /// @notice Adds a new set of token pairs than can be bridged
+    /// @dev Called by owner to add or map home token addresses to remote token addresses.
+    /// @param _homeTokens token addresses on home chain
+    /// @param _remoteTokens token addresses on remote chain
+    /// @param _domain domain ID of the remote chain whose tokens are being mapped
+    function batchAddTokenPair(
+        address[] calldata _homeTokens,
+        address[] calldata _remoteTokens,
+        uint32 _domain
+    ) external onlyOwner {
+        uint256 homeTokensLen = _homeTokens.length;
+        require(homeTokensLen == _remoteTokens.length, 'Array length mismatch');
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < homeTokensLen; ++i) {
+            _addTokenPair(_homeTokens[i], _remoteTokens[i], _domain);
+        }
+    }
+
     /// @notice Adds new token pair than can be bridged
     /// @dev Called by owner to add or map home token address to remote token address.
     /// Changing the remote token address can only be done within a 7 day period, after first
@@ -110,6 +129,14 @@ contract ToucanCrosschainMessenger is
         address _remoteToken,
         uint32 _domain
     ) external onlyOwner {
+        _addTokenPair(_homeToken, _remoteToken, _domain);
+    }
+
+    function _addTokenPair(
+        address _homeToken,
+        address _remoteToken,
+        uint32 _domain
+    ) private {
         require(
             _homeToken != address(0) && _remoteToken != address(0),
             '!_homeToken || !_remoteTokens'

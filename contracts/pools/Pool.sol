@@ -430,10 +430,10 @@ abstract contract Pool is
         // Read the address of the remote pool from ToucanCrosschainMessenger
         // and set that as a recipient in our cross-chain messages.
         address tcm = router;
-        address recipient = IToucanCrosschainMessenger(tcm).remoteTokens(
-            address(this),
-            destinationDomain
-        );
+        RemoteTokenInformation memory remoteInfo = IToucanCrosschainMessenger(
+            tcm
+        ).remoteTokens(address(this), destinationDomain);
+        address recipient = remoteInfo.tokenAddress;
         require(recipient != address(0), Errors.CP_EMPTY_ADDRESS);
 
         //slither-disable-next-line uninitialized-local

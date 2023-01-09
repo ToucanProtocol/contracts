@@ -48,6 +48,8 @@ abstract contract RetirementCertificatesStorageV1 {
     uint256 public minValidRetirementAmount;
 }
 
-abstract contract RetirementCertificatesStorage is
-    RetirementCertificatesStorageV1
-{}
+/// @dev Kept separate from RetirementCertificatesStorageV1 to
+/// add ReentrancyGuardUpgradeable in between.
+abstract contract RetirementCertificatesStorage {
+
+}
