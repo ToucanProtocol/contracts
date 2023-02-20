@@ -11,7 +11,7 @@ abstract contract CarbonOffsetBatchesStorageV1 {
     uint256 public batchTokenCounter;
     /// @custom:oz-upgrades-renamed-from serialNumberExist
     mapping(string => bool) public serialNumberApproved;
-    mapping(string => bool) public DEPRECATED_URIs;
+    mapping(string => bool) private DEPRECATED_URIs;
     mapping(address => bool) public verifiers; // has been removed, but must stay here because of storage layout
 
     string public baseURI;

@@ -71,6 +71,11 @@ abstract contract Pool is
     event AddFeeExemptedTCO2(address tco2);
     event RemoveFeeExemptedTCO2(address tco2);
     event RouterUpdated(address router);
+    event TCO2Bridged(
+        uint32 indexed destinationDomain,
+        address indexed tco2,
+        uint256 amount
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -444,6 +449,7 @@ abstract contract Pool is
                 amounts[i],
                 recipient
             );
+            emit TCO2Bridged(destinationDomain, tco2s[i], amounts[i]);
         }
     }
 
@@ -602,6 +608,7 @@ abstract contract Pool is
 
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
+            checkEligible(tco2s[i]);
             if (!isExempted) {
                 feeAmount =
                     (amounts[i] * _feeRedeemPercentageInBase) /

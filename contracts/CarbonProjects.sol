@@ -36,7 +36,8 @@ contract CarbonProjects is
     // ----------------------------------------
 
     /// @dev auto-created getter VERSION() returns the current version of the smart contract
-    string public constant VERSION = '1.1.0';
+    string public constant VERSION = '1.1.1';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
     /// @dev All roles related to Access Control
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 
@@ -194,10 +195,12 @@ contract CarbonProjects is
         whenNotPaused
     {
         require(_exists(tokenId), 'Project not yet minted');
-        require(
-            projectIds[newProjectId] == false,
-            'Cant change current projectId to an existing one'
-        );
+        if (bytes(newProjectId).length != 0) {
+            require(
+                projectIds[newProjectId] == false,
+                'Cant change current projectId to an existing one'
+            );
+        }
 
         string memory oldProjectId = projectData[tokenId].projectId;
         projectIds[oldProjectId] = false;

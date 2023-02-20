@@ -51,7 +51,6 @@ contract CarbonProjectVintages is
         uint64 startTime
     );
     event ProjectVintageUpdated(uint256 tokenId);
-    event ProjectVintageIdUpdated(uint256 tokenId);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
