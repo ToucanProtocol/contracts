@@ -39,11 +39,17 @@ contract BaseCarbonTonne is
     //      Constants
     // ----------------------------------------
 
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.5.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
+
+    /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
-    /// @dev fees redeem percentage with 2 fixed decimals precision
+
+    /// @dev divider to calculate fees in basis points
     uint256 public constant feeRedeemDivider = 1e4;
 
     // ----------------------------------------
@@ -94,6 +100,9 @@ contract BaseCarbonTonne is
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __ERC20_init_unchained('Toucan Protocol: Base Carbon Tonne', 'BCT');
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -648,8 +657,12 @@ contract BaseCarbonTonne is
     /// starting from contract at index 0 until amount is satisfied
     /// @param amount Total amount to be redeemed
     /// @dev BCT Pool tokens in user's wallet get burned
-    function redeemAuto(uint256 amount) external virtual {
-        redeemAuto2(amount);
+    function redeemAuto(uint256 amount)
+        external
+        virtual
+        returns (address[] memory tco2s, uint256[] memory amounts)
+    {
+        return redeemAuto2(amount);
     }
 
     /// @notice Automatically redeems an amount of Pool tokens for underlying

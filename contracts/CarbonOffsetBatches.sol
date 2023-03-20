@@ -38,9 +38,13 @@ contract CarbonOffsetBatches is
     //      Constants
     // ----------------------------------------
 
-    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.3.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+
+    /// @dev All roles related to accessing this contract
     bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
 
     // ----------------------------------------
@@ -82,6 +86,9 @@ contract CarbonOffsetBatches is
         );
         __Ownable_init_unchained();
         __Pausable_init_unchained();
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         contractRegistry = _contractRegistry;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }

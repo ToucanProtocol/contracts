@@ -22,9 +22,15 @@ contract ToucanCrosschainMessenger is
     //      Constants
     // ----------------------------------------
 
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.1.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+
+    /// @notice duration allowing for updates in token pairs post-creation
     uint256 public constant TIMER = 1209600; // 14 Days
+    /// @dev EIP712Domain hash used in generating request hashes
     bytes32 public constant EIP712DomainHash =
         keccak256('EIP712Domain(string name,string version,uint256 chainId)');
 
@@ -74,6 +80,7 @@ contract ToucanCrosschainMessenger is
     {
         __Router_initialize(_abacusConnectionManager);
         __Pausable_init();
+        __UUPSUpgradeable_init_unchained();
     }
 
     function DOMAIN_SEPARATOR() public view returns (bytes32) {

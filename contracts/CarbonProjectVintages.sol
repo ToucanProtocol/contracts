@@ -4,6 +4,7 @@
 
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
+
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
@@ -35,9 +36,13 @@ contract CarbonProjectVintages is
     //      Constants
     // ----------------------------------------
 
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.1.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
-    /// @dev All roles related to Access Control
+    /// @dev All roles related to accessing this contract
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
 
     // ----------------------------------------
@@ -69,6 +74,9 @@ contract CarbonProjectVintages is
         );
         __Ownable_init_unchained();
         __Pausable_init_unchained();
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         /// @dev granting the deployer==owner the rights to grant other roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }

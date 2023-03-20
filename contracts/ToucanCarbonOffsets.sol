@@ -36,8 +36,11 @@ contract ToucanCarbonOffsets is
     //      Constants
     // ----------------------------------------
 
-    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.4.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     // ----------------------------------------
     //      Events

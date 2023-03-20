@@ -25,8 +25,13 @@ contract ToucanContractRegistry is
     //      Constants
     // ----------------------------------------
 
-    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.0.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+
+    /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     // ----------------------------------------
@@ -90,6 +95,9 @@ contract ToucanContractRegistry is
 
     function initialize() external virtual initializer {
         __Ownable_init();
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         /// @dev granting the deployer==owner the rights to grant other roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }

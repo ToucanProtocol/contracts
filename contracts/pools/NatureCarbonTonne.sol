@@ -14,6 +14,9 @@ contract NatureCarbonTonne is Pool {
     //      Constants
     // ----------------------------------------
 
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.4.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
@@ -26,6 +29,9 @@ contract NatureCarbonTonne is Pool {
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __ERC20_init_unchained('Toucan Protocol: Nature Carbon Tonne', 'NCT');
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 }

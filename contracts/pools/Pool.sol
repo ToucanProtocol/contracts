@@ -38,9 +38,11 @@ abstract contract Pool is
     //      Constants
     // ----------------------------------------
 
+    /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
     bytes32 public constant MANAGER_ROLE = keccak256('MANAGER_ROLE');
-    /// @dev fees redeem percentage with 2 fixed decimals precision
+
+    /// @dev divider to calculate fees in basis points
     uint256 public constant feeRedeemDivider = 1e4;
 
     // ----------------------------------------
@@ -637,8 +639,14 @@ abstract contract Pool is
     /// starting from contract at index 0 until amount is satisfied
     /// @param amount Total amount to be redeemed
     /// @dev Pool tokens in user's wallet get burned
-    function redeemAuto(uint256 amount) external virtual {
-        redeemAuto2(amount);
+    /// @return tco2s amounts The addresses and amounts of the TCO2s that were
+    /// automatically redeemed
+    function redeemAuto(uint256 amount)
+        external
+        virtual
+        returns (address[] memory tco2s, uint256[] memory amounts)
+    {
+        return redeemAuto2(amount);
     }
 
     /// @notice Automatically redeems an amount of Pool tokens for underlying

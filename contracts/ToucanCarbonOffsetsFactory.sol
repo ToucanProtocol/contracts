@@ -38,8 +38,13 @@ contract ToucanCarbonOffsetsFactory is
     //      Constants
     // ----------------------------------------
 
-    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.2.1';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+
+    /// @dev divider to calculate fees in basis points
     uint256 public constant bridgeFeeDivider = 1e4;
 
     // ----------------------------------------
@@ -67,6 +72,8 @@ contract ToucanCarbonOffsetsFactory is
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         contractRegistry = _contractRegistry;
     }
 

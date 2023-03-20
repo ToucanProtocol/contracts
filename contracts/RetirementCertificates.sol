@@ -37,9 +37,13 @@ contract RetirementCertificates is
     //      Constants
     // ----------------------------------------
 
-    /// @dev auto-created getter VERSION() returns the current version of the smart contract
+    /// @dev Version-related parameters. VERSION keeps track of production
+    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
+    /// of a VERSION in our staging environment.
     string public constant VERSION = '1.0.1';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+
+    /// @dev dividers to round carbon in human-readable denominations
     uint256 public constant tonneDenomination = 1e18;
     uint256 public constant kiloDenomination = 1e15;
 
@@ -75,6 +79,8 @@ contract RetirementCertificates is
         );
         __Ownable_init_unchained();
         __ReentrancyGuard_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
         contractRegistry = _contractRegistry;
         baseURI = _baseURI;
     }
