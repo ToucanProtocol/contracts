@@ -8,10 +8,6 @@ SPDX-License-Identifier: LicenseRef-Proprietary
 This repository contains only the smart contracts of Toucan Protocol. 
 Since Toucan Protocol has upgradable smart contracts built with the UUPS proxy system by Open Zeppelin, changes of already deployed contracts are realized on-chain by an upgrade process, which is subject to scheduling. In order to view the latest state, we recommend viewing the implementation contract's source code on the respective block explorer (e.g. Polygonscan).
 
-[toucan.earth](https://toucan.earth/)
-
----
-
 # Toucan Protocol tokenizer
 
 We're building a protocol that allows anybody to bring carbon credits on-chain via tokenization, directly sell or aggregate them in carbon index pools.
@@ -82,6 +78,15 @@ Currently, there are two pools available: [BCT] & [NCT](https://www.coingecko.co
 - **[BCT]**: Base Carbon Tonne. A tradeable ERC20 token, where 1 token represents 1 tonne of CO2-equivalent carbon offsets.
 - **[NCT](https://www.coingecko.com/en/coins/toucan-protocol-nature-carbon-tonne)**: Nature Carbon Tonne. An ERC20-based token that represents 1 tonne of CO2-equivalent avoided or removed via a nature-based project, verified by Verra.
 - **Vintage**: A monitoring period for a carbon offsetting project. Not always equivalent to one full calendar year. A single project can issue credits/offsets which are not fully equivalent (e.g. the way the carbon amount is measured might be different from one monitoring period (vintage) to the next). Usually, different vintages have different quality and attributes.
+
+## Install
+
+```console
+git clone https://github.com/ToucanProtocol/contracts
+cd contracts
+yarn
+npx hardhat compile
+```
 
 ## Stack
 
