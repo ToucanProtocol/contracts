@@ -85,32 +85,15 @@ Currently, there are two pools available: [BCT] & [NCT](https://www.coingecko.co
 
 ## Stack
 
-- Frontend: [NextJS](https://nextjs.org/)
 - Smart contracts are written in [Solidity](https://soliditylang.org/)
 - [Hardhat development environment](https://hardhat.org/) and various plugins
 - [`ethers.js`](https://docs.ethers.io/v5/)
 - [TheGraph](https://thegraph.com) for indexing of blockchain data
 
-## Documentation
-
-- [Our security model and processes](documentation/security.md)
-- [How to set up your local workstation](documentation/local-setup.md)
-- [How to contribute](CONTRIBUTING.md)
-- [How to deploy the smart contracts](documentation/contracts.md)
-- [How to deploy the frontend](documentation/frontend.md)
-- [How to deploy the subgraph](documentation/subgraph.md)
-- [How to interact with the smart contracts](documentation/contract-interaction.md)
-- [Hardhat tasks](documentation/tasks.md)
-
 ## Copyright / Licensing
 
-The files in this repository are a mixture of licensed and (currently) unlicensed:
-
-- Some are from Austin Griffith's scaffold-eth project (see
-  [`LICENSES/MIT.txt`](LICENSES/MIT.txt)).
-
-- Others are currently proprietary, but are likely to be released
-  under a Free / Open Source license later.
+The files in this repository are (currently) unlicensed but are likely to
+be released under a Free / Open Source license later.
 
 We have used the [`reuse`](https://github.com/fsfe/reuse-tool/) tool
 to aim for compliance with [the REUSE
