@@ -6,8 +6,12 @@
 
 pragma solidity 0.8.14;
 
-enum RetirementStatus {
+enum BatchStatus {
     Pending, // 0
     Rejected, // 1
-    Confirmed // 2
+    Confirmed, // 2
+    DetokenizationRequested, // 3
+    DetokenizationFinalized, // 4
+    RetirementRequested, // 5
+    RetirementFinalized // 6
 }

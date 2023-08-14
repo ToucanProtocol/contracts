@@ -10,17 +10,22 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 import './interfaces/IPausable.sol';
+import './interfaces/IToucanCarbonOffsetsFactory.sol';
 import './interfaces/IToucanContractRegistry.sol';
+import './libraries/Strings.sol';
 import './ToucanContractRegistryStorage.sol';
 
 /// @dev The ToucanContractRegistry is queried by other contracts for current addresses
 contract ToucanContractRegistry is
-    ToucanContractRegistryStorage,
+    ToucanContractRegistryStorageLegacy,
     OwnableUpgradeable,
     AccessControlUpgradeable,
     IToucanContractRegistry,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    ToucanContractRegistryStorage
 {
+    using Strings for string;
+
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -28,11 +33,17 @@ contract ToucanContractRegistry is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.0.0';
+    string public constant VERSION = '1.2.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+
+    // ----------------------------------------
+    //      Events
+    // ----------------------------------------
+
+    event TCO2FactoryAdded(address indexed factory, string indexed standard);
 
     // ----------------------------------------
     //      Modifiers
@@ -40,7 +51,7 @@ contract ToucanContractRegistry is
 
     modifier onlyBy(address _factory, address _owner) {
         require(
-            _factory == _msgSender() || _owner == _msgSender(),
+            _factory == msg.sender || _owner == msg.sender,
             'Caller is not the factory'
         );
         _;
@@ -60,7 +71,7 @@ contract ToucanContractRegistry is
         _disableInitializers();
     }
 
-    /// @notice security function that pauses all contracts part of the carbon bri  dge
+    /// @notice security function that pauses all contracts part of the carbon bridge
     function pauseSystem() external onlyPausers {
         IPausable cpv = IPausable(_carbonProjectVintagesAddress);
         if (!cpv.paused()) cpv.pause();
@@ -71,10 +82,22 @@ contract ToucanContractRegistry is
         IPausable cob = IPausable(_carbonOffsetBatchesAddress);
         if (!cob.paused()) cob.pause();
 
-        IPausable tcof = IPausable(_toucanCarbonOffsetsFactoryAddress);
-        if (!tcof.paused()) tcof.pause();
+        uint256 standardRegistriesLen = standardRegistries.length;
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < standardRegistriesLen; ) {
+            string memory standardRegistry = standardRegistries[i];
+            address factory = toucanCarbonOffsetFactories[standardRegistry];
+
+            IPausable tcof = IPausable(factory);
+            if (!tcof.paused()) tcof.pause();
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
+    /// @notice security function that unpauses all contracts part of the carbon bridge
     function unpauseSystem() external onlyOwner {
         IPausable cpv = IPausable(_carbonProjectVintagesAddress);
         if (cpv.paused()) cpv.unpause();
@@ -85,8 +108,19 @@ contract ToucanContractRegistry is
         IPausable cob = IPausable(_carbonOffsetBatchesAddress);
         if (cob.paused()) cob.unpause();
 
-        IPausable tcof = IPausable(_toucanCarbonOffsetsFactoryAddress);
-        if (tcof.paused()) tcof.unpause();
+        uint256 standardRegistriesLen = standardRegistries.length;
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < standardRegistriesLen; ) {
+            string memory standardRegistry = standardRegistries[i];
+            address factory = toucanCarbonOffsetFactories[standardRegistry];
+
+            IPausable tcof = IPausable(factory);
+            if (tcof.paused()) tcof.unpause();
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     // ----------------------------------------
@@ -117,7 +151,7 @@ contract ToucanContractRegistry is
         virtual
         onlyOwner
     {
-        require(_address != address(0), 'Error: zero address provided');
+        require(_address != address(0), 'Zero address');
         _carbonOffsetBatchesAddress = _address;
     }
 
@@ -126,7 +160,7 @@ contract ToucanContractRegistry is
         virtual
         onlyOwner
     {
-        require(_address != address(0), 'Error: zero address provided');
+        require(_address != address(0), 'Zero address');
         _carbonProjectsAddress = _address;
     }
 
@@ -135,36 +169,86 @@ contract ToucanContractRegistry is
         virtual
         onlyOwner
     {
-        require(_address != address(0), 'Error: zero address provided');
+        require(_address != address(0), 'Zero address');
         _carbonProjectVintagesAddress = _address;
     }
 
-    function setToucanCarbonOffsetsFactoryAddress(address _address)
+    function setToucanCarbonOffsetsFactoryAddress(address tco2Factory)
         external
         virtual
         onlyOwner
     {
-        require(_address != address(0), 'Error: zero address provided');
-        _toucanCarbonOffsetsFactoryAddress = _address;
+        require(tco2Factory != address(0), 'Zero address');
+
+        // Get the standard registry from the factory
+        string memory standardRegistry = IToucanCarbonOffsetsFactory(
+            tco2Factory
+        ).standardRegistry();
+        require(bytes(standardRegistry).length != 0, 'Empty standard registry');
+
+        if (!standardRegistryExists(standardRegistry)) {
+            standardRegistries.push(standardRegistry);
+        }
+        toucanCarbonOffsetFactories[standardRegistry] = tco2Factory;
+
+        emit TCO2FactoryAdded(tco2Factory, standardRegistry);
     }
 
-    function setCarbonOffsetBadgesAddress(address _address)
+    function standardRegistryExists(string memory standard)
+        private
+        view
+        returns (bool)
+    {
+        uint256 standardRegistriesLen = standardRegistries.length;
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < standardRegistriesLen; ) {
+            if (standardRegistries[i].equals(standard)) {
+                return true;
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+        return false;
+    }
+
+    function setToucanCarbonOffsetsEscrowAddress(address _address)
         external
         virtual
         onlyOwner
     {
-        require(_address != address(0), 'Error: zero address provided');
-        _carbonOffsetBadgesAddress = _address;
+        require(_address != address(0), 'Zero address');
+        _toucanCarbonOffsetsEscrowAddress = _address;
     }
 
-    /// @dev function to add valid TCO2 contracts
-    function addERC20(address _address)
+    function setRetirementCertificatesAddress(address _address)
         external
         virtual
-        override
-        onlyBy(_toucanCarbonOffsetsFactoryAddress, owner())
+        onlyOwner
     {
-        projectVintageERC20Registry[_address] = true;
+        require(_address != address(0), 'Zero address');
+        _retirementCertificatesAddress = _address;
+    }
+
+    /// Add valid TCO2 contracts for Verra
+    /// TODO: Kept for backwards-compatibility; will be removed in a future
+    /// upgrade in favor of addERC20(erc20, 'verra')
+    function addERC20(address erc20)
+        external
+        virtual
+        onlyBy(DEPRECATED_toucanCarbonOffsetsFactoryAddress, owner())
+    {
+        projectVintageERC20Registry[erc20] = true;
+    }
+
+    /// @notice Keep track of TCO2s per standard
+    function addERC20(address erc20, string calldata standardRegistry)
+        external
+        virtual
+        onlyBy(toucanCarbonOffsetFactories[standardRegistry], owner())
+    {
+        projectVintageERC20Registry[erc20] = true;
     }
 
     // ----------------------------------------
@@ -201,6 +285,9 @@ contract ToucanContractRegistry is
         return _carbonProjectVintagesAddress;
     }
 
+    /// Returns the TCO2 factory for Verra
+    /// TODO: Kept for backwards-compatibility; will be removed in a future
+    /// upgrade in favor of toucanCarbonOffsetsFactory('verra')
     function toucanCarbonOffsetsFactoryAddress()
         external
         view
@@ -208,26 +295,71 @@ contract ToucanContractRegistry is
         override
         returns (address)
     {
-        return _toucanCarbonOffsetsFactoryAddress;
+        return DEPRECATED_toucanCarbonOffsetsFactoryAddress;
     }
 
-    function carbonOffsetBadgesAddress()
+    /// @dev return the TCO2 factory address for the provided standard
+    function toucanCarbonOffsetsFactoryAddress(string memory standardRegistry)
         external
         view
         virtual
         override
         returns (address)
     {
-        return _carbonOffsetBadgesAddress;
+        return toucanCarbonOffsetFactories[standardRegistry];
     }
 
-    function checkERC20(address _address)
+    function toucanCarbonOffsetsEscrowAddress()
+        external
+        view
+        virtual
+        override
+        returns (address)
+    {
+        return _toucanCarbonOffsetsEscrowAddress;
+    }
+
+    /// TODO: Remove in a future upgrade now that we have retirementCertificatesAddress
+    function carbonOffsetBadgesAddress()
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return _retirementCertificatesAddress;
+    }
+
+    function retirementCertificatesAddress()
+        external
+        view
+        virtual
+        override
+        returns (address)
+    {
+        return _retirementCertificatesAddress;
+    }
+
+    /// TODO: Kept for backwards-compatibility; will be removed in a future
+    /// upgrade in favor of isValidERC20(erc20)
+    function checkERC20(address erc20) external view virtual returns (bool) {
+        return projectVintageERC20Registry[erc20];
+    }
+
+    function isValidERC20(address erc20)
         external
         view
         virtual
         override
         returns (bool)
     {
-        return projectVintageERC20Registry[_address];
+        return projectVintageERC20Registry[erc20];
+    }
+
+    function supportedStandardRegistries()
+        external
+        view
+        returns (string[] memory)
+    {
+        return standardRegistries;
     }
 }

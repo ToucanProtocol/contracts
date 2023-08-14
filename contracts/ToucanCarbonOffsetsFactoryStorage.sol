@@ -21,7 +21,8 @@ abstract contract ToucanCarbonOffsetsFactoryStorageV2 {
     uint256 public bridgeFeePercentageInBase;
     address public bridgeFeeBurnAddress;
     uint256 public bridgeFeeBurnPercentageInBase;
-    uint256 public totalRetired;
+    //slither-disable-next-line constable-states
+    uint256 private DEPRECATED_TotalRetired;
 }
 
 /// @dev V3 Storage contract for ToucanCarbonOffsetsFactory v.1.2

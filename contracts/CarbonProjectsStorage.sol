@@ -10,7 +10,7 @@ pragma solidity 0.8.14;
 import './CarbonProjectTypes.sol';
 
 /// @dev Separate storage contract to improve upgrade safety
-contract CarbonProjectsStorage {
+abstract contract CarbonProjectsStorage {
     uint128 public projectTokenCounter;
     uint128 public totalSupply;
     address public contractRegistry;

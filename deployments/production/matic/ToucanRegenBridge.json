@@ -1,17 +1,22 @@
 {
-  "address": "0x35D7426Fb9069B99Bb36BaD30eb804E8fd924056",
+  "address": "0xdC1Dfa22824Af4e423a558bbb6C53a31c3c11DCC",
   "abi": [
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "tokenIssuer_",
-          "type": "address"
-        },
-        {
           "internalType": "contract INCTPool",
           "name": "nctPool_",
           "type": "address"
+        },
+        {
+          "internalType": "bytes32[]",
+          "name": "roles",
+          "type": "bytes32[]"
+        },
+        {
+          "internalType": "address[]",
+          "name": "accounts",
+          "type": "address[]"
         }
       ],
       "stateMutability": "nonpayable",
@@ -83,25 +88,6 @@
         }
       ],
       "name": "Issue",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "previousOwner",
-          "type": "address"
-        },
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "OwnershipTransferred",
       "type": "event"
     },
     {
@@ -198,25 +184,6 @@
         {
           "indexed": false,
           "internalType": "address",
-          "name": "oldIssuer",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "address",
-          "name": "newIssuer",
-          "type": "address"
-        }
-      ],
-      "name": "TokenIssuerUpdated",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "address",
           "name": "account",
           "type": "address"
         }
@@ -240,6 +207,19 @@
     {
       "inputs": [],
       "name": "PAUSER_ROLE",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "TOKEN_ISSUER_ROLE",
       "outputs": [
         {
           "internalType": "bytes32",
@@ -290,19 +270,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newPauser",
-          "type": "address"
-        }
-      ],
-      "name": "grantPauserRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -414,19 +381,6 @@
     },
     {
       "inputs": [],
-      "name": "owner",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "pause",
       "outputs": [],
       "stateMutability": "nonpayable",
@@ -443,13 +397,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "renounceOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -473,19 +420,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "pauser",
-          "type": "address"
-        }
-      ],
-      "name": "revokePauserRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "bytes32",
           "name": "role",
           "type": "bytes32"
@@ -497,19 +431,6 @@
         }
       ],
       "name": "revokeRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newIssuer",
-          "type": "address"
-        }
-      ],
-      "name": "setTokenIssuer",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -554,19 +475,6 @@
     },
     {
       "inputs": [],
-      "name": "tokenIssuer",
-      "outputs": [
-        {
-          "internalType": "address",
-          "name": "",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
       "name": "totalTransferred",
       "outputs": [
         {
@@ -576,19 +484,6 @@
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "newOwner",
-          "type": "address"
-        }
-      ],
-      "name": "transferOwnership",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {

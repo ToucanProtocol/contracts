@@ -15,9 +15,8 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
 import '../cross-chain/interfaces/IToucanCrosschainMessenger.sol';
-import '../interfaces/ICarbonOffsetBatches.sol';
+import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
-import '../interfaces/IToucanContractRegistry.sol';
 import '../libraries/Errors.sol';
 import './BaseCarbonTonneStorage.sol';
 
@@ -42,8 +41,8 @@ contract BaseCarbonTonne is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.5.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
+    string public constant VERSION = '1.6.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
@@ -58,24 +57,12 @@ contract BaseCarbonTonne is
 
     event Deposited(address erc20Addr, uint256 amount);
     event Redeemed(address account, address erc20, uint256 amount);
-    event ExternalAddressWhitelisted(address erc20addr);
-    event ExternalAddressRemovedFromWhitelist(address erc20addr);
-    event InternalAddressWhitelisted(address erc20addr);
-    event InternalAddressBlacklisted(address erc20addr);
-    event InternalAddressRemovedFromBlackList(address erc20addr);
-    event InternalAddressRemovedFromWhitelist(address erc20addr);
-    event AttributeStandardAdded(string standard);
-    event AttributeStandardRemoved(string standard);
-    event AttributeMethodologyAdded(string methodology);
-    event AttributeMethodologyRemoved(string methodology);
-    event AttributeRegionAdded(string region);
-    event AttributeRegionRemoved(string region);
     event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
-    event ToucanRegistrySet(address ContractRegistry);
-    event MappingSwitched(string mappingName, bool accepted);
+    event RedeemFeeUpdated(uint256 feeBp);
+    event RedeemRetireFeeUpdated(uint256 feeBp);
     event SupplyCapUpdated(uint256 newCap);
-    event MinimumVintageStartTimeUpdated(uint256 minimumVintageStartTime);
+    event FilterUpdated(address filter);
     event TCO2ScoringUpdated(address[] tco2s);
     event AddFeeExemptedTCO2(address tco2);
     event RemoveFeeExemptedTCO2(address tco2);
@@ -150,159 +137,22 @@ contract BaseCarbonTonne is
         _unpause();
     }
 
-    function setToucanContractRegistry(address _address) external virtual {
-        onlyPoolOwner();
-        contractRegistry = _address;
-        emit ToucanRegistrySet(_address);
-    }
-
-    /// @notice Generic function to switch attributes mappings into either
-    /// acceptance or rejection criteria
-    /// @param _mappingName attribute mapping of project-vintage data
-    /// @param accepted determines if mapping works as black or whitelist
-    function switchMapping(string memory _mappingName, bool accepted)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        if (strcmp(_mappingName, 'regions')) {
-            accepted
-                ? regionsIsAcceptedMapping = true
-                : regionsIsAcceptedMapping = false;
-        } else if (strcmp(_mappingName, 'standards')) {
-            accepted
-                ? standardsIsAcceptedMapping = true
-                : standardsIsAcceptedMapping = false;
-        } else if (strcmp(_mappingName, 'methodologies')) {
-            accepted
-                ? methodologiesIsAcceptedMapping = true
-                : methodologiesIsAcceptedMapping = false;
-        }
-        emit MappingSwitched(_mappingName, accepted);
-    }
-
-    /// @notice Function to add attributes for filtering (does not support complex AttributeSets)
-    /// @param addToList determines whether attribute should be added or removed
-    /// Other params are arrays of attributes to be added
-    function addAttributes(
-        bool addToList,
-        string[] memory _regions,
-        string[] memory _standards,
-        string[] memory _methodologies
-    ) external virtual {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < _standards.length; ++i) {
-            if (addToList == true) {
-                standards[_standards[i]] = true;
-                emit AttributeStandardAdded(_standards[i]);
-            } else {
-                standards[_standards[i]] = false;
-                emit AttributeStandardRemoved(_standards[i]);
-            }
-        }
-
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < _methodologies.length; ++i) {
-            if (addToList == true) {
-                methodologies[_methodologies[i]] = true;
-                emit AttributeMethodologyAdded(_methodologies[i]);
-            } else {
-                methodologies[_methodologies[i]] = false;
-                emit AttributeMethodologyRemoved(_methodologies[i]);
-            }
-        }
-
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < _regions.length; ++i) {
-            if (addToList == true) {
-                regions[_regions[i]] = true;
-                emit AttributeRegionAdded(_regions[i]);
-            } else {
-                regions[_regions[i]] = false;
-                emit AttributeRegionRemoved(_regions[i]);
-            }
-        }
-    }
-
-    /// @notice Function to whitelist selected external non-TCO2 contracts by their address
-    /// @param erc20Addr accepts an array of contract addresses
-    function addToExternalWhiteList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            externalWhiteList[erc20Addr[i]] = true;
-            emit ExternalAddressWhitelisted(erc20Addr[i]);
-        }
-    }
-
-    /// @notice Function to whitelist certain TCO2 contracts by their address
-    /// @param erc20Addr accepts an array of contract addresses
-    function addToInternalWhiteList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            internalWhiteList[erc20Addr[i]] = true;
-            emit InternalAddressWhitelisted(erc20Addr[i]);
-        }
-    }
-
-    /// @notice Function to blacklist certain TCO2 contracts by their address
-    /// @param erc20Addr accepts an array of contract addresses
-    function addToInternalBlackList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            internalBlackList[erc20Addr[i]] = true;
-            emit InternalAddressBlacklisted(erc20Addr[i]);
-        }
-    }
-
-    /// @notice Function to remove ERC20 addresses from external whitelist
-    /// @param erc20Addr accepts an array of contract addresses
-    function removeFromExternalWhiteList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            externalWhiteList[erc20Addr[i]] = false;
-            emit ExternalAddressRemovedFromWhitelist(erc20Addr[i]);
-        }
-    }
-
-    /// @notice Function to remove TCO2 addresses from internal blacklist
-    /// @param erc20Addr accepts an array of contract addresses
-    function removeFromInternalBlackList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            internalBlackList[erc20Addr[i]] = false;
-            emit InternalAddressRemovedFromBlackList(erc20Addr[i]);
-        }
-    }
-
-    /// @notice Function to remove TCO2 addresses from internal whitelist
-    /// @param erc20Addr accepts an array of contract addressesc
-    function removeFromInternalWhiteList(address[] memory erc20Addr) external {
-        onlyPoolOwner();
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < erc20Addr.length; ++i) {
-            internalWhiteList[erc20Addr[i]] = false;
-            emit InternalAddressRemovedFromWhitelist(erc20Addr[i]);
-        }
-    }
-
     /// @notice Update the fee redeem percentage
-    /// @param _feeRedeemPercentageInBase percentage of fee in base
-    function setFeeRedeemPercentage(uint256 _feeRedeemPercentageInBase)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        require(
-            _feeRedeemPercentageInBase < feeRedeemDivider,
-            Errors.CP_INVALID_FEE
-        );
-        feeRedeemPercentageInBase = _feeRedeemPercentageInBase;
+    /// @param _feeBp percentage of fee in basis points
+    function setFeeRedeemPercentage(uint256 _feeBp) external virtual {
+        onlyWithRole(MANAGER_ROLE);
+        require(_feeBp < feeRedeemDivider, Errors.CP_INVALID_FEE);
+        feeRedeemPercentageInBase = _feeBp;
+        emit RedeemFeeUpdated(_feeBp);
+    }
+
+    /// @notice Update the fee percentage charged in redeemManyAndRetire
+    /// @param _feeBp percentage of fee in basis points
+    function setFeeRedeemRetirePercentage(uint256 _feeBp) external virtual {
+        onlyWithRole(MANAGER_ROLE);
+        require(_feeBp < feeRedeemDivider, Errors.CP_INVALID_FEE);
+        feeRedeemRetirePercentageInBase = _feeBp;
+        emit RedeemRetireFeeUpdated(_feeBp);
     }
 
     /// @notice Update the fee redeem receiver
@@ -376,15 +226,12 @@ contract BaseCarbonTonne is
         emit SupplyCapUpdated(newCap);
     }
 
-    /// @notice Determines the minimum vintage start time acceptance criteria of TCO2s
-    /// @param _minimumVintageStartTime unix time format
-    function setMinimumVintageStartTime(uint64 _minimumVintageStartTime)
-        external
-        virtual
-    {
+    /// @notice Update the address of the filter contract
+    /// @param _filter Filter contract address
+    function setFilter(address _filter) external virtual {
         onlyPoolOwner();
-        minimumVintageStartTime = _minimumVintageStartTime;
-        emit MinimumVintageStartTimeUpdated(_minimumVintageStartTime);
+        filter = _filter;
+        emit FilterUpdated(_filter);
     }
 
     /// @notice Allows MANAGERs or the owner to pass an array to hold TCO2 contract addesses that are
@@ -483,7 +330,7 @@ contract BaseCarbonTonne is
     /// for each TCO2 separately
     function deposit(address erc20Addr, uint256 amount) external virtual {
         onlyUnpaused();
-        checkEligible(erc20Addr);
+        require(checkEligible(erc20Addr), Errors.CP_NOT_ELIGIBLE);
 
         uint256 remainingSpace = getRemaining();
         require(remainingSpace != 0, Errors.CP_FULL_POOL);
@@ -507,58 +354,31 @@ contract BaseCarbonTonne is
         virtual
         returns (bool)
     {
-        bool isToucanContract = IToucanContractRegistry(contractRegistry)
-            .checkERC20(erc20Addr);
-
-        if (isToucanContract) {
-            if (internalWhiteList[erc20Addr]) {
-                return true;
-            }
-
-            require(!internalBlackList[erc20Addr], Errors.CP_BLACKLISTED);
-
-            checkAttributeMatching(erc20Addr);
-        } else {
-            /// @dev If not Toucan native contract, check if address is whitelisted
-            require(externalWhiteList[erc20Addr], Errors.CP_NOT_WHITELISTED);
-        }
-
-        return true;
+        return IPoolFilter(filter).checkEligible(erc20Addr);
     }
 
-    /// @notice checks whether incoming project-vintage-ERC20 token matches the accepted criteria/attributes
-    function checkAttributeMatching(address erc20Addr)
-        public
+    /// @notice Returns minimum vintage start time for this pool
+    function minimumVintageStartTime() external view returns (uint64) {
+        return IPoolFilter(filter).minimumVintageStartTime();
+    }
+
+    /// @notice Checks if region is eligible for this pool
+    function regions(string calldata region) external view returns (bool) {
+        return IPoolFilter(filter).regions(region);
+    }
+
+    /// @notice Checks if standard is eligible for this pool
+    function standards(string calldata standard) external view returns (bool) {
+        return IPoolFilter(filter).standards(standard);
+    }
+
+    /// @notice Checks if methodology is eligible for this pool
+    function methodologies(string calldata methodology)
+        external
         view
-        virtual
         returns (bool)
     {
-        ProjectData memory projectData;
-        VintageData memory vintageData;
-        (projectData, vintageData) = IToucanCarbonOffsets(erc20Addr)
-            .getAttributes();
-
-        /// @dev checks if any one of the attributes are blacklisted.
-        /// If mappings are set to "whitelist"-mode, require the opposite
-        require(
-            vintageData.startTime >= minimumVintageStartTime,
-            Errors.CP_START_TIME_TOO_OLD
-        );
-        require(
-            regions[projectData.region] == regionsIsAcceptedMapping,
-            Errors.CP_REGION_NOT_ACCEPTED
-        );
-        require(
-            standards[projectData.standard] == standardsIsAcceptedMapping,
-            Errors.CP_STANDARD_NOT_ACCEPTED
-        );
-        require(
-            methodologies[projectData.methodology] ==
-                methodologiesIsAcceptedMapping,
-            Errors.CP_METHODOLOGY_NOT_ACCEPTED
-        );
-
-        return true;
+        return IPoolFilter(filter).methodologies(methodology);
     }
 
     /// @notice View function to calculate fees pre-execution
@@ -606,14 +426,54 @@ contract BaseCarbonTonne is
         IToucanCarbonOffsets(tco2).burnFrom(msg.sender, amount);
     }
 
-    /// @notice Redeems Pool tokens for multiple underlying TCO2s 1:1 minus fees
-    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
+    /// The redeemed TCO2s are retired in the same go in order to allow charging
+    /// a lower fee vs selective redemptions that do not retire the TCO2s.
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of amounts to redeem and retire for each tco2s
+    /// @return retirementIds The retirements ids that were produced
+    /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
+    function redeemAndRetireMany(
+        address[] memory tco2s,
+        uint256[] memory amounts
+    )
+        external
+        virtual
+        returns (
+            uint256[] memory retirementIds,
+            uint256[] memory redeemedAmounts
+        )
+    {
+        (retirementIds, redeemedAmounts) = redeemManyInternal(
+            tco2s,
+            amounts,
+            true
+        );
+    }
+
+    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of amounts to redeem for each tco2s
-    /// BCT Pool token in user's wallet get burned
+    /// Pool token in user's wallet get burned
+    /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
     function redeemMany(address[] memory tco2s, uint256[] memory amounts)
         external
         virtual
+        returns (uint256[] memory redeemedAmounts)
+    {
+        (, redeemedAmounts) = redeemManyInternal(tco2s, amounts, false);
+    }
+
+    function redeemManyInternal(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    )
+        internal
+        returns (
+            uint256[] memory retirementIds,
+            uint256[] memory redeemedAmounts
+        )
     {
         onlyUnpaused();
         uint256 tco2Length = tco2s.length;
@@ -621,13 +481,21 @@ contract BaseCarbonTonne is
 
         //slither-disable-next-line uninitialized-local
         uint256 totalFee;
-        uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
+        //slither-disable-next-line uninitialized-local
+        uint256 _feeRedeemPercentageInBase;
+        if (toRetire) {
+            retirementIds = new uint256[](tco2Length);
+            _feeRedeemPercentageInBase = feeRedeemRetirePercentageInBase;
+        } else {
+            _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
+        }
         bool isExempted = redeemFeeExemptedAddresses[msg.sender];
         //slither-disable-next-line uninitialized-local
         uint256 feeAmount;
+        redeemedAmounts = new uint256[](tco2Length);
 
         //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ++i) {
+        for (uint256 i; i < tco2Length; ) {
             checkEligible(tco2s[i]);
             if (!isExempted) {
                 feeAmount =
@@ -637,8 +505,27 @@ contract BaseCarbonTonne is
             } else {
                 feeAmount = 0;
             }
-            redeemSingle(tco2s[i], amounts[i] - feeAmount);
+
+            // Redeem the amount minus the fee
+            uint256 amountToRedeem = amounts[i] - feeAmount;
+            redeemSingle(tco2s[i], amountToRedeem);
+
+            // If requested, retire the TCO2s in one go. Callers should
+            // first approve the pool in order for the pool to retire
+            // on behalf of them
+            if (toRetire) {
+                retirementIds[i] = IToucanCarbonOffsets(tco2s[i]).retireFrom(
+                    msg.sender,
+                    amountToRedeem
+                );
+            }
+            redeemedAmounts[i] = amountToRedeem;
+
+            unchecked {
+                ++i;
+            }
         }
+
         if (totalFee != 0) {
             uint256 burnAmount = (totalFee * feeRedeemBurnPercentageInBase) /
                 feeRedeemDivider;
@@ -805,26 +692,6 @@ contract BaseCarbonTonne is
         validDestination(recipient);
         super.transferFrom(sender, recipient, amount);
         return true;
-    }
-
-    // -----------------------------
-    //      Helper Functions
-    // -----------------------------
-
-    function memcmp(bytes memory a, bytes memory b)
-        internal
-        pure
-        returns (bool)
-    {
-        return (a.length == b.length) && (keccak256(a) == keccak256(b));
-    }
-
-    function strcmp(string memory a, string memory b)
-        internal
-        pure
-        returns (bool)
-    {
-        return memcmp(bytes(a), bytes(b));
     }
 
     function getScoredTCO2s() external view returns (address[] memory) {

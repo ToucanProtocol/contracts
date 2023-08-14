@@ -20,4 +20,5 @@ struct VintageData {
     string correspAdjustment;
     string additionalCertification;
     string uri;
+    string registry;
 }

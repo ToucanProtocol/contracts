@@ -11,7 +11,7 @@ interface ICarbonOffsetBatches {
     function getConfirmationStatus(uint256 tokenId)
         external
         view
-        returns (RetirementStatus);
+        returns (BatchStatus);
 
     function getBatchNFTData(uint256 tokenId)
         external
@@ -19,6 +19,11 @@ interface ICarbonOffsetBatches {
         returns (
             uint256,
             uint256,
-            RetirementStatus
+            BatchStatus
         );
+
+    function setStatusForDetokenizationOrRetirement(
+        uint256 tokenId,
+        BatchStatus newStatus
+    ) external;
 }

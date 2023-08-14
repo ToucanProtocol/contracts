@@ -12,6 +12,7 @@ import '@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
+import './interfaces/IToucanCarbonOffsets.sol';
 import './interfaces/IToucanContractRegistry.sol';
 import './RetirementCertificatesStorage.sol';
 
@@ -41,7 +42,7 @@ contract RetirementCertificates is
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
     string public constant VERSION = '1.0.1';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
 
     /// @dev dividers to round carbon in human-readable denominations
     uint256 public constant tonneDenomination = 1e18;
@@ -138,7 +139,7 @@ contract RetirementCertificates is
     ) external returns (uint256) {
         // Logic requires that minting can only originate from a project-vintage ERC20 contract
         require(
-            IToucanContractRegistry(contractRegistry).checkERC20(msg.sender),
+            IToucanContractRegistry(contractRegistry).isValidERC20(msg.sender),
             'Caller not a TCO2'
         );
         require(
@@ -217,6 +218,7 @@ contract RetirementCertificates is
     /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name.
     /// @param retirementMessage A message to accompany the retirement.
     /// @param retirementEventIds An array of event ids to associate with the NFT.
+    /// @return The token id of the newly minted NFT.
     /// @dev    The function can either be called by a valid TCO2 contract or by someone who
     ///         owns retirement events.
     function mintCertificate(
@@ -226,13 +228,13 @@ contract RetirementCertificates is
         string calldata beneficiaryString,
         string calldata retirementMessage,
         uint256[] calldata retirementEventIds
-    ) external virtual nonReentrant {
+    ) external virtual nonReentrant returns (uint256) {
         // If the provided retiring entity is not the caller, then
         // ensure the caller is at least a TCO2 contract. This is to
         // allow TCO2 contracts to call retireAndMintCertificate.
         require(
             retiringEntity == msg.sender ||
-                IToucanContractRegistry(contractRegistry).checkERC20(
+                IToucanContractRegistry(contractRegistry).isValidERC20(
                     msg.sender
                 ) ==
                 true,
@@ -245,8 +247,6 @@ contract RetirementCertificates is
         }
         _tokenIds = newItemId;
 
-        _safeMint(retiringEntity, newItemId);
-
         // Attach retirement events to the newly minted NFT
         _attachRetirementEvents(newItemId, retiringEntity, retirementEventIds);
 
@@ -258,6 +258,9 @@ contract RetirementCertificates is
         certificates[newItemId].retirementMessage = retirementMessage;
 
         emit CertificateMinted(newItemId);
+        _safeMint(retiringEntity, newItemId);
+
+        return newItemId;
     }
 
     /// @param tokenId The id of the NFT to get the URI.

@@ -9,10 +9,16 @@ import '../CarbonProjectVintageTypes.sol';
 import '../CarbonProjectTypes.sol';
 
 interface IToucanCarbonOffsets {
+    function retireFrom(address account, uint256 amount)
+        external
+        returns (uint256 retirementEventId);
+
     function burnFrom(address account, uint256 amount) external;
 
     function getAttributes()
         external
         view
         returns (ProjectData memory, VintageData memory);
+
+    function standardRegistry() external view returns (string memory);
 }

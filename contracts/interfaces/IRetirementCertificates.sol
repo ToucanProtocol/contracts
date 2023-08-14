@@ -13,7 +13,7 @@ interface IRetirementCertificates {
         string calldata beneficiaryString,
         string calldata retirementMessage,
         uint256[] calldata retirementEventIds
-    ) external;
+    ) external returns (uint256);
 
     function registerEvent(
         address retiringEntity,
@@ -21,4 +21,10 @@ interface IRetirementCertificates {
         uint256 amount,
         bool isLegacy
     ) external returns (uint256 retireEventCounter);
+
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) external;
 }

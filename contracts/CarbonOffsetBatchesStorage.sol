@@ -21,7 +21,7 @@ abstract contract CarbonOffsetBatchesStorageV1 {
         uint256 projectVintageTokenId;
         string serialNumber;
         uint256 quantity;
-        RetirementStatus status;
+        BatchStatus status;
         string uri;
         string[] comments;
         address[] commentAuthors;
@@ -30,4 +30,11 @@ abstract contract CarbonOffsetBatchesStorageV1 {
     mapping(uint256 => NFTData) public nftList;
 }
 
-abstract contract CarbonOffsetBatchesStorage is CarbonOffsetBatchesStorageV1 {}
+abstract contract CarbonOffsetBatchesStorageV2 {
+    mapping(string => bool) public supportedRegistries;
+}
+
+abstract contract CarbonOffsetBatchesStorage is
+    CarbonOffsetBatchesStorageV1,
+    CarbonOffsetBatchesStorageV2
+{}

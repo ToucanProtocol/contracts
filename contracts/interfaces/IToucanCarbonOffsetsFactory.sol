@@ -5,7 +5,9 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-interface IToucanCarbonOffsetsFactory {
+import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+
+interface IToucanCarbonOffsetsFactory is IAccessControlUpgradeable {
     function bridgeFeeReceiverAddress()
         external
         view
@@ -18,9 +20,9 @@ interface IToucanCarbonOffsetsFactory {
         view
         returns (uint256 feeAmount, uint256 burnAmount);
 
-    function increaseTotalRetired(uint256 amount) external;
-
     function allowedBridges(address user) external view returns (bool);
 
     function owner() external view returns (address);
+
+    function standardRegistry() external returns (string memory);
 }
