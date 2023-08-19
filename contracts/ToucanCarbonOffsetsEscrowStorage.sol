@@ -12,7 +12,7 @@ abstract contract ToucanCarbonOffsetsEscrowStorageV1 {
     // Monotonically increasing request id counter
     uint256 public requestIdCounter;
     // Request id to request data
-    mapping(uint256 => Request) internal _requests;
+    mapping(uint256 => DetokenizationRequest) internal _detokenizationRequests;
 }
 
 abstract contract ToucanCarbonOffsetsEscrowStorage is

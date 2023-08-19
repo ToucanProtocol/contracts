@@ -16,7 +16,10 @@ interface IToucanCarbonOffsetsEscrow {
 
     function finalizeDetokenizationRequest(uint256 requestId) external;
 
-    function revertRequest(uint256 requestId) external;
+    function revertDetokenizationRequest(uint256 requestId) external;
 
-    function requests(uint256 requestId) external view returns (Request memory);
+    function detokenizationRequests(uint256 requestId)
+        external
+        view
+        returns (DetokenizationRequest memory);
 }

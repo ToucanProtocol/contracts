@@ -45,9 +45,9 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             .toucanCarbonOffsetsEscrowAddress();
 
         // Fetch batch NFT IDs from escrow request
-        Request memory request = IToucanCarbonOffsetsEscrow(escrow).requests(
-            requestId
-        );
+        DetokenizationRequest memory request = IToucanCarbonOffsetsEscrow(
+            escrow
+        ).detokenizationRequests(requestId);
 
         uint256 batchIdLength = request.batchTokenIds.length;
         // Loop through batches in the request and finalize them
@@ -88,9 +88,9 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             .toucanCarbonOffsetsEscrowAddress();
 
         // Fetch batch NFT IDs from escrow request
-        Request memory request = IToucanCarbonOffsetsEscrow(escrow).requests(
-            requestId
-        );
+        DetokenizationRequest memory request = IToucanCarbonOffsetsEscrow(
+            escrow
+        ).detokenizationRequests(requestId);
 
         uint256 batchIdLength = request.batchTokenIds.length;
         // Loop through batches in the request and revert them to Confirmed
@@ -109,7 +109,9 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
         }
 
         // Mark escrow request as reverted
-        IToucanCarbonOffsetsEscrow(escrow).revertRequest(requestId);
+        IToucanCarbonOffsetsEscrow(escrow).revertDetokenizationRequest(
+            requestId
+        );
 
         emit DetokenizationReverted(requestId);
     }

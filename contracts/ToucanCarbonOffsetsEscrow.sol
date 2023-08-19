@@ -135,10 +135,9 @@ contract ToucanCarbonOffsetsEscrow is
         requestIdCounter = requestId;
 
         // Store request data
-        _requests[requestId] = Request(
+        _detokenizationRequests[requestId] = DetokenizationRequest(
             user,
             amount,
-            RequestType.Detokenization,
             RequestStatus.Pending,
             batchTokenIds
         );
@@ -163,8 +162,9 @@ contract ToucanCarbonOffsetsEscrow is
         override
         onlyTCO2
     {
-        Request storage request = _requests[requestId];
-        require(request.rType == RequestType.Detokenization, 'Invalid type');
+        DetokenizationRequest storage request = _detokenizationRequests[
+            requestId
+        ];
         require(request.status == RequestStatus.Pending, 'Not pending request');
 
         request.status = RequestStatus.Finalized;
@@ -178,13 +178,15 @@ contract ToucanCarbonOffsetsEscrow is
     /// back to the user.
     /// @dev Only the TCO2 contract can call this function.
     /// @param requestId The id of the request to revert.
-    function revertRequest(uint256 requestId)
+    function revertDetokenizationRequest(uint256 requestId)
         external
         virtual
         override
         onlyTCO2
     {
-        Request storage request = _requests[requestId];
+        DetokenizationRequest storage request = _detokenizationRequests[
+            requestId
+        ];
         require(request.status == RequestStatus.Pending, 'Not pending request');
 
         request.status = RequestStatus.Reverted;
@@ -199,13 +201,13 @@ contract ToucanCarbonOffsetsEscrow is
     //           Read-only functions
     // ----------------------------------------
 
-    function requests(uint256 requestId)
+    function detokenizationRequests(uint256 requestId)
         external
         view
         virtual
         override
-        returns (Request memory)
+        returns (DetokenizationRequest memory)
     {
-        return _requests[requestId];
+        return _detokenizationRequests[requestId];
     }
 }
