@@ -12,10 +12,10 @@ struct VintageData {
     string name;
     uint64 startTime; // UNIX timestamp
     uint64 endTime; // UNIX timestamp
-    uint256 projectTokenId;
     uint64 totalVintageQuantity;
     bool isCorsiaCompliant;
     bool isCCPcompliant;
+    uint256 projectTokenId;
     string coBenefits;
     string correspAdjustment;
     string additionalCertification;
