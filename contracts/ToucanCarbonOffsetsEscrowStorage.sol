@@ -10,9 +10,13 @@ import './ToucanCarbonOffsetsEscrowTypes.sol';
 abstract contract ToucanCarbonOffsetsEscrowStorageV1 {
     address public contractRegistry;
     // Monotonically increasing request id counter
-    uint256 public requestIdCounter;
+    uint256 public detokenizationRequestIdCounter;
     // Request id to request data
     mapping(uint256 => DetokenizationRequest) internal _detokenizationRequests;
+    // Retirement request id counter
+    uint256 retirementRequestIdCounter;
+    // Request id to request data
+    mapping(uint256 => RetirementRequest) internal _retirementRequests;
 }
 
 abstract contract ToucanCarbonOffsetsEscrowStorage is

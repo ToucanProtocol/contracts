@@ -308,4 +308,22 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             return false;
         }
     }
+
+    function retireAndMintCertificateForEntity(
+        address retiringEntity,
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) external virtual onlyEscrow {
+        _retireAndMintCertificate(
+            retiringEntity,
+            retiringEntityString,
+            beneficiary,
+            beneficiaryString,
+            retirementMessage,
+            amount
+        );
+    }
 }

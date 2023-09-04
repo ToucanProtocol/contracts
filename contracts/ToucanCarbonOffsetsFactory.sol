@@ -26,18 +26,18 @@ contract ToucanCarbonOffsetsFactory is ToucanCarbonOffsetsFactoryBase {
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize(address _contractRegistry)
-        external
-        virtual
-        initializer
-    {
-        // TODO(LILA-5187): Remove all init below in favor of __ToucanCarbonOffsetsFactoryBase_init
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __Pausable_init_unchained();
-        __UUPSUpgradeable_init_unchained();
+    function initialize(
+        address _contractRegistry,
+        address[] calldata _accounts,
+        bytes32[] calldata _roles
+    ) external virtual initializer {
+        __ToucanCarbonOffsetsFactoryBase_init(_accounts, _roles);
 
         contractRegistry = _contractRegistry;
+    }
+
+    function setAdmin(address _user) external onlyOwner {
+        grantRole(DEFAULT_ADMIN_ROLE, _user);
     }
 
     function standardRegistry() public pure override returns (string memory) {

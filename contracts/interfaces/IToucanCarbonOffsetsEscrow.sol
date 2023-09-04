@@ -14,12 +14,31 @@ interface IToucanCarbonOffsetsEscrow {
         uint256[] calldata batchTokenIds
     ) external returns (uint256);
 
+    function createRetirementRequest(
+        address user,
+        uint256 amount,
+        uint256[] calldata batchTokenIds,
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage
+    ) external returns (uint256);
+
     function finalizeDetokenizationRequest(uint256 requestId) external;
 
+    function finalizeRetirementRequest(uint256 requestId) external;
+
     function revertDetokenizationRequest(uint256 requestId) external;
+
+    function revertRetirementRequest(uint256 requestId) external;
 
     function detokenizationRequests(uint256 requestId)
         external
         view
         returns (DetokenizationRequest memory);
+
+    function retirementRequests(uint256 requestId)
+        external
+        view
+        returns (RetirementRequest memory);
 }

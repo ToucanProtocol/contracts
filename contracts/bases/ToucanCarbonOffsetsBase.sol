@@ -36,6 +36,7 @@ abstract contract ToucanCarbonOffsetsBase is
     /// @dev All roles related to accessing this contract
     bytes32 public constant DETOKENIZER_ROLE = keccak256('DETOKENIZER_ROLE');
     bytes32 public constant TOKENIZER_ROLE = keccak256('TOKENIZER_ROLE');
+    bytes32 public constant RETIREMENT_ROLE = keccak256('RETIREMENT_ROLE');
 
     // ----------------------------------------
     //      Events
@@ -43,6 +44,7 @@ abstract contract ToucanCarbonOffsetsBase is
 
     event FeePaid(address bridger, uint256 fees);
     event FeeBurnt(address bridger, uint256 fees);
+    event Retired(address sender, uint256 amount, uint256 eventId);
 
     // ----------------------------------------
     //              Modifiers
@@ -83,6 +85,16 @@ abstract contract ToucanCarbonOffsetsBase is
                     .toucanCarbonOffsetsFactoryAddress(standardRegistry())
             ).hasRole(role, msg.sender),
             'Invalid access'
+        );
+        _;
+    }
+
+    // Modifier that checks if msg.sender is the escrow contract
+    modifier onlyEscrow() {
+        require(
+            IToucanContractRegistry(contractRegistry)
+                .toucanCarbonOffsetsEscrowAddress() == msg.sender,
+            'Not escrow contract'
         );
         _;
     }
@@ -226,6 +238,58 @@ abstract contract ToucanCarbonOffsetsBase is
     {
         _spendAllowance(account, msg.sender, amount);
         _burn(account, amount);
+    }
+
+    // @dev Internal function for the burning of TCO2 tokens
+    // @dev retiringEntityAddress is a parameter to handle scenarios, when
+    // retirements are performed from the escrow contract and the retiring entity
+    // is different than the account.
+    function _retire(
+        address account,
+        uint256 amount,
+        address retiringEntityAddress
+    ) internal virtual returns (uint256 retirementEventId) {
+        _burn(account, amount);
+
+        // Register retirement event in the certificates contract
+        address certAddr = IToucanContractRegistry(contractRegistry)
+            .retirementCertificatesAddress();
+        retirementEventId = IRetirementCertificates(certAddr).registerEvent(
+            retiringEntityAddress,
+            projectVintageTokenId,
+            amount,
+            false
+        );
+
+        emit Retired(retiringEntityAddress, amount, retirementEventId);
+    }
+
+    // @dev Internal function retire and mint certificates
+    function _retireAndMintCertificate(
+        address retiringEntity,
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) internal virtual whenNotPaused {
+        // Retire provided amount
+        uint256 retirementEventId = _retire(msg.sender, amount, retiringEntity);
+        uint256[] memory retirementEventIds = new uint256[](1);
+        retirementEventIds[0] = retirementEventId;
+
+        // Mint certificate
+        address certAddr = IToucanContractRegistry(contractRegistry)
+            .retirementCertificatesAddress();
+        //slither-disable-next-line unused-return
+        IRetirementCertificates(certAddr).mintCertificate(
+            retiringEntity,
+            retiringEntityString,
+            beneficiary,
+            beneficiaryString,
+            retirementMessage,
+            retirementEventIds
+        );
     }
 
     // -----------------------------

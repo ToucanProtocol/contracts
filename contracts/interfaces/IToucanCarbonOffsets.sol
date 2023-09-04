@@ -21,4 +21,21 @@ interface IToucanCarbonOffsets {
         returns (ProjectData memory, VintageData memory);
 
     function standardRegistry() external view returns (string memory);
+
+    function retireAndMintCertificate(
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) external;
+
+    function retireAndMintCertificateForEntity(
+        address retiringEntity,
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage,
+        uint256 amount
+    ) external;
 }

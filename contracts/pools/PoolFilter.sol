@@ -52,6 +52,16 @@ abstract contract PoolFilter is
         _disableInitializers();
     }
 
+    function __PoolFilter_init() internal initializer {
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+        __Pausable_init_unchained();
+        __AccessControl_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------

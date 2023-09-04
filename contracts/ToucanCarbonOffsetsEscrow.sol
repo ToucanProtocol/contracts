@@ -128,13 +128,13 @@ contract ToucanCarbonOffsetsEscrow is
         uint256[] calldata batchTokenIds
     ) external virtual override onlyTCO2 returns (uint256) {
         // Bump request id
-        uint256 requestId = requestIdCounter;
+        uint256 requestId = detokenizationRequestIdCounter;
         unchecked {
             ++requestId;
         }
-        requestIdCounter = requestId;
+        detokenizationRequestIdCounter = requestId;
 
-        // Store request data
+        // Store detokenization request data
         _detokenizationRequests[requestId] = DetokenizationRequest(
             user,
             amount,
@@ -150,6 +150,84 @@ contract ToucanCarbonOffsetsEscrow is
         );
 
         return requestId;
+    }
+
+    /// @notice Create a new retirement request.
+    /// @dev Only a TCO2 contract can call this function.
+    /// Additionally, the escrow contract must have been
+    /// approved to transfer the amount of TCO2 to retire.
+    /// @param user The user that is requesting the retirement.
+    /// @param amount The amount of TCO2 to retire.
+    /// @param batchTokenIds The ids of the batches to retire.
+    /// @param retiringEntityString The name of the entity retiring the TCO2.
+    /// @param beneficiary The address of the beneficiary.
+    /// @param beneficiaryString The name of the beneficiary.
+    /// @param retirementMessage A message for the retirement.
+    /// @return requestId The id of the retirement request.
+    function createRetirementRequest(
+        address user,
+        uint256 amount,
+        uint256[] calldata batchTokenIds,
+        string calldata retiringEntityString,
+        address beneficiary,
+        string calldata beneficiaryString,
+        string calldata retirementMessage
+    ) external virtual override onlyTCO2 returns (uint256 requestId) {
+        // Bump request id
+        requestId = retirementRequestIdCounter;
+        unchecked {
+            ++requestId;
+        }
+        retirementRequestIdCounter = requestId;
+        // Store retirement request data
+        _retirementRequests[requestId] = RetirementRequest(
+            user,
+            amount,
+            RequestStatus.Pending,
+            batchTokenIds,
+            retiringEntityString,
+            beneficiary,
+            beneficiaryString,
+            retirementMessage
+        );
+
+        // Transfer TCO2 from user to escrow contract
+        IERC20Upgradeable(msg.sender).safeTransferFrom(
+            user,
+            address(this),
+            amount
+        );
+
+        return requestId;
+    }
+
+    /// @notice Finalize a retirement request by calling
+    /// the retire and mint certificate function in respective
+    /// TCO2 Batch, which can only be invoked by the escrow
+    /// After retiring the amount of TCO2 is burned.
+    /// @dev Only the TCO2 contract can call this function.
+    /// @param requestId The id of the request to finalize.
+    function finalizeRetirementRequest(uint256 requestId)
+        external
+        virtual
+        override
+        onlyTCO2
+    {
+        RetirementRequest storage request = _retirementRequests[requestId];
+        require(request.status == RequestStatus.Pending, 'Not pending request');
+
+        request.status = RequestStatus.Finalized;
+
+        uint256 amount = request.amount;
+
+        IToucanCarbonOffsets(msg.sender).retireAndMintCertificateForEntity(
+            request.user,
+            request.retiringEntityString,
+            request.beneficiary,
+            request.beneficiaryString,
+            request.retirementMessage,
+            amount
+        );
     }
 
     /// @notice Finalize a detokenization request by burning
@@ -174,7 +252,28 @@ contract ToucanCarbonOffsetsEscrow is
         IToucanCarbonOffsets(msg.sender).burnFrom(address(this), amount);
     }
 
-    /// @notice Revert a request by transfering amount of TCO2
+    /// @notice Revert a retirement request by transfering amount of TCO2
+    /// back to the user.
+    /// @dev Only the TCO2 contract can call this function.
+    /// @param requestId The id of the request to revert.
+    function revertRetirementRequest(uint256 requestId)
+        external
+        virtual
+        override
+        onlyTCO2
+    {
+        RetirementRequest storage request = _retirementRequests[requestId];
+        require(request.status == RequestStatus.Pending, 'Not pending request');
+
+        request.status = RequestStatus.Reverted;
+
+        IERC20Upgradeable(msg.sender).safeTransfer(
+            request.user,
+            request.amount
+        );
+    }
+
+    /// @notice Revert a detokenization request by transfering amount of TCO2
     /// back to the user.
     /// @dev Only the TCO2 contract can call this function.
     /// @param requestId The id of the request to revert.
@@ -209,5 +308,15 @@ contract ToucanCarbonOffsetsEscrow is
         returns (DetokenizationRequest memory)
     {
         return _detokenizationRequests[requestId];
+    }
+
+    function retirementRequests(uint256 requestId)
+        external
+        view
+        virtual
+        override
+        returns (RetirementRequest memory)
+    {
+        return _retirementRequests[requestId];
     }
 }

@@ -19,9 +19,6 @@ contract NatureCarbonTonneFilter is PoolFilter {
     // ----------------------------------------
 
     function initialize() external virtual initializer {
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __Pausable_init_unchained();
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        __PoolFilter_init();
     }
 }

@@ -13,6 +13,27 @@ struct DetokenizationRequest {
     uint256[] batchTokenIds;
 }
 
+struct RetirementRequest {
+    address user;
+    uint256 amount;
+    RequestStatus status;
+    // The request may optionally be associated with one or more batches.
+    // This may need to be limited to one batch for registries which don't
+    // support atomic retirement of multiple batches in one go, since
+    // retiring one batch at a time might create a situation where our
+    // RetirementRequest is only partially fulfilled, and then we would be
+    // stuck with no way forwards and no way to roll back.
+    uint256[] batchTokenIds;
+    // Optional
+    string retiringEntityString;
+    // Optional
+    address beneficiary;
+    // Optional
+    string beneficiaryString;
+    // Optional
+    string retirementMessage;
+}
+
 enum RequestStatus {
     Pending,
     Finalized,

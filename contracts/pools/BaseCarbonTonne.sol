@@ -60,6 +60,10 @@ contract BaseCarbonTonne is
     event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
     event RedeemFeeUpdated(uint256 feeBp);
+    event RedeemBurnFeeUpdated(uint256 feeBp);
+    event RedeemFeeReceiverUpdated(address receiver);
+    event RedeemFeeBurnAddressUpdated(address receiver);
+    event RedeemFeeExempted(address exemptedUser, bool isExempted);
     event RedeemRetireFeeUpdated(uint256 feeBp);
     event SupplyCapUpdated(uint256 newCap);
     event FilterUpdated(address filter);
@@ -161,6 +165,7 @@ contract BaseCarbonTonne is
         onlyPoolOwner();
         require(_feeRedeemReceiver != address(0), Errors.CP_EMPTY_ADDRESS);
         feeRedeemReceiver = _feeRedeemReceiver;
+        emit RedeemFeeReceiverUpdated(_feeRedeemReceiver);
     }
 
     /// @notice Update the fee redeem burn percentage
@@ -175,6 +180,7 @@ contract BaseCarbonTonne is
             Errors.CP_INVALID_FEE
         );
         feeRedeemBurnPercentageInBase = _feeRedeemBurnPercentageInBase;
+        emit RedeemBurnFeeUpdated(_feeRedeemBurnPercentageInBase);
     }
 
     /// @notice Update the fee redeem burn address
@@ -186,6 +192,7 @@ contract BaseCarbonTonne is
         onlyPoolOwner();
         require(_feeRedeemBurnAddress != address(0), Errors.CP_EMPTY_ADDRESS);
         feeRedeemBurnAddress = _feeRedeemBurnAddress;
+        emit RedeemFeeBurnAddressUpdated(_feeRedeemBurnAddress);
     }
 
     /// @notice Adds a new address for redeem fees exemption
@@ -193,6 +200,7 @@ contract BaseCarbonTonne is
     function addRedeemFeeExemptedAddress(address _address) external virtual {
         onlyPoolOwner();
         redeemFeeExemptedAddresses[_address] = true;
+        emit RedeemFeeExempted(_address, true);
     }
 
     /// @notice Removes an address from redeem fees exemption
@@ -200,6 +208,7 @@ contract BaseCarbonTonne is
     function removeRedeemFeeExemptedAddress(address _address) external virtual {
         onlyPoolOwner();
         redeemFeeExemptedAddresses[_address] = false;
+        emit RedeemFeeExempted(_address, false);
     }
 
     /// @notice Adds a new TCO2 for redeem fees exemption
@@ -496,7 +505,7 @@ contract BaseCarbonTonne is
 
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ) {
-            checkEligible(tco2s[i]);
+            require(checkEligible(tco2s[i]), Errors.CP_NOT_ELIGIBLE);
             if (!isExempted) {
                 feeAmount =
                     (amounts[i] * _feeRedeemPercentageInBase) /

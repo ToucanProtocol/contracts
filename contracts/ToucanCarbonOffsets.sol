@@ -5,7 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import './bases/ToucanCarbonOffsetsRetirements.sol';
+import './bases/ToucanCarbonOffsetsDirectRetirements.sol';
 import './bases/ToucanCarbonOffsetsWithBatchBase.sol';
 
 /// @notice Implementation contract of the TCO2 tokens (ERC20)
@@ -14,7 +14,7 @@ import './bases/ToucanCarbonOffsetsWithBatchBase.sol';
 /// @dev Each TCO2 contract is deployed via a Beacon Proxy in `ToucanCarbonOffsetsFactory`
 contract ToucanCarbonOffsets is
     ToucanCarbonOffsetsWithBatchBase,
-    ToucanCarbonOffsetsRetirements
+    ToucanCarbonOffsetsDirectRetirements
 {
     // ----------------------------------------
     //      Constants
