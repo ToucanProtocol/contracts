@@ -7,6 +7,7 @@ pragma solidity 0.8.14;
 
 import '../CarbonProjectVintageTypes.sol';
 import '../CarbonProjectTypes.sol';
+import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 
 interface IToucanCarbonOffsets {
     function retireFrom(address account, uint256 amount)
@@ -32,10 +33,8 @@ interface IToucanCarbonOffsets {
 
     function retireAndMintCertificateForEntity(
         address retiringEntity,
-        string calldata retiringEntityString,
-        address beneficiary,
-        string calldata beneficiaryString,
-        string calldata retirementMessage,
-        uint256 amount
+        CreateRetirementRequestParams calldata params
     ) external;
+
+    function projectVintageTokenId() external view returns (uint256);
 }

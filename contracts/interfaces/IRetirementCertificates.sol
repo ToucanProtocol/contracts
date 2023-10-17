@@ -5,6 +5,8 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
+import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+
 interface IRetirementCertificates {
     function mintCertificate(
         address retiringEntity,
@@ -12,6 +14,12 @@ interface IRetirementCertificates {
         address beneficiary,
         string calldata beneficiaryString,
         string calldata retirementMessage,
+        uint256[] calldata retirementEventIds
+    ) external returns (uint256);
+
+    function mintCertificateWithExtraData(
+        address retiringEntity,
+        CreateRetirementRequestParams calldata params,
         uint256[] calldata retirementEventIds
     ) external returns (uint256);
 

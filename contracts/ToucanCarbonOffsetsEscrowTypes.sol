@@ -11,6 +11,7 @@ struct DetokenizationRequest {
     RequestStatus status;
     // The request may optionally be associated with one or more batches.
     uint256[] batchTokenIds;
+    uint256 projectVintageTokenId;
 }
 
 struct RetirementRequest {
@@ -32,6 +33,15 @@ struct RetirementRequest {
     string beneficiaryString;
     // Optional
     string retirementMessage;
+    // Optional
+    string beneficiaryLocation;
+    // Optional
+    string consumptionCountryCode;
+    // Optional
+    uint256 consumptionPeriodStart;
+    // Optional
+    uint256 consumptionPeriodEnd;
+    uint256 projectVintageTokenId;
 }
 
 enum RequestStatus {

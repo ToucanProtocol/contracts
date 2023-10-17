@@ -17,8 +17,8 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import './interfaces/ICarbonOffsetBatches.sol';
 import './interfaces/ICarbonProjectVintages.sol';
 import './interfaces/IToucanCarbonOffsets.sol';
+import './interfaces/IToucanCarbonOffsetsFactory.sol';
 import './interfaces/IToucanContractRegistry.sol';
-import './ToucanCarbonOffsetsFactory.sol';
 import './CarbonOffsetBatchesStorage.sol';
 import './libraries/Errors.sol';
 import './libraries/ProjectVintageUtils.sol';
@@ -262,7 +262,7 @@ contract CarbonOffsetBatches is
     }
 
     /// @notice Function to reject Batch-NFTs, e.g. if the serial number entered is incorrect.
-    function rejectRetirement(uint256 tokenId) public virtual whenNotPaused {
+    function rejectBatch(uint256 tokenId) public virtual whenNotPaused {
         onlyWithRole(VERIFIER_ROLE);
         require(
             nftList[tokenId].status == BatchStatus.Pending,
@@ -280,7 +280,7 @@ contract CarbonOffsetBatches is
         whenNotPaused
     {
         onlyWithRole(VERIFIER_ROLE);
-        rejectRetirement(tokenId);
+        rejectBatch(tokenId);
         addComment(tokenId, comment);
     }
 
@@ -576,7 +576,7 @@ contract CarbonOffsetBatches is
             carbonRegistry
         );
 
-        return ToucanCarbonOffsetsFactory(tco2Factory).pvIdtoERC20(pvId);
+        return IToucanCarbonOffsetsFactory(tco2Factory).pvIdtoERC20(pvId);
     }
 
     function supportsInterface(bytes4 interfaceId)

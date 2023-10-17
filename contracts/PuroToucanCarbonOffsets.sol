@@ -5,10 +5,10 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import './bases/ToucanCarbonOffsetsWithBatchBase.sol';
+import './bases/ToucanCarbonOffsetsEscrowableWithBatchBase.sol';
 
 /// @notice The PuroToucanCarbonOffsets contract is a specific implementation for Puro's logic.
-contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsWithBatchBase {
+contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsEscrowableWithBatchBase {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -16,7 +16,7 @@ contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsWithBatchBase {
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.0.0';
+    string public constant VERSION = '1.1.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
 
     // ----------------------------------------
@@ -26,12 +26,12 @@ contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsWithBatchBase {
     function initialize(
         string memory name_,
         string memory symbol_,
-        uint256 _projectVintageTokenId,
-        address _contractRegistry
+        uint256 projectVintageTokenId_,
+        address contractRegistry_
     ) external virtual initializer {
         __ERC20_init_unchained(name_, symbol_);
-        projectVintageTokenId = _projectVintageTokenId;
-        contractRegistry = _contractRegistry;
+        _projectVintageTokenId = projectVintageTokenId_;
+        contractRegistry = contractRegistry_;
     }
 
     function standardRegistry() public pure override returns (string memory) {

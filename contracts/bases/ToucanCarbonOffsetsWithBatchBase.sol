@@ -6,6 +6,8 @@
 pragma solidity 0.8.14;
 
 import './ToucanCarbonOffsetsBase.sol';
+import './ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import '../libraries/Errors.sol';
 
 /// @notice Base contract that can be reused between different TCO2
 /// implementations that need to work with batch NFTs
@@ -14,107 +16,8 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
     ToucanCarbonOffsetsBase
 {
     // ----------------------------------------
-    //       Events
-    // ----------------------------------------
-
-    event DetokenizationRequested(
-        address indexed user,
-        uint256 amount,
-        uint256 indexed requestId,
-        uint256[] batchIds
-    );
-    event DetokenizationReverted(uint256 indexed requestId);
-    event DetokenizationFinalized(uint256 indexed requestId);
-
-    // ----------------------------------------
     //       Admin functions
     // ----------------------------------------
-
-    /// @notice Finalize a detokenization request
-    /// @param requestId The request id in the escrow contract that
-    /// tracks the detokenization request
-    function finalizeDetokenization(uint256 requestId)
-        external
-        whenNotPaused
-        onlyWithRole(DETOKENIZER_ROLE)
-    {
-        address tcnRegistry = contractRegistry;
-        address batchNFT = IToucanContractRegistry(tcnRegistry)
-            .carbonOffsetBatchesAddress();
-        address escrow = IToucanContractRegistry(tcnRegistry)
-            .toucanCarbonOffsetsEscrowAddress();
-
-        // Fetch batch NFT IDs from escrow request
-        DetokenizationRequest memory request = IToucanCarbonOffsetsEscrow(
-            escrow
-        ).detokenizationRequests(requestId);
-
-        uint256 batchIdLength = request.batchTokenIds.length;
-        // Loop through batches in the request and finalize them
-        // while keeping track of the total TCO2 amount to burn
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < batchIdLength; ) {
-            ICarbonOffsetBatches(batchNFT)
-                .setStatusForDetokenizationOrRetirement(
-                    request.batchTokenIds[i],
-                    BatchStatus.DetokenizationFinalized
-                );
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        // Finalize escrow request
-        IToucanCarbonOffsetsEscrow(escrow).finalizeDetokenizationRequest(
-            requestId
-        );
-
-        emit DetokenizationFinalized(requestId);
-    }
-
-    /// @notice Revert a detokenization request
-    /// @param requestId The request id in the escrow contract that
-    /// tracks the detokenization request
-    function revertDetokenization(uint256 requestId)
-        external
-        whenNotPaused
-        onlyWithRole(DETOKENIZER_ROLE)
-    {
-        address tcnRegistry = contractRegistry;
-        address batchNFT = IToucanContractRegistry(tcnRegistry)
-            .carbonOffsetBatchesAddress();
-        address escrow = IToucanContractRegistry(tcnRegistry)
-            .toucanCarbonOffsetsEscrowAddress();
-
-        // Fetch batch NFT IDs from escrow request
-        DetokenizationRequest memory request = IToucanCarbonOffsetsEscrow(
-            escrow
-        ).detokenizationRequests(requestId);
-
-        uint256 batchIdLength = request.batchTokenIds.length;
-        // Loop through batches in the request and revert them to Confirmed
-        // while keeping track of the total amount to transfer back to the user
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < batchIdLength; ) {
-            ICarbonOffsetBatches(batchNFT)
-                .setStatusForDetokenizationOrRetirement(
-                    request.batchTokenIds[i],
-                    BatchStatus.Confirmed
-                );
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        // Mark escrow request as reverted
-        IToucanCarbonOffsetsEscrow(escrow).revertDetokenizationRequest(
-            requestId
-        );
-
-        emit DetokenizationReverted(requestId);
-    }
 
     /// @notice Defractionalize batch NFT by burning the amount
     /// of TCO2 from the sender and transfer the batch NFT that
@@ -135,77 +38,14 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             uint256 batchAmount,
             BatchStatus status
         ) = _getNormalizedDataFromBatch(batchNFT, tokenId);
-        require(status == BatchStatus.Confirmed, 'Batch not confirmed');
+        require(
+            status == BatchStatus.Confirmed,
+            Errors.TCO2_BATCH_NOT_CONFIRMED
+        );
         _burn(msg.sender, batchAmount);
 
         // Transfer batch NFT to sender
         IERC721(batchNFT).transferFrom(address(this), msg.sender, tokenId);
-    }
-
-    // ----------------------------------------
-    //       Permissionless functions
-    // ----------------------------------------
-
-    /// @notice Request a detokenization of a batch NFT
-    /// @param tokenIds One or more batches to detokenize
-    /// @param amount The amount of TCO2 to detokenize
-    /// Currently the amount must match the batch quantity
-    /// @return The ID of the request in the escrow contract
-    /// @dev This function is permissionless and can be called
-    /// by anyone
-    function requestDetokenization(uint256[] calldata tokenIds, uint256 amount)
-        external
-        whenNotPaused
-        returns (uint256)
-    {
-        address tcnRegistry = contractRegistry;
-        address batchNFT = IToucanContractRegistry(tcnRegistry)
-            .carbonOffsetBatchesAddress();
-        address escrow = IToucanContractRegistry(tcnRegistry)
-            .toucanCarbonOffsetsEscrowAddress();
-
-        //slither-disable-next-line uninitialized-local
-        uint256 totalAmount;
-        {
-            // Stack too deep workaround
-
-            // Loop through batches in the request and set them to DetokenizationRequested
-            // while keeping track of the total amount to transfer from the user
-            uint256 batchIdLength = tokenIds.length;
-            //slither-disable-next-line uninitialized-local
-            for (uint256 i; i < batchIdLength; ) {
-                uint256 tokenId = tokenIds[i];
-                (, uint256 batchAmount, ) = _getNormalizedDataFromBatch(
-                    batchNFT,
-                    tokenId
-                );
-                totalAmount += batchAmount;
-
-                // Transition batch status to DetokenizationRequested
-                ICarbonOffsetBatches(batchNFT)
-                    .setStatusForDetokenizationOrRetirement(
-                        tokenId,
-                        BatchStatus.DetokenizationRequested
-                    );
-
-                unchecked {
-                    ++i;
-                }
-            }
-        }
-
-        // Current requirement is that the total batch quantity matches the provided
-        // amount. In the future this requirement should be removed in favor of
-        // performing batch splitting.
-        require(amount == totalAmount, 'Batch amount mismatch');
-
-        // Create escrow contract request
-        require(approve(escrow, amount), 'Approval failed');
-        uint256 requestId = IToucanCarbonOffsetsEscrow(escrow)
-            .createDetokenizationRequest(_msgSender(), amount, tokenIds);
-        emit DetokenizationRequested(_msgSender(), amount, requestId, tokenIds);
-
-        return requestId;
     }
 
     /// @notice Receive hook to fractionalize Batch-NFTs into ERC20's
@@ -221,7 +61,7 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
         // msg.sender is the CarbonOffsetBatches contract
         require(
             checkWhiteListed(msg.sender),
-            'Error: Batch-NFT not from whitelisted contract'
+            Errors.TCO2_BATCH_NOT_WHITELISTED
         );
 
         (
@@ -230,14 +70,14 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             BatchStatus status
         ) = _getNormalizedDataFromBatch(msg.sender, tokenId);
         require(
-            gotVintageTokenId == projectVintageTokenId,
-            'Error: non-matching NFT'
+            gotVintageTokenId == _projectVintageTokenId,
+            Errors.TCO2_NON_MATCHING_NFT
         );
-        require(status == BatchStatus.Confirmed, 'BatchNFT not yet confirmed');
         require(
-            getRemaining() >= quantity,
-            'Error: Quantity in batch is higher than total vintages'
+            status == BatchStatus.Confirmed,
+            Errors.TCO2_BATCH_NOT_CONFIRMED
         );
+        require(getRemaining() >= quantity, Errors.TCO2_QTY_HIGHER);
 
         minterToId[from] = tokenId;
         IToucanCarbonOffsetsFactory tco2Factory = IToucanCarbonOffsetsFactory(
@@ -307,23 +147,5 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
         } else {
             return false;
         }
-    }
-
-    function retireAndMintCertificateForEntity(
-        address retiringEntity,
-        string calldata retiringEntityString,
-        address beneficiary,
-        string calldata beneficiaryString,
-        string calldata retirementMessage,
-        uint256 amount
-    ) external virtual onlyEscrow {
-        _retireAndMintCertificate(
-            retiringEntity,
-            retiringEntityString,
-            beneficiary,
-            beneficiaryString,
-            retirementMessage,
-            amount
-        );
     }
 }

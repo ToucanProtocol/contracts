@@ -12,8 +12,11 @@ import '@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
+import './bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import './interfaces/ICarbonProjectVintages.sol';
 import './interfaces/IToucanCarbonOffsets.sol';
 import './interfaces/IToucanContractRegistry.sol';
+import './libraries/Strings.sol';
 import './RetirementCertificatesStorage.sol';
 
 /// @notice The `RetirementCertificates` contract lets users mint NFTs that act as proof-of-retirement.
@@ -33,6 +36,7 @@ contract RetirementCertificates is
     // ----------------------------------------
 
     using AddressUpgradeable for address;
+    using Strings for string;
 
     // ----------------------------------------
     //      Constants
@@ -41,8 +45,8 @@ contract RetirementCertificates is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.0.1';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
+    string public constant VERSION = '1.1.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev dividers to round carbon in human-readable denominations
     uint256 public constant tonneDenomination = 1e18;
@@ -229,6 +233,27 @@ contract RetirementCertificates is
         string calldata retirementMessage,
         uint256[] calldata retirementEventIds
     ) external virtual nonReentrant returns (uint256) {
+        CreateRetirementRequestParams
+            memory params = CreateRetirementRequestParams({
+                tokenIds: new uint256[](0),
+                amount: 0,
+                retiringEntityString: retiringEntityString,
+                beneficiary: beneficiary,
+                beneficiaryString: beneficiaryString,
+                retirementMessage: retirementMessage,
+                beneficiaryLocation: '',
+                consumptionCountryCode: '',
+                consumptionPeriodStart: 0,
+                consumptionPeriodEnd: 0
+            });
+        return _mintCertificate(retiringEntity, params, retirementEventIds);
+    }
+
+    function _mintCertificate(
+        address retiringEntity,
+        CreateRetirementRequestParams memory params,
+        uint256[] calldata retirementEventIds
+    ) internal returns (uint256) {
         // If the provided retiring entity is not the caller, then
         // ensure the caller is at least a TCO2 contract. This is to
         // allow TCO2 contracts to call retireAndMintCertificate.
@@ -251,16 +276,40 @@ contract RetirementCertificates is
         _attachRetirementEvents(newItemId, retiringEntity, retirementEventIds);
 
         certificates[newItemId].createdAt = block.timestamp;
-        certificates[newItemId].beneficiary = beneficiary;
-        certificates[newItemId].beneficiaryString = beneficiaryString;
+        certificates[newItemId].beneficiary = params.beneficiary;
+        certificates[newItemId].beneficiaryString = params.beneficiaryString;
         certificates[newItemId].retiringEntity = retiringEntity;
-        certificates[newItemId].retiringEntityString = retiringEntityString;
-        certificates[newItemId].retirementMessage = retirementMessage;
+        certificates[newItemId].retiringEntityString = params
+            .retiringEntityString;
+        certificates[newItemId].retirementMessage = params.retirementMessage;
+        certificates[newItemId].beneficiaryLocation = params
+            .beneficiaryLocation;
+        certificates[newItemId].consumptionCountryCode = params
+            .consumptionCountryCode;
+        certificates[newItemId].consumptionPeriodStart = params
+            .consumptionPeriodStart;
+        certificates[newItemId].consumptionPeriodEnd = params
+            .consumptionPeriodEnd;
 
         emit CertificateMinted(newItemId);
         _safeMint(retiringEntity, newItemId);
 
         return newItemId;
+    }
+
+    /// @notice Mint new Retirement Certificate NFT that shows how many TCO2s have been retired.
+    /// @param retiringEntity The entity that has retired TCO2 and is eligible to mint an NFT.
+    /// @param params Retirement params
+    /// @param retirementEventIds An array of event ids to associate with the NFT.
+    /// @return The token id of the newly minted NFT.
+    /// @dev    The function can either be called by a valid TCO2 contract or by someone who
+    ///         owns retirement events.
+    function mintCertificateWithExtraData(
+        address retiringEntity,
+        CreateRetirementRequestParams calldata params,
+        uint256[] calldata retirementEventIds
+    ) external virtual nonReentrant returns (uint256) {
+        return _mintCertificate(retiringEntity, params, retirementEventIds);
     }
 
     /// @param tokenId The id of the NFT to get the URI.
@@ -298,6 +347,12 @@ contract RetirementCertificates is
         string calldata beneficiaryString,
         string calldata retirementMessage
     ) external virtual {
+        string[] memory registries = new string[](1);
+        registries[0] = 'verra';
+        require(
+            isCertificateForRegistry(tokenId, registries),
+            'Invalid registry'
+        );
         require(msg.sender == ownerOf(tokenId), 'Sender is not owner');
         require(
             block.timestamp < certificates[tokenId].createdAt + 24 hours,
@@ -318,6 +373,34 @@ contract RetirementCertificates is
         }
 
         emit CertificateUpdated(tokenId);
+    }
+
+    function isCertificateForRegistry(
+        uint256 tokenId,
+        string[] memory registries
+    ) public view returns (bool) {
+        // Determine the registry of the certificate
+        uint256 eventId = certificates[tokenId].retirementEventIds[0];
+        uint256 projectVintageTokenId = retirements[eventId]
+            .projectVintageTokenId;
+        VintageData memory data = ICarbonProjectVintages(
+            IToucanContractRegistry(contractRegistry)
+                .carbonProjectVintagesAddress()
+        ).getProjectVintageDataByTokenId(projectVintageTokenId);
+        string memory registry = data.registry;
+        if (bytes(registry).length == 0) {
+            // For backwards-compatibility
+            registry = 'verra';
+        }
+
+        // Loop through the registries and check if the certificate is for one of them
+        for (uint256 i = 0; i < registries.length; i++) {
+            if (registry.equals(registries[i])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// @notice Get certificate data for an NFT.

@@ -105,4 +105,16 @@ library Errors {
     string public constant COB_ONLY_MINTS = '43';
     // New batch status is invalid
     string public constant COB_INVALID_NEW_STATUS = '44';
+    // The TCO2 batch amount has a mismatch
+    string public constant TCO2_BATCH_AMT_MISMATCH = '45';
+    // The TCO2 batch amount approval has failed
+    string public constant TCO2_APPROVAL_AMT_FAILED = '46';
+    // The TCO2 batch not confirmed
+    string public constant TCO2_BATCH_NOT_CONFIRMED = '47';
+    // The TCO2 batch not whitelisted
+    string public constant TCO2_BATCH_NOT_WHITELISTED = '48';
+    // The TCO2 is non matching NFT
+    string public constant TCO2_NON_MATCHING_NFT = '49';
+    // The TCO2 Quantity in batch is higher than total vintages
+    string public constant TCO2_QTY_HIGHER = '50';
 }

@@ -142,6 +142,10 @@ abstract contract ToucanCarbonOffsetsBase is
     //       Permissionless functions
     // ----------------------------------------
 
+    function projectVintageTokenId() external view returns (uint256) {
+        return _projectVintageTokenId;
+    }
+
     /// @notice Token name getter overriden to return the a name based on the carbon project data
     //slither-disable-next-line external-function
     function name() public view virtual override returns (string memory) {
@@ -197,7 +201,7 @@ abstract contract ToucanCarbonOffsetsBase is
             .carbonProjectVintagesAddress();
 
         VintageData memory vintageData = ICarbonProjectVintages(vc)
-            .getProjectVintageDataByTokenId(projectVintageTokenId);
+            .getProjectVintageDataByTokenId(_projectVintageTokenId);
         ProjectData memory projectData = ICarbonProjects(pc)
             .getProjectDataByTokenId(vintageData.projectTokenId);
 
@@ -256,7 +260,7 @@ abstract contract ToucanCarbonOffsetsBase is
             .retirementCertificatesAddress();
         retirementEventId = IRetirementCertificates(certAddr).registerEvent(
             retiringEntityAddress,
-            projectVintageTokenId,
+            _projectVintageTokenId,
             amount,
             false
         );
@@ -267,29 +271,26 @@ abstract contract ToucanCarbonOffsetsBase is
     // @dev Internal function retire and mint certificates
     function _retireAndMintCertificate(
         address retiringEntity,
-        string calldata retiringEntityString,
-        address beneficiary,
-        string calldata beneficiaryString,
-        string calldata retirementMessage,
-        uint256 amount
+        CreateRetirementRequestParams memory params
     ) internal virtual whenNotPaused {
         // Retire provided amount
-        uint256 retirementEventId = _retire(msg.sender, amount, retiringEntity);
+        uint256 retirementEventId = _retire(
+            msg.sender,
+            params.amount,
+            retiringEntity
+        );
         uint256[] memory retirementEventIds = new uint256[](1);
         retirementEventIds[0] = retirementEventId;
 
-        // Mint certificate
-        address certAddr = IToucanContractRegistry(contractRegistry)
-            .retirementCertificatesAddress();
         //slither-disable-next-line unused-return
-        IRetirementCertificates(certAddr).mintCertificate(
-            retiringEntity,
-            retiringEntityString,
-            beneficiary,
-            beneficiaryString,
-            retirementMessage,
-            retirementEventIds
-        );
+        IRetirementCertificates(
+            IToucanContractRegistry(contractRegistry)
+                .retirementCertificatesAddress()
+        ).mintCertificateWithExtraData(
+                retiringEntity,
+                params,
+                retirementEventIds
+            );
     }
 
     // -----------------------------

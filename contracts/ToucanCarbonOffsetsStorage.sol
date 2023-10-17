@@ -8,11 +8,11 @@ pragma solidity 0.8.14;
 
 /// @dev Separate storage contract to improve upgrade safety
 abstract contract ToucanCarbonOffsetsStorage {
-    uint256 public projectVintageTokenId;
+    uint256 internal _projectVintageTokenId;
     address public contractRegistry;
 
     mapping(address => uint256) public minterToId;
     /// @dev deprecated field; retirements are now tracked
     /// as events in the RetirementCertificatesStorage contract
-    mapping(address => uint256) public retiredAmount;
+    mapping(address => uint256) internal retiredAmount;
 }

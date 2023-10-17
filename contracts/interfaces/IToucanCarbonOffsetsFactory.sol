@@ -25,4 +25,6 @@ interface IToucanCarbonOffsetsFactory is IAccessControlUpgradeable {
     function owner() external view returns (address);
 
     function standardRegistry() external returns (string memory);
+
+    function pvIdtoERC20(uint256 pvId) external view returns (address);
 }

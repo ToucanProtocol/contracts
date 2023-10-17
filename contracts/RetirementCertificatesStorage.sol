@@ -14,6 +14,10 @@ abstract contract RetirementCertificatesStorageV1 {
         string retiringEntityString;
         string beneficiaryString;
         string retirementMessage;
+        string beneficiaryLocation;
+        string consumptionCountryCode;
+        uint256 consumptionPeriodStart;
+        uint256 consumptionPeriodEnd;
     }
 
     /// @dev a RetirementEvent has a clear ownership relationship.

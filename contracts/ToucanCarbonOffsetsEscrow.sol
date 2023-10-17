@@ -12,6 +12,7 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 
+import './bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 import './interfaces/IToucanCarbonOffsets.sol';
 import './interfaces/IToucanCarbonOffsetsEscrow.sol';
 import './interfaces/IToucanContractRegistry.sol';
@@ -37,8 +38,8 @@ contract ToucanCarbonOffsetsEscrow is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.0.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
+    string public constant VERSION = '1.1.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
@@ -134,12 +135,16 @@ contract ToucanCarbonOffsetsEscrow is
         }
         detokenizationRequestIdCounter = requestId;
 
+        // Keep track of the project vintage token id
+        uint256 projectVintageTokenId = getProjectVintageTokenId(msg.sender);
+
         // Store detokenization request data
         _detokenizationRequests[requestId] = DetokenizationRequest(
             user,
             amount,
             RequestStatus.Pending,
-            batchTokenIds
+            batchTokenIds,
+            projectVintageTokenId
         );
 
         // Transfer TCO2 from user to escrow contract
@@ -157,21 +162,10 @@ contract ToucanCarbonOffsetsEscrow is
     /// Additionally, the escrow contract must have been
     /// approved to transfer the amount of TCO2 to retire.
     /// @param user The user that is requesting the retirement.
-    /// @param amount The amount of TCO2 to retire.
-    /// @param batchTokenIds The ids of the batches to retire.
-    /// @param retiringEntityString The name of the entity retiring the TCO2.
-    /// @param beneficiary The address of the beneficiary.
-    /// @param beneficiaryString The name of the beneficiary.
-    /// @param retirementMessage A message for the retirement.
-    /// @return requestId The id of the retirement request.
+    /// @param params Retirement request params.
     function createRetirementRequest(
         address user,
-        uint256 amount,
-        uint256[] calldata batchTokenIds,
-        string calldata retiringEntityString,
-        address beneficiary,
-        string calldata beneficiaryString,
-        string calldata retirementMessage
+        CreateRetirementRequestParams calldata params
     ) external virtual override onlyTCO2 returns (uint256 requestId) {
         // Bump request id
         requestId = retirementRequestIdCounter;
@@ -179,23 +173,32 @@ contract ToucanCarbonOffsetsEscrow is
             ++requestId;
         }
         retirementRequestIdCounter = requestId;
+
+        // Keep track of the project vintage token id
+        uint256 projectVintageTokenId = getProjectVintageTokenId(msg.sender);
+
         // Store retirement request data
         _retirementRequests[requestId] = RetirementRequest(
             user,
-            amount,
+            params.amount,
             RequestStatus.Pending,
-            batchTokenIds,
-            retiringEntityString,
-            beneficiary,
-            beneficiaryString,
-            retirementMessage
+            params.tokenIds,
+            params.retiringEntityString,
+            params.beneficiary,
+            params.beneficiaryString,
+            params.retirementMessage,
+            params.beneficiaryLocation,
+            params.consumptionCountryCode,
+            params.consumptionPeriodStart,
+            params.consumptionPeriodEnd,
+            projectVintageTokenId
         );
 
         // Transfer TCO2 from user to escrow contract
         IERC20Upgradeable(msg.sender).safeTransferFrom(
             user,
             address(this),
-            amount
+            params.amount
         );
 
         return requestId;
@@ -218,15 +221,22 @@ contract ToucanCarbonOffsetsEscrow is
 
         request.status = RequestStatus.Finalized;
 
-        uint256 amount = request.amount;
-
+        CreateRetirementRequestParams
+            memory params = CreateRetirementRequestParams({
+                tokenIds: request.batchTokenIds,
+                amount: request.amount,
+                retiringEntityString: request.retiringEntityString,
+                beneficiary: request.beneficiary,
+                beneficiaryString: request.beneficiaryString,
+                retirementMessage: request.retirementMessage,
+                beneficiaryLocation: request.beneficiaryLocation,
+                consumptionCountryCode: request.consumptionCountryCode,
+                consumptionPeriodStart: request.consumptionPeriodStart,
+                consumptionPeriodEnd: request.consumptionPeriodEnd
+            });
         IToucanCarbonOffsets(msg.sender).retireAndMintCertificateForEntity(
             request.user,
-            request.retiringEntityString,
-            request.beneficiary,
-            request.beneficiaryString,
-            request.retirementMessage,
-            amount
+            params
         );
     }
 
@@ -299,6 +309,14 @@ contract ToucanCarbonOffsetsEscrow is
     // ----------------------------------------
     //           Read-only functions
     // ----------------------------------------
+
+    function getProjectVintageTokenId(address tco2)
+        internal
+        view
+        returns (uint256)
+    {
+        return IToucanCarbonOffsets(tco2).projectVintageTokenId();
+    }
 
     function detokenizationRequests(uint256 requestId)
         external

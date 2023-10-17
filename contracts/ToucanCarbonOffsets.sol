@@ -33,12 +33,12 @@ contract ToucanCarbonOffsets is
     function initialize(
         string memory name_,
         string memory symbol_,
-        uint256 _projectVintageTokenId,
-        address _contractRegistry
+        uint256 projectVintageTokenId_,
+        address contractRegistry_
     ) external virtual initializer {
         __ERC20_init_unchained(name_, symbol_);
-        projectVintageTokenId = _projectVintageTokenId;
-        contractRegistry = _contractRegistry;
+        _projectVintageTokenId = projectVintageTokenId_;
+        contractRegistry = contractRegistry_;
     }
 
     /// @dev function to achieve backwards compatibility
@@ -54,7 +54,7 @@ contract ToucanCarbonOffsets is
             .retirementCertificatesAddress();
         retirementEventId = IRetirementCertificates(certAddr).registerEvent(
             msg.sender,
-            projectVintageTokenId,
+            _projectVintageTokenId,
             amount,
             true
         );

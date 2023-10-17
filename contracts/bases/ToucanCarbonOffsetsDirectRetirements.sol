@@ -53,14 +53,20 @@ abstract contract ToucanCarbonOffsetsDirectRetirements is
         string calldata retirementMessage,
         uint256 amount
     ) external virtual whenNotPaused {
-        // @dev Call Internal function to retire and mint certificate
-        _retireAndMintCertificate(
-            msg.sender,
-            retiringEntityString,
-            beneficiary,
-            beneficiaryString,
-            retirementMessage,
-            amount
-        );
+        CreateRetirementRequestParams
+            memory params = CreateRetirementRequestParams({
+                tokenIds: new uint256[](0),
+                amount: amount,
+                retiringEntityString: retiringEntityString,
+                beneficiary: beneficiary,
+                beneficiaryString: beneficiaryString,
+                retirementMessage: retirementMessage,
+                beneficiaryLocation: '',
+                consumptionCountryCode: '',
+                consumptionPeriodStart: 0,
+                consumptionPeriodEnd: 0
+            });
+
+        _retireAndMintCertificate(msg.sender, params);
     }
 }

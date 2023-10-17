@@ -6,6 +6,7 @@
 pragma solidity 0.8.14;
 
 import '../ToucanCarbonOffsetsEscrowTypes.sol';
+import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 
 interface IToucanCarbonOffsetsEscrow {
     function createDetokenizationRequest(
@@ -16,12 +17,7 @@ interface IToucanCarbonOffsetsEscrow {
 
     function createRetirementRequest(
         address user,
-        uint256 amount,
-        uint256[] calldata batchTokenIds,
-        string calldata retiringEntityString,
-        address beneficiary,
-        string calldata beneficiaryString,
-        string calldata retirementMessage
+        CreateRetirementRequestParams calldata params
     ) external returns (uint256);
 
     function finalizeDetokenizationRequest(uint256 requestId) external;
