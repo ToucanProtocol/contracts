@@ -271,6 +271,45 @@ abstract contract Pool is
         _burn(_account, _amount);
     }
 
+    function _getRemotePoolAddress(address tcm, uint32 destinationDomain)
+        internal
+        view
+        returns (address recipient)
+    {
+        RemoteTokenInformation memory remoteInfo = IToucanCrosschainMessenger(
+            tcm
+        ).remoteTokens(address(this), destinationDomain);
+        recipient = remoteInfo.tokenAddress;
+        require(recipient != address(0), Errors.CP_EMPTY_ADDRESS);
+    }
+
+    /// @notice Get the fee needed to bridge TCO2s into the destination domain.
+    /// @param destinationDomain The domain to bridge TCO2s to
+    /// @param tco2s The TCO2s to bridge
+    /// @param amounts The amounts of TCO2s to bridge
+    /// @return fee The fee amount to be paid
+    function quoteBridgeTCO2sFee(
+        uint32 destinationDomain,
+        address[] calldata tco2s,
+        uint256[] calldata amounts
+    ) external view returns (uint256 fee) {
+        uint256 tco2Length = tco2s.length;
+        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+
+        address tcm = router;
+        address recipient = _getRemotePoolAddress(tcm, destinationDomain);
+
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < tco2Length; ++i) {
+            fee += IToucanCrosschainMessenger(tcm).quoteTokenTransferFee(
+                destinationDomain,
+                tco2s[i],
+                amounts[i],
+                recipient
+            );
+        }
+    }
+
     /// @notice Allows MANAGER or the owner to bridge TCO2s into
     /// another domain.
     /// @param destinationDomain The domain to bridge TCO2s to
@@ -280,7 +319,7 @@ abstract contract Pool is
         uint32 destinationDomain,
         address[] calldata tco2s,
         uint256[] calldata amounts
-    ) external {
+    ) external payable {
         onlyWithRole(MANAGER_ROLE);
         uint256 tco2Length = tco2s.length;
         require(tco2Length != 0, Errors.CP_EMPTY_ARRAY);
@@ -293,20 +332,14 @@ abstract contract Pool is
         // Read the address of the remote pool from ToucanCrosschainMessenger
         // and set that as a recipient in our cross-chain messages.
         address tcm = router;
-        RemoteTokenInformation memory remoteInfo = IToucanCrosschainMessenger(
-            tcm
-        ).remoteTokens(address(this), destinationDomain);
-        address recipient = remoteInfo.tokenAddress;
-        require(recipient != address(0), Errors.CP_EMPTY_ADDRESS);
+        address recipient = _getRemotePoolAddress(tcm, destinationDomain);
 
+        uint256 payment = msg.value / tco2Length;
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
-            IToucanCrosschainMessenger(tcm).sendMessageWithRecipient(
-                destinationDomain,
-                tco2s[i],
-                amounts[i],
-                recipient
-            );
+            IToucanCrosschainMessenger(tcm).transferTokensToRecipient{
+                value: payment
+            }(destinationDomain, tco2s[i], amounts[i], recipient);
             emit TCO2Bridged(destinationDomain, tco2s[i], amounts[i]);
         }
     }

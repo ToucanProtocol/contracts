@@ -47,7 +47,7 @@ abstract contract ToucanCrosschainMessengerStorageV1 {
     /// chain to the domain id of the remote chain (uint32)
     /// to info about the token in the remote chain (RemoteTokenInformation)
     mapping(address => mapping(uint32 => RemoteTokenInformation))
-        public remoteTokens;
+        internal remoteTokens_;
 }
 
 abstract contract ToucanCrosschainMessengerStorage is

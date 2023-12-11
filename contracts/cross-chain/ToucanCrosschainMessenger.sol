@@ -5,17 +5,21 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {Router} from '@abacus-network/app/contracts/Router.sol';
+import {Router} from '@hyperlane-xyz/core/contracts/client/Router.sol';
+import {AccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {PausableUpgradeable} from '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import {UUPSUpgradeable} from '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
 import './ToucanCrosschainMessengerStorage.sol';
 import './interfaces/IBridgeableToken.sol';
+import {IToucanCrosschainMessenger} from './interfaces/IToucanCrosschainMessenger.sol';
 
 contract ToucanCrosschainMessenger is
+    IToucanCrosschainMessenger,
     PausableUpgradeable,
-    Router,
     UUPSUpgradeable,
+    AccessControlUpgradeable,
+    Router,
     ToucanCrosschainMessengerStorage
 {
     // ----------------------------------------
@@ -25,7 +29,7 @@ contract ToucanCrosschainMessenger is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.1.0';
+    string public constant VERSION = '2.0.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @notice duration allowing for updates in token pairs post-creation
@@ -33,6 +37,7 @@ contract ToucanCrosschainMessenger is
     /// @dev EIP712Domain hash used in generating request hashes
     bytes32 public constant EIP712DomainHash =
         keccak256('EIP712Domain(string name,string version,uint256 chainId)');
+    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     // ----------------------------------------
     //      Events
@@ -63,24 +68,44 @@ contract ToucanCrosschainMessenger is
         address indexed remoteTokenAddress,
         uint32 domainId
     );
+    event TokenPairRemoved(
+        address indexed homeTokenAddress,
+        address indexed remoteTokenAddress,
+        uint32 domainId
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
+    constructor(address _mailbox) Router(_mailbox) {
         _disableInitializers();
+    }
+
+    modifier onlyPausers() {
+        require(hasRole(PAUSER_ROLE, msg.sender), 'Not authorized');
+        _;
     }
 
     // ----------------------------------------
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize(address _abacusConnectionManager)
-        external
-        virtual
-        initializer
-    {
-        __Router_initialize(_abacusConnectionManager);
+    function initialize(
+        address _owner,
+        address[] calldata accounts,
+        bytes32[] calldata roles
+    ) external virtual initializer {
+        require(accounts.length == roles.length, 'Array length mismatch');
+
+        _MailboxClient_initialize(address(0), address(0), _owner);
         __Pausable_init();
         __UUPSUpgradeable_init_unchained();
+        __AccessControl_init_unchained();
+
+        bool hasDefaultAdmin = false;
+        for (uint256 i = 0; i < accounts.length; ++i) {
+            _grantRole(roles[i], accounts[i]);
+            if (roles[i] == DEFAULT_ADMIN_ROLE) hasDefaultAdmin = true;
+        }
+        require(hasDefaultAdmin, 'No admin specified');
     }
 
     function DOMAIN_SEPARATOR() public view returns (bytes32) {
@@ -144,33 +169,36 @@ contract ToucanCrosschainMessenger is
         address _remoteToken,
         uint32 _domain
     ) private {
-        require(
-            _homeToken != address(0) && _remoteToken != address(0),
-            '!_homeToken || !_remoteTokens'
-        );
-        if (remoteTokens[_homeToken][_domain].timer != 0) {
+        require(_homeToken != address(0), '!_homeToken');
+        if (remoteTokens_[_homeToken][_domain].timer != 0) {
             require(
-                (block.timestamp - remoteTokens[_homeToken][_domain].timer) <
+                (block.timestamp - remoteTokens_[_homeToken][_domain].timer) <
                     TIMER,
                 'timer expired'
             );
         }
-        remoteTokens[_homeToken][_domain] = RemoteTokenInformation(
+        address remoteToken = remoteTokens_[_homeToken][_domain].tokenAddress;
+        remoteTokens_[_homeToken][_domain] = RemoteTokenInformation(
             _remoteToken,
             block.timestamp
         );
-        emit TokenPairAdded(_homeToken, _remoteToken, _domain);
+        if (_remoteToken == address(0)) {
+            require(remoteToken != address(0), 'invalid pair removal');
+            emit TokenPairRemoved(_homeToken, remoteToken, _domain);
+        } else {
+            emit TokenPairAdded(_homeToken, _remoteToken, _domain);
+        }
     }
 
     /// @notice Pauses the cross chain bridge
     /// @dev when invoked by owner it Pauses the cross chain bridging logic to interact with abacus
-    function pause() external onlyOwner whenNotPaused {
+    function pause() external onlyPausers whenNotPaused {
         _pause();
     }
 
     /// @notice Unpauses the cross chain bridge
     /// @dev when invoked by owner it unpauses the cross chain bridging logic to interact with abacus
-    function unpause() external onlyOwner whenPaused {
+    function unpause() external onlyPausers whenPaused {
         _unpause();
     }
 
@@ -186,7 +214,7 @@ contract ToucanCrosschainMessenger is
     function _handle(
         uint32 _origin,
         bytes32, // _sender, // commented out because parameter not used
-        bytes memory _message
+        bytes calldata _message
     ) internal virtual override whenNotPaused {
         // currently only one message type supported, i.e. mint type
         (
@@ -232,22 +260,65 @@ contract ToucanCrosschainMessenger is
     //      Message-dispatching functions
     // ----------------------------------------
 
-    /// @notice Send a message of "Type A" to a remote xApp Router via Abacus;
-    /// this message is called to take some action in the cross-chain context
+    /// @notice Fetch the amount that needs to be used as a fee
+    /// in order to to pay for the gas of the transfer on the
+    /// destination domain.
+    /// @dev Use the result of this function as msg.value when calling
+    /// `transferTokens` or `transferTokensToRecipient`.
     /// @param _destinationDomain The domain to send the message to
     /// @param _token address of token to be bridged
     /// @param _amount the amount of tokens to be bridged
     /// @param _recipient the recipient of tokens in the destination domain
-    function sendMessageWithRecipient(
+    /// @return The required fee for a token transfer
+    function quoteTokenTransferFee(
+        uint32 _destinationDomain,
+        address _token,
+        uint256 _amount,
+        address _recipient
+    ) external view override returns (uint256) {
+        bytes memory message = _buildTokenTransferMessage(
+            _destinationDomain,
+            _token,
+            _amount,
+            _recipient,
+            bytes32(type(uint256).max)
+        );
+        return _quoteDispatch(_destinationDomain, message);
+    }
+
+    function _buildTokenTransferMessage(
+        uint32 _destinationDomain,
+        address _token,
+        uint256 _amount,
+        address _recipient,
+        bytes32 _requestHash
+    ) internal view returns (bytes memory) {
+        address remoteToken = remoteTokens_[_token][_destinationDomain]
+            .tokenAddress;
+        require(remoteToken != address(0), 'remote token not mapped');
+        return
+            abi.encode(
+                MessageTypes.MINT,
+                msg.sender,
+                _recipient,
+                remoteToken,
+                _amount,
+                _destinationDomain,
+                _requestHash
+            );
+    }
+
+    /// @notice Transfer tokens to a recipient in the destination domain
+    /// @param _destinationDomain The domain to send the tokens to
+    /// @param _token address of token to be bridged
+    /// @param _amount the amount of tokens to be bridged
+    /// @param _recipient the recipient of tokens in the destination domain
+    function transferTokensToRecipient(
         uint32 _destinationDomain,
         address _token,
         uint256 _amount,
         address _recipient
     ) public payable whenNotPaused {
-        require(
-            remoteTokens[_token][_destinationDomain].tokenAddress != address(0),
-            'remote token not mapped'
-        );
         uint256 currentNonce = nonce;
         unchecked {
             ++currentNonce;
@@ -260,31 +331,26 @@ contract ToucanCrosschainMessenger is
             _destinationDomain,
             currentNonce
         );
-        // encode a message to send to the remote xApp Router
-        address remoteToken = remoteTokens[_token][_destinationDomain]
-            .tokenAddress;
         requests[requestHash] = BridgeRequest(
             false,
             block.timestamp, // timestamp when the bridge request was sent
             BridgeRequestType.SENT,
             MessageTypes.MINT
         );
-        bytes memory _outboundMessage = abi.encode(
-            MessageTypes.MINT,
-            msg.sender,
-            _recipient,
-            remoteToken,
-            _amount,
+        // encode a message to send to the remote xApp Router
+        bytes memory _outboundMessage = _buildTokenTransferMessage(
             _destinationDomain,
+            _token,
+            _amount,
+            _recipient,
             requestHash
         );
-        // Dispatch Message
-        // Pay Gas for processing message
-        // And create a checkpoint so message can be processed
-        _dispatchWithGas(_destinationDomain, _outboundMessage, msg.value);
+        // Dispatch the message
+        _dispatch(_destinationDomain, _outboundMessage);
+        // Burn the tokens on this side of the bridge
         IBridgeableToken(_token).bridgeBurn(msg.sender, _amount);
         emit BridgeRequestSent(
-            _localDomain(),
+            localDomain,
             _destinationDomain,
             msg.sender,
             _recipient,
@@ -295,19 +361,18 @@ contract ToucanCrosschainMessenger is
         );
     }
 
-    /// @notice Send a message of "Type A" to a remote xApp Router via Abacus;
-    /// this message is called to take some action in the cross-chain context.
+    /// @notice Transfer tokens to a recipient in the destination domain.
     /// The recipient of the tokens in the destination domain is the same as
-    /// msg.sender here.
+    /// msg.sender in this context.
     /// @param _destinationDomain The domain to send the message to
     /// @param _token address of token to be bridged
     /// @param _amount the amount of tokens to be bridged
-    function sendMessage(
+    function transferTokens(
         uint32 _destinationDomain,
         address _token,
         uint256 _amount
     ) external payable {
-        sendMessageWithRecipient(
+        transferTokensToRecipient(
             _destinationDomain,
             _token,
             _amount,
@@ -333,5 +398,15 @@ contract ToucanCrosschainMessenger is
                     _nonce
                 )
             );
+    }
+
+    function remoteTokens(address _token, uint32 _domain)
+        external
+        view
+        virtual
+        override
+        returns (RemoteTokenInformation memory)
+    {
+        return remoteTokens_[_token][_domain];
     }
 }

@@ -8,13 +8,13 @@ pragma solidity 0.8.14;
 import {RemoteTokenInformation} from '../ToucanCrosschainMessengerStorage.sol';
 
 interface IToucanCrosschainMessenger {
-    function sendMessage(
+    function transferTokens(
         uint32 destinationDomain,
         address token,
         uint256 amount
     ) external payable;
 
-    function sendMessageWithRecipient(
+    function transferTokensToRecipient(
         uint32 destinationDomain,
         address token,
         uint256 amount,
@@ -25,4 +25,11 @@ interface IToucanCrosschainMessenger {
         external
         view
         returns (RemoteTokenInformation memory);
+
+    function quoteTokenTransferFee(
+        uint32 destinationDomain,
+        address token,
+        uint256 amount,
+        address recipient
+    ) external view returns (uint256);
 }
