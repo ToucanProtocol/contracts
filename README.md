@@ -16,6 +16,22 @@ We want to bring carbon as an asset class to DeFi and unlock the myriad possibil
 
 This repository contains an MVP for the tokenization of legacy (real-world) carbon credits.
 
+## Install
+
+```console
+git clone https://github.com/ToucanProtocol/contracts
+cd contracts
+yarn
+yarn compile
+```
+
+## Stack
+
+- Smart contracts are written in [Solidity](https://soliditylang.org/)
+- [Hardhat development environment](https://hardhat.org/) and various plugins
+- [`ethers.js`](https://docs.ethers.io/v5/)
+- [TheGraph](https://thegraph.com) for indexing of blockchain data
+
 ## Tokenization overview
 
 The diagram below depicts a simplified version of the Toucan Protocol.
@@ -78,22 +94,6 @@ Currently, there are two pools available: [BCT] & [NCT](https://www.coingecko.co
 - **[BCT]**: Base Carbon Tonne. A tradeable ERC20 token, where 1 token represents 1 tonne of CO2-equivalent carbon offsets.
 - **[NCT](https://www.coingecko.com/en/coins/toucan-protocol-nature-carbon-tonne)**: Nature Carbon Tonne. An ERC20-based token that represents 1 tonne of CO2-equivalent avoided or removed via a nature-based project, verified by Verra.
 - **Vintage**: A monitoring period for a carbon offsetting project. Not always equivalent to one full calendar year. A single project can issue credits/offsets which are not fully equivalent (e.g. the way the carbon amount is measured might be different from one monitoring period (vintage) to the next). Usually, different vintages have different quality and attributes.
-
-## Install
-
-```console
-git clone https://github.com/ToucanProtocol/contracts
-cd contracts
-yarn
-npx hardhat compile
-```
-
-## Stack
-
-- Smart contracts are written in [Solidity](https://soliditylang.org/)
-- [Hardhat development environment](https://hardhat.org/) and various plugins
-- [`ethers.js`](https://docs.ethers.io/v5/)
-- [TheGraph](https://thegraph.com) for indexing of blockchain data
 
 ## Copyright / Licensing
 
