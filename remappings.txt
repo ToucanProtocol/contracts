@@ -1,2 +1,2 @@
-@abacus-network/=node_modules/@abacus-network/
+@hyperlane-xyz/=node_modules/@hyperlane-xyz/
 @openzeppelin/=node_modules/@openzeppelin/
