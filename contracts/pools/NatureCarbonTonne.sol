@@ -5,11 +5,11 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import './Pool.sol';
+import {PoolWithFixedFees} from './PoolWithFixedFees.sol';
 
 /// @notice Nature Carbon Tonne (or NatureCarbonTonne)
 /// Contract is an ERC20 compliant token that acts as a pool for TCO2 tokens
-contract NatureCarbonTonne is Pool {
+contract NatureCarbonTonne is PoolWithFixedFees {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -33,5 +33,17 @@ contract NatureCarbonTonne is Pool {
         __UUPSUpgradeable_init_unchained();
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    }
+
+    /// @notice View function to calculate fees pre-execution
+    /// @dev Kept for backwards-compatibility
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @return totalFee Total fees amount
+    function calculateRedeemFees(
+        address[] memory tco2s,
+        uint256[] memory amounts
+    ) external view virtual returns (uint256 totalFee) {
+        return calculateRedemptionFees(tco2s, amounts, false);
     }
 }

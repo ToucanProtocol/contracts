@@ -15,6 +15,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
 import '../cross-chain/interfaces/IToucanCrosschainMessenger.sol';
+import {FeeDistribution, IFeeCalculator} from './interfaces/IFeeCalculator.sol';
 import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import '../libraries/Errors.sol';
@@ -50,17 +51,12 @@ abstract contract Pool is
 
     event Deposited(address erc20Addr, uint256 amount);
     event Redeemed(address account, address erc20, uint256 amount);
+    event DepositFeePaid(address depositor, uint256 fees);
     event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
-    event RedeemFeeUpdated(uint256 feeBp);
-    event RedeemBurnFeeUpdated(uint256 feeBp);
-    event RedeemFeeReceiverUpdated(address receiver);
-    event RedeemFeeBurnAddressUpdated(address receiver);
     event RedeemFeeExempted(address exemptedUser, bool isExempted);
-    event RedeemRetireFeeUpdated(uint256 feeBp);
     event SupplyCapUpdated(uint256 newCap);
     event FilterUpdated(address filter);
-    event TCO2ScoringUpdated(address[] tco2s);
     event AddFeeExemptedTCO2(address tco2);
     event RemoveFeeExemptedTCO2(address tco2);
     event RouterUpdated(address router);
@@ -123,60 +119,6 @@ abstract contract Pool is
         _unpause();
     }
 
-    /// @notice Update the fee redeem percentage
-    /// @param _feeBp percentage of fee in basis points
-    function setFeeRedeemPercentage(uint256 _feeBp) external virtual {
-        onlyWithRole(MANAGER_ROLE);
-        require(_feeBp < feeRedeemDivider, Errors.CP_INVALID_FEE);
-        feeRedeemPercentageInBase = _feeBp;
-        emit RedeemFeeUpdated(_feeBp);
-    }
-
-    /// @notice Update the fee percentage charged in redeemManyAndRetire
-    /// @param _feeBp percentage of fee in basis points
-    function setFeeRedeemRetirePercentage(uint256 _feeBp) external virtual {
-        onlyWithRole(MANAGER_ROLE);
-        require(_feeBp < feeRedeemDivider, Errors.CP_INVALID_FEE);
-        feeRedeemRetirePercentageInBase = _feeBp;
-        emit RedeemRetireFeeUpdated(_feeBp);
-    }
-
-    /// @notice Update the fee redeem receiver
-    /// @param _feeRedeemReceiver address to transfer the fees
-    function setFeeRedeemReceiver(address _feeRedeemReceiver) external virtual {
-        onlyPoolOwner();
-        require(_feeRedeemReceiver != address(0), Errors.CP_EMPTY_ADDRESS);
-        feeRedeemReceiver = _feeRedeemReceiver;
-        emit RedeemFeeReceiverUpdated(_feeRedeemReceiver);
-    }
-
-    /// @notice Update the fee redeem burn percentage
-    /// @param _feeRedeemBurnPercentageInBase percentage of fee in base
-    function setFeeRedeemBurnPercentage(uint256 _feeRedeemBurnPercentageInBase)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        require(
-            _feeRedeemBurnPercentageInBase < feeRedeemDivider,
-            Errors.CP_INVALID_FEE
-        );
-        feeRedeemBurnPercentageInBase = _feeRedeemBurnPercentageInBase;
-        emit RedeemBurnFeeUpdated(_feeRedeemBurnPercentageInBase);
-    }
-
-    /// @notice Update the fee redeem burn address
-    /// @param _feeRedeemBurnAddress address to transfer the fees to burn
-    function setFeeRedeemBurnAddress(address _feeRedeemBurnAddress)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        require(_feeRedeemBurnAddress != address(0), Errors.CP_EMPTY_ADDRESS);
-        feeRedeemBurnAddress = _feeRedeemBurnAddress;
-        emit RedeemFeeBurnAddressUpdated(_feeRedeemBurnAddress);
-    }
-
     /// @notice Adds a new address for redeem fees exemption
     /// @param _address address to be exempted on redeem fees
     function addRedeemFeeExemptedAddress(address _address) external virtual {
@@ -223,16 +165,6 @@ abstract contract Pool is
         onlyPoolOwner();
         filter = _filter;
         emit FilterUpdated(_filter);
-    }
-
-    /// @notice Allows MANAGERs or the owner to pass an array to hold TCO2 contract addesses that are
-    /// ordered by some form of scoring mechanism
-    /// @param tco2s array of ordered TCO2 addresses
-    function setTCO2Scoring(address[] calldata tco2s) external {
-        onlyWithRole(MANAGER_ROLE);
-        require(tco2s.length != 0, Errors.CP_EMPTY_ARRAY);
-        scoredTCO2s = tco2s;
-        emit TCO2ScoringUpdated(tco2s);
     }
 
     // -------------------------------------
@@ -335,50 +267,137 @@ abstract contract Pool is
         address recipient = _getRemotePoolAddress(tcm, destinationDomain);
 
         uint256 payment = msg.value / tco2Length;
+        uint256 tempSupply = _totalTCO2Supply;
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
+            tempSupply -= amounts[i];
+            //slither-disable-next-line reentrancy-eth
             IToucanCrosschainMessenger(tcm).transferTokensToRecipient{
                 value: payment
             }(destinationDomain, tco2s[i], amounts[i], recipient);
             emit TCO2Bridged(destinationDomain, tco2s[i], amounts[i]);
         }
+        _totalTCO2Supply = tempSupply;
     }
 
     // ----------------------------
     //   Permissionless functions
     // ----------------------------
 
-    /// @notice Deposit function for pool that accepts TCO2s and mints pool token 1:1
-    /// @param erc20Addr ERC20 contract address to be deposited, requires approve
-    /// @dev Eligibility is checked via `checkEligible`, balances are tracked
-    /// for each TCO2 separately
-    function deposit(address erc20Addr, uint256 amount) external virtual {
+    function _deposit(
+        address erc20Addr,
+        uint256 amount,
+        uint256 maxFee
+    ) internal returns (uint256 mintedPoolTokenAmount) {
         onlyUnpaused();
-        require(checkEligible(erc20Addr), Errors.CP_NOT_ELIGIBLE);
 
+        // Ensure the TCO2 is eligible to be deposited
+        _checkEligible(erc20Addr);
+
+        // Ensure there is space in the pool
         uint256 remainingSpace = getRemaining();
         require(remainingSpace != 0, Errors.CP_FULL_POOL);
 
+        // If the amount to be deposited exceeds the remaining space, deposit
+        // the maximum amount possible up to the cap instead of failing.
         if (amount > remainingSpace) amount = remainingSpace;
 
-        _mint(msg.sender, amount);
+        uint256 depositedAmount = amount;
+        if (feeCalculator != IFeeCalculator(address(0))) {
+            // If a fee module is configured, use it to calculate the minting fees
+            FeeDistribution memory feeDistribution = feeCalculator
+                .calculateDepositFees(
+                    erc20Addr,
+                    address(this),
+                    depositedAmount
+                );
+            uint256 feeDistributionTotal = getFeeDistributionTotal(
+                feeDistribution
+            );
+            if (maxFee != 0) {
+                // Protect caller against getting charged a higher fee than expected
+                require(feeDistributionTotal <= maxFee, Errors.CP_FEE_TOO_HIGH);
+            }
+            depositedAmount -= feeDistributionTotal;
+
+            // Distribute the fee between the recipients
+            uint256 recipientLen = feeDistribution.recipients.length;
+            for (uint256 i = 0; i < recipientLen; ++i) {
+                _mint(feeDistribution.recipients[i], feeDistribution.shares[i]);
+            }
+            emit DepositFeePaid(msg.sender, feeDistributionTotal);
+        }
+
+        // Mint pool tokens to the user
+        _mint(msg.sender, depositedAmount);
+        _totalTCO2Supply += amount;
         emit Deposited(erc20Addr, amount);
 
+        // Transfer the TCO2 to the pool
         IERC20Upgradeable(erc20Addr).safeTransferFrom(
             msg.sender,
             address(this),
             amount
         );
+
+        return depositedAmount;
     }
 
-    /// @notice Checks if token to be deposited is eligible for this pool
+    function calculateDepositFees(address tco2, uint256 amount)
+        external
+        view
+        returns (uint256 feeDistributionTotal)
+    {
+        onlyUnpaused();
+
+        IFeeCalculator feeCalc = feeCalculator;
+        if (address(feeCalc) == address(0)) {
+            // No deposit fees charged if no fee module is configured
+            return 0;
+        }
+        FeeDistribution memory feeDistribution = feeCalc.calculateDepositFees(
+            tco2,
+            address(this),
+            amount
+        );
+        feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
+    }
+
+    /// @notice Checks if token to be deposited is eligible for this pool.
+    /// Reverts if not.
+    /// Beware that the revert reason might depend on the underlying implementation
+    /// of IPoolFilter.checkEligible
+    /// @param erc20Addr the contract to check
+    /// @return isEligible true if address is eligible and no other issues occur
     function checkEligible(address erc20Addr)
-        public
+        external
         view
         virtual
-        returns (bool)
+        returns (bool isEligible)
     {
-        return IPoolFilter(filter).checkEligible(erc20Addr);
+        _checkEligible(erc20Addr);
+
+        return true;
+    }
+
+    function _checkEligible(address erc20Addr) internal view {
+        //slither-disable-next-line unused-return
+        try IPoolFilter(filter).checkEligible(erc20Addr) returns (
+            //slither-disable-next-line uninitialized-local
+            bool isEligible
+        ) {
+            require(isEligible, Errors.CP_NOT_ELIGIBLE);
+            //slither-disable-next-line uninitialized-local
+        } catch Error(string memory reason) {
+            revert(reason);
+            //slither-disable-next-line uninitialized-local
+        } catch (bytes memory reason) {
+            // this most often results in a random bytes sequence,
+            // but it's worth at least trying to log it
+            revert(
+                string(abi.encodePacked('unexpected error: ', string(reason)))
+            );
+        }
     }
 
     /// @notice Returns minimum vintage start time for this pool
@@ -409,29 +428,104 @@ abstract contract Pool is
     /// @dev User specifies in front-end the addresses and amounts they want
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of amounts to redeem for each tco2s
-    /// @return Total fees amount
-    function calculateRedeemFees(
+    /// @param toRetire Whether the TCO2s will be retired atomically
+    /// with the redemption. It may be that lower fees will be charged
+    /// in this case.
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateRedemptionFees(
         address[] memory tco2s,
-        uint256[] memory amounts
-    ) external view virtual returns (uint256) {
+        uint256[] memory amounts,
+        bool toRetire
+    ) public view virtual returns (uint256 feeDistributionTotal) {
         onlyUnpaused();
+
+        // Exempted addresses pay no fees
         if (redeemFeeExemptedAddresses[msg.sender]) {
             return 0;
         }
+
         uint256 tco2Length = tco2s.length;
         require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
 
-        //slither-disable-next-line uninitialized-local
-        uint256 totalFee;
-        uint256 _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
-
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ++i) {
-            uint256 feeAmount = (amounts[i] * _feeRedeemPercentageInBase) /
-                feeRedeemDivider;
-            totalFee += feeAmount;
+        for (uint256 i = 0; i < tco2Length; ++i) {
+            if (feeCalculator == IFeeCalculator(address(0))) {
+                feeDistributionTotal += getFixedRedemptionFee(
+                    amounts[i],
+                    toRetire
+                );
+            } else {
+                FeeDistribution memory feeDistribution = feeCalculator
+                    .calculateRedemptionFees(
+                        tco2s[i],
+                        address(this),
+                        amounts[i]
+                    );
+                feeDistributionTotal += getFeeDistributionTotal(
+                    feeDistribution
+                );
+            }
         }
-        return totalFee;
+    }
+
+    function getFeeDistributionTotal(FeeDistribution memory feeDistribution)
+        internal
+        pure
+        returns (uint256 feeAmount)
+    {
+        uint256 recipientLen = feeDistribution.recipients.length;
+        //slither-disable-next-line incorrect-equality
+        require(
+            recipientLen == feeDistribution.shares.length,
+            Errors.CP_LENGTH_MISMATCH
+        );
+        for (uint256 i = 0; i < recipientLen; ++i) {
+            feeAmount += feeDistribution.shares[i];
+        }
+        return feeAmount;
+    }
+
+    function calculateRedemptionFee(
+        address tco2,
+        uint256 amount,
+        bool toRetire
+    ) internal view returns (FeeDistribution memory feeDistribution) {
+        if (feeCalculator == IFeeCalculator(address(0))) {
+            // Fall back to fixed fee if a fee module is not configured
+            uint256 feeAmount = getFixedRedemptionFee(amount, toRetire);
+            return getFixedRedemptionFeeRecipients(feeAmount);
+        }
+
+        // Use the fee module if one is configured
+        return
+            feeCalculator.calculateRedemptionFees(tco2, address(this), amount);
+    }
+
+    function getFixedRedemptionFee(uint256 amount, bool toRetire)
+        internal
+        view
+        returns (uint256)
+    {
+        // Use appropriate fee bp to charge
+        uint256 feeBp = 0;
+        if (toRetire) {
+            feeBp = _feeRedeemRetirePercentageInBase;
+        } else {
+            feeBp = _feeRedeemPercentageInBase;
+        }
+        // Calculate fee
+        return (amount * feeBp) / feeRedeemDivider;
+    }
+
+    function getFixedRedemptionFeeRecipients(uint256 totalFee)
+        internal
+        view
+        returns (FeeDistribution memory feeDistribution)
+    {
+        address[] memory recipients = new address[](1);
+        uint256[] memory shares = new uint256[](1);
+        recipients[0] = _feeRedeemReceiver;
+        shares[0] = totalFee;
+        return FeeDistribution(recipients, shares);
     }
 
     /// @notice Redeem a whitelisted TCO2 without paying any fees and burn
@@ -450,47 +544,10 @@ abstract contract Pool is
         IToucanCarbonOffsets(tco2).burnFrom(msg.sender, amount);
     }
 
-    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
-    /// The redeemed TCO2s are retired in the same go in order to allow charging
-    /// a lower fee vs selective redemptions that do not retire the TCO2s.
-    /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem and retire for each tco2s
-    /// @return retirementIds The retirements ids that were produced
-    /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
-    function redeemAndRetireMany(
-        address[] memory tco2s,
-        uint256[] memory amounts
-    )
-        external
-        virtual
-        returns (
-            uint256[] memory retirementIds,
-            uint256[] memory redeemedAmounts
-        )
-    {
-        (retirementIds, redeemedAmounts) = redeemManyInternal(
-            tco2s,
-            amounts,
-            true
-        );
-    }
-
-    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
-    /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem for each tco2s
-    /// Pool token in user's wallet get burned
-    /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
-    function redeemMany(address[] memory tco2s, uint256[] memory amounts)
-        external
-        virtual
-        returns (uint256[] memory redeemedAmounts)
-    {
-        (, redeemedAmounts) = redeemManyInternal(tco2s, amounts, false);
-    }
-
-    function redeemManyInternal(
+    function _redeemMany(
         address[] memory tco2s,
         uint256[] memory amounts,
+        uint256 maxFee,
         bool toRetire
     )
         internal
@@ -503,35 +560,42 @@ abstract contract Pool is
         uint256 tco2Length = tco2s.length;
         require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
 
-        //slither-disable-next-line uninitialized-local
-        uint256 totalFee;
-        //slither-disable-next-line uninitialized-local
-        uint256 _feeRedeemPercentageInBase;
+        // Initialize return arrays
+        redeemedAmounts = new uint256[](tco2Length);
         if (toRetire) {
             retirementIds = new uint256[](tco2Length);
-            _feeRedeemPercentageInBase = feeRedeemRetirePercentageInBase;
-        } else {
-            _feeRedeemPercentageInBase = feeRedeemPercentageInBase;
         }
-        bool isExempted = redeemFeeExemptedAddresses[msg.sender];
-        //slither-disable-next-line uninitialized-local
-        uint256 feeAmount;
-        redeemedAmounts = new uint256[](tco2Length);
 
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ) {
-            require(checkEligible(tco2s[i]), Errors.CP_NOT_ELIGIBLE);
+        // Exempted addresses pay no fees
+        bool isExempted = redeemFeeExemptedAddresses[msg.sender];
+
+        // Execute redemptions
+        uint256 totalFee = 0;
+        for (uint256 i = 0; i < tco2Length; ++i) {
+            _checkEligible(tco2s[i]);
+
+            uint256 amountToRedeem = amounts[i];
             if (!isExempted) {
-                feeAmount =
-                    (amounts[i] * _feeRedeemPercentageInBase) /
-                    feeRedeemDivider;
-                totalFee += feeAmount;
-            } else {
-                feeAmount = 0;
+                // Calculate the fee to be paid for the current TCO2 redemption
+                FeeDistribution memory feeDistribution = calculateRedemptionFee(
+                    tco2s[i],
+                    amounts[i],
+                    toRetire
+                );
+                uint256 feeDistributionTotal = getFeeDistributionTotal(
+                    feeDistribution
+                );
+                amountToRedeem -= feeDistributionTotal;
+                totalFee += feeDistributionTotal;
+
+                // Distribute the fee between the recipients
+                distributeRedemptionFee(
+                    feeDistribution.recipients,
+                    feeDistribution.shares
+                );
             }
 
             // Redeem the amount minus the fee
-            uint256 amountToRedeem = amounts[i] - feeAmount;
             redeemSingle(tco2s[i], amountToRedeem);
 
             // If requested, retire the TCO2s in one go. Callers should
@@ -543,120 +607,36 @@ abstract contract Pool is
                     amountToRedeem
                 );
             }
+
+            // Keep track of redeemed amounts in return arguments
+            // to make the function composable.
             redeemedAmounts[i] = amountToRedeem;
-
-            unchecked {
-                ++i;
-            }
         }
 
-        if (totalFee != 0) {
-            uint256 burnAmount = (totalFee * feeRedeemBurnPercentageInBase) /
+        if (maxFee != 0) {
+            // Protect caller against getting charged a higher fee than expected
+            require(totalFee <= maxFee, Errors.CP_FEE_TOO_HIGH);
+        }
+    }
+
+    // Distribute the fees between the recipients
+    function distributeRedemptionFee(
+        address[] memory recipients,
+        uint256[] memory fees
+    ) internal {
+        uint256 amountToBurn = 0;
+        for (uint256 i = 0; i < recipients.length; ++i) {
+            uint256 fee = fees[i];
+            uint256 burnAmount = (fee * _feeRedeemBurnPercentageInBase) /
                 feeRedeemDivider;
-            totalFee -= burnAmount;
-            transfer(feeRedeemReceiver, totalFee);
-            emit RedeemFeePaid(msg.sender, totalFee);
-            if (burnAmount > 0) {
-                transfer(feeRedeemBurnAddress, burnAmount);
-                emit RedeemFeeBurnt(msg.sender, burnAmount);
-            }
+            fee -= burnAmount;
+            amountToBurn += burnAmount;
+            transfer(recipients[i], fee);
+            emit RedeemFeePaid(msg.sender, fee);
         }
-    }
-
-    /// @notice Automatically redeems an amount of Pool tokens for underlying
-    /// TCO2s from an array of ranked TCO2 contracts
-    /// starting from contract at index 0 until amount is satisfied
-    /// @param amount Total amount to be redeemed
-    /// @dev Pool tokens in user's wallet get burned
-    /// @return tco2s amounts The addresses and amounts of the TCO2s that were
-    /// automatically redeemed
-    function redeemAuto(uint256 amount)
-        external
-        virtual
-        returns (address[] memory tco2s, uint256[] memory amounts)
-    {
-        return redeemAuto2(amount);
-    }
-
-    /// @notice Automatically redeems an amount of Pool tokens for underlying
-    /// TCO2s from an array of ranked TCO2 contracts starting from contract at
-    /// index 0 until amount is satisfied.
-    /// @param amount Total amount to be redeemed
-    /// @return tco2s amounts The addresses and amounts of the TCO2s that were
-    /// automatically redeemed
-    function redeemAuto2(uint256 amount)
-        public
-        virtual
-        returns (address[] memory tco2s, uint256[] memory amounts)
-    {
-        onlyUnpaused();
-        require(amount != 0, Errors.CP_ZERO_AMOUNT);
-        //slither-disable-next-line uninitialized-local
-        uint256 i;
-        // Non-zero count tracks TCO2s with a balance
-        //slither-disable-next-line uninitialized-local
-        uint256 nonZeroCount;
-
-        uint256 scoredTCO2Len = scoredTCO2s.length;
-        while (amount > 0 && i < scoredTCO2Len) {
-            address tco2 = scoredTCO2s[i];
-            uint256 balance = tokenBalances(tco2);
-            //slither-disable-next-line uninitialized-local
-            uint256 amountToRedeem;
-
-            // Only TCO2s with a balance should be included for a redemption.
-            if (balance != 0) {
-                amountToRedeem = amount > balance ? balance : amount;
-                amount -= amountToRedeem;
-                unchecked {
-                    ++nonZeroCount;
-                }
-            }
-
-            unchecked {
-                ++i;
-            }
-
-            // Create return arrays statically since Solidity does not
-            // support dynamic arrays or mappings in-memory (EIP-1153).
-            // Do it here to avoid having to fill out the last indexes
-            // during the second iteration.
-            //slither-disable-next-line incorrect-equality
-            if (amount == 0) {
-                tco2s = new address[](nonZeroCount);
-                amounts = new uint256[](nonZeroCount);
-
-                tco2s[nonZeroCount - 1] = tco2;
-                amounts[nonZeroCount - 1] = amountToRedeem;
-                redeemSingle(tco2, amountToRedeem);
-            }
-        }
-
-        require(amount == 0, Errors.CP_NON_ZERO_REMAINING);
-
-        // Execute the second iteration by avoiding to run the last index
-        // since we have already executed that in the first iteration.
-        nonZeroCount = 0;
-        //slither-disable-next-line uninitialized-local
-        for (uint256 j; j < i - 1; ++j) {
-            address tco2 = scoredTCO2s[j];
-            // This second loop only gets called when the `amount` is larger
-            // than the first tco2 balance in the array. Here, in every iteration the
-            // tco2 balance is smaller than the remaining amount while the last bit of
-            // the `amount` which is smaller than the tco2 balance, got redeemed
-            // in the first loop.
-            uint256 balance = tokenBalances(tco2);
-
-            // Ignore empty balances so we don't generate redundant transactions.
-            //slither-disable-next-line incorrect-equality
-            if (balance == 0) continue;
-
-            tco2s[nonZeroCount] = tco2;
-            amounts[nonZeroCount] = balance;
-            redeemSingle(tco2, balance);
-            unchecked {
-                ++nonZeroCount;
-            }
+        if (amountToBurn > 0) {
+            transfer(_feeRedeemBurnAddress, amountToBurn);
+            emit RedeemFeeBurnt(msg.sender, amountToBurn);
         }
     }
 
@@ -664,6 +644,7 @@ abstract contract Pool is
     function redeemSingle(address erc20, uint256 amount) internal virtual {
         _burn(msg.sender, amount);
         IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+        _totalTCO2Supply -= amount;
         emit Redeemed(msg.sender, erc20, amount);
     }
 
@@ -718,9 +699,5 @@ abstract contract Pool is
         validDestination(recipient);
         super.transferFrom(sender, recipient, amount);
         return true;
-    }
-
-    function getScoredTCO2s() external view returns (address[] memory) {
-        return scoredTCO2s;
     }
 }

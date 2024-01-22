@@ -117,4 +117,10 @@ library Errors {
     string public constant TCO2_NON_MATCHING_NFT = '49';
     // The TCO2 Quantity in batch is higher than total vintages
     string public constant TCO2_QTY_HIGHER = '50';
+    // The fee to be charged is too high
+    string public constant CP_FEE_TOO_HIGH = '51';
+    // The max fee to be paid is invalid
+    string public constant CP_INVALID_MAX_FEE = '52';
+    // The pool feature is not supported
+    string public constant CP_NOT_SUPPORTED = '53';
 }

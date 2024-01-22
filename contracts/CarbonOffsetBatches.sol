@@ -122,12 +122,12 @@ contract CarbonOffsetBatches is
 
     /// @dev The verifier has the authority to confirm NFTs so ERC20's can be minted
     function onlyWithRole(bytes32 role) internal view {
-        require(hasRole(role, _msgSender()), Errors.COB_INVALID_CALLER);
+        require(hasRole(role, msg.sender), Errors.COB_INVALID_CALLER);
     }
 
     function onlyOwningTCO2(uint256 tokenId) internal view {
         address tokenOwner = ownerOf(tokenId);
-        require(tokenOwner == _msgSender(), Errors.COB_NOT_BATCH_OWNER);
+        require(tokenOwner == msg.sender, Errors.COB_NOT_BATCH_OWNER);
         require(
             IToucanContractRegistry(contractRegistry).isValidERC20(tokenOwner),
             Errors.COB_INVALID_BATCH_OWNER
@@ -426,7 +426,7 @@ contract CarbonOffsetBatches is
     ) external virtual whenNotPaused {
         require(
             ownerOf(tokenId) == _msgSender() ||
-                hasRole(VERIFIER_ROLE, _msgSender()),
+                hasRole(VERIFIER_ROLE, msg.sender),
             Errors.COB_NOT_VERIFIER
         );
         _updateBatchWithData(tokenId, serialNumber, quantity, uri);
@@ -465,7 +465,7 @@ contract CarbonOffsetBatches is
     ) external virtual whenNotPaused {
         require(
             ownerOf(tokenId) == _msgSender() ||
-                hasRole(VERIFIER_ROLE, _msgSender()),
+                hasRole(VERIFIER_ROLE, msg.sender),
             Errors.COB_NOT_VERIFIER
         );
         require(
@@ -642,9 +642,9 @@ contract CarbonOffsetBatches is
     /// should prevent accidental comments from the wrong account.
     function addComment(uint256 tokenId, string memory comment) public virtual {
         require(
-            hasRole(VERIFIER_ROLE, _msgSender()) ||
+            hasRole(VERIFIER_ROLE, msg.sender) ||
                 _msgSender() == ownerOf(tokenId) ||
-                _msgSender() == owner(),
+                msg.sender == owner(),
             Errors.COB_INVALID_CALLER
         );
         require(_exists(tokenId), Errors.COB_NOT_EXISTS);
