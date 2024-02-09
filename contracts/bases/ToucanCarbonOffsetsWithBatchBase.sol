@@ -73,6 +73,12 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             gotVintageTokenId == _projectVintageTokenId,
             Errors.TCO2_NON_MATCHING_NFT
         );
+        // don't mint TCO2s for received batches that are in detokenization/retirement requested status
+        if (
+            status == BatchStatus.DetokenizationRequested ||
+            status == BatchStatus.RetirementRequested
+        ) return this.onERC721Received.selector;
+        // mint TCO2s for received batches that are in confirmed status
         require(
             status == BatchStatus.Confirmed,
             Errors.TCO2_BATCH_NOT_CONFIRMED
@@ -87,14 +93,16 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
         address bridgeFeeReceiver = tco2Factory.bridgeFeeReceiverAddress();
 
         if (bridgeFeeReceiver == address(0x0)) {
-            // @dev if no bridge fee receiver address is set, mint without fees
+            // if no bridge fee receiver address is set, mint without fees
             _mint(from, quantity);
         } else {
-            // @dev calculate bridge fees
+            // calculate bridge fees
             (uint256 feeAmount, uint256 feeBurnAmount) = tco2Factory
                 .getBridgeFeeAndBurnAmount(quantity);
             _mint(from, quantity - feeAmount);
             address bridgeFeeBurnAddress = tco2Factory.bridgeFeeBurnAddress();
+            // we mint the burn fee to the bridge fee burn address so it can be retired later.
+            // if there is no address configured we just mint the full amount to the bridge fee receiver.
             if (bridgeFeeBurnAddress != address(0x0) && feeBurnAmount > 0) {
                 feeAmount -= feeBurnAmount;
                 _mint(bridgeFeeReceiver, feeAmount);
@@ -128,7 +136,23 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
             uint256 quantity,
             BatchStatus status
         ) = ICarbonOffsetBatches(cob).getBatchNFTData(tokenId);
-        return (vintageTokenId, quantity * 10**decimals(), status);
+        return (vintageTokenId, _batchAmountToTCO2Amount(quantity), status);
+    }
+
+    function _batchAmountToTCO2Amount(uint256 batchAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        return batchAmount * 10**decimals();
+    }
+
+    function _TCO2AmountToBatchAmount(uint256 TCO2Amount)
+        internal
+        view
+        returns (uint256)
+    {
+        return TCO2Amount / 10**decimals();
     }
 
     /// @dev Internal helper to check if CarbonOffsetBatches is whitelisted (official)

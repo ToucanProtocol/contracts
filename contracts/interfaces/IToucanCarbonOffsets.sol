@@ -21,6 +21,12 @@ interface IToucanCarbonOffsets {
         view
         returns (ProjectData memory, VintageData memory);
 
+    /// @notice Get the vintage data of the TCO2
+    function getVintageData()
+        external
+        view
+        returns (VintageData memory vintageData);
+
     function standardRegistry() external view returns (string memory);
 
     function retireAndMintCertificate(

@@ -54,6 +54,8 @@ abstract contract Pool is
     event DepositFeePaid(address depositor, uint256 fees);
     event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
+    event RedeemBurnFeeUpdated(uint256 feeBp);
+    event RedeemFeeBurnAddressUpdated(address receiver);
     event RedeemFeeExempted(address exemptedUser, bool isExempted);
     event SupplyCapUpdated(uint256 newCap);
     event FilterUpdated(address filter);
@@ -117,6 +119,33 @@ abstract contract Pool is
     function unpause() external virtual {
         onlyWithRole(PAUSER_ROLE);
         _unpause();
+    }
+
+    /// @notice Update the fee redeem burn percentage
+    /// @param feeRedeemBurnPercentageInBase_ percentage of fee in base
+    function setFeeRedeemBurnPercentage(uint256 feeRedeemBurnPercentageInBase_)
+        external
+        virtual
+    {
+        onlyPoolOwner();
+        require(
+            feeRedeemBurnPercentageInBase_ < feeRedeemDivider,
+            Errors.CP_INVALID_FEE
+        );
+        _feeRedeemBurnPercentageInBase = feeRedeemBurnPercentageInBase_;
+        emit RedeemBurnFeeUpdated(feeRedeemBurnPercentageInBase_);
+    }
+
+    /// @notice Update the fee redeem burn address
+    /// @param feeRedeemBurnAddress_ address to transfer the fees to burn
+    function setFeeRedeemBurnAddress(address feeRedeemBurnAddress_)
+        external
+        virtual
+    {
+        onlyPoolOwner();
+        require(feeRedeemBurnAddress_ != address(0), Errors.CP_EMPTY_ADDRESS);
+        _feeRedeemBurnAddress = feeRedeemBurnAddress_;
+        emit RedeemFeeBurnAddressUpdated(feeRedeemBurnAddress_);
     }
 
     /// @notice Adds a new address for redeem fees exemption
@@ -270,12 +299,24 @@ abstract contract Pool is
         uint256 tempSupply = _totalTCO2Supply;
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
-            tempSupply -= amounts[i];
+            address tco2 = tco2s[i];
+            uint256 amount = amounts[i];
+
+            {
+                // Update supply-related storage variables in the pool
+                VintageData memory vData = IToucanCarbonOffsets(tco2)
+                    .getVintageData();
+                _totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
+                tempSupply -= amount;
+            }
+
+            // Transfer tokens to recipient
             //slither-disable-next-line reentrancy-eth
             IToucanCrosschainMessenger(tcm).transferTokensToRecipient{
                 value: payment
-            }(destinationDomain, tco2s[i], amounts[i], recipient);
-            emit TCO2Bridged(destinationDomain, tco2s[i], amounts[i]);
+            }(destinationDomain, tco2, amount, recipient);
+
+            emit TCO2Bridged(destinationDomain, tco2, amount);
         }
         _totalTCO2Supply = tempSupply;
     }
@@ -307,8 +348,8 @@ abstract contract Pool is
             // If a fee module is configured, use it to calculate the minting fees
             FeeDistribution memory feeDistribution = feeCalculator
                 .calculateDepositFees(
-                    erc20Addr,
                     address(this),
+                    erc20Addr,
                     depositedAmount
                 );
             uint256 feeDistributionTotal = getFeeDistributionTotal(
@@ -330,8 +371,12 @@ abstract contract Pool is
 
         // Mint pool tokens to the user
         _mint(msg.sender, depositedAmount);
+
+        // Update supply-related storage variables in the pool
+        VintageData memory vData = IToucanCarbonOffsets(erc20Addr)
+            .getVintageData();
+        _totalPerProjectTCO2Supply[vData.projectTokenId] += amount;
         _totalTCO2Supply += amount;
-        emit Deposited(erc20Addr, amount);
 
         // Transfer the TCO2 to the pool
         IERC20Upgradeable(erc20Addr).safeTransferFrom(
@@ -340,27 +385,9 @@ abstract contract Pool is
             amount
         );
 
+        emit Deposited(erc20Addr, amount);
+
         return depositedAmount;
-    }
-
-    function calculateDepositFees(address tco2, uint256 amount)
-        external
-        view
-        returns (uint256 feeDistributionTotal)
-    {
-        onlyUnpaused();
-
-        IFeeCalculator feeCalc = feeCalculator;
-        if (address(feeCalc) == address(0)) {
-            // No deposit fees charged if no fee module is configured
-            return 0;
-        }
-        FeeDistribution memory feeDistribution = feeCalc.calculateDepositFees(
-            tco2,
-            address(this),
-            amount
-        );
-        feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
     }
 
     /// @notice Checks if token to be deposited is eligible for this pool.
@@ -424,48 +451,86 @@ abstract contract Pool is
         return IPoolFilter(filter).methodologies(methodology);
     }
 
-    /// @notice View function to calculate fees pre-execution
-    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @notice View function to calculate deposit fees pre-execution
+    /// @dev User specifies in front-end the address and amount they want
+    /// @param tco2 TCO2 contract addresses
+    /// @param amount Amount to redeem
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateDepositFees(address tco2, uint256 amount)
+        external
+        view
+        virtual
+        returns (uint256 feeDistributionTotal);
+
+    /// @notice View function to calculate redemption fees pre-execution
     /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
+    /// The indexes of this array are matching 1:1 with the tco2s array.
     /// @param toRetire Whether the TCO2s will be retired atomically
     /// with the redemption. It may be that lower fees will be charged
     /// in this case.
     /// @return feeDistributionTotal Total fee amount to be paid
-    function calculateRedemptionFees(
+    function calculateRedemptionInFees(
         address[] memory tco2s,
         uint256[] memory amounts,
         bool toRetire
-    ) public view virtual returns (uint256 feeDistributionTotal) {
-        onlyUnpaused();
+    ) public view virtual returns (uint256 feeDistributionTotal);
 
-        // Exempted addresses pay no fees
-        if (redeemFeeExemptedAddresses[msg.sender]) {
-            return 0;
-        }
+    /// @dev Internal function to calculate redemption fees.
+    /// Made virtual so that each child contract can implement its own
+    /// internal fee calculation logic that can be shared with the
+    /// current Pool contract. Child contracts will most likely need
+    /// to simply expose a public function that returns just the
+    /// feeDistributionTotal which is the value that is useful to
+    /// external clients who only care about the total fee amount and
+    /// not how the fee is going to be distributed.
+    function _calculateRedemptionInFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    )
+        internal
+        view
+        virtual
+        returns (
+            uint256[] memory feeAmounts,
+            FeeDistribution memory feeDistribution
+        );
 
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+    /// @notice View function to calculate redemption fees pre-execution
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of TCO2 amounts to redeem
+    /// The indexes of this array are matching 1:1 with the tco2s array.
+    /// @param toRetire Whether the TCO2s will be retired atomically
+    /// with the redemption. It may be that lower fees will be charged
+    /// in this case.
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateRedemptionOutFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    ) external view virtual returns (uint256 feeDistributionTotal);
 
-        for (uint256 i = 0; i < tco2Length; ++i) {
-            if (feeCalculator == IFeeCalculator(address(0))) {
-                feeDistributionTotal += getFixedRedemptionFee(
-                    amounts[i],
-                    toRetire
-                );
-            } else {
-                FeeDistribution memory feeDistribution = feeCalculator
-                    .calculateRedemptionFees(
-                        tco2s[i],
-                        address(this),
-                        amounts[i]
-                    );
-                feeDistributionTotal += getFeeDistributionTotal(
-                    feeDistribution
-                );
-            }
-        }
-    }
+    /// @dev Internal function to calculate redemption fees.
+    /// Made virtual so that each child contract can implement its own
+    /// internal fee calculation logic that can be shared with the
+    /// current Pool contract. Child contracts will most likely need
+    /// to simply expose a public function that returns just the
+    /// feeDistributionTotal which is the value that is useful to
+    /// external clients who only care about the total fee amount and
+    /// not how the fee is going to be distributed.
+    function _calculateRedemptionOutFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    )
+        internal
+        view
+        virtual
+        returns (
+            uint256 feeDistributionTotal,
+            FeeDistribution memory feeDistribution
+        );
 
     function getFeeDistributionTotal(FeeDistribution memory feeDistribution)
         internal
@@ -482,22 +547,6 @@ abstract contract Pool is
             feeAmount += feeDistribution.shares[i];
         }
         return feeAmount;
-    }
-
-    function calculateRedemptionFee(
-        address tco2,
-        uint256 amount,
-        bool toRetire
-    ) internal view returns (FeeDistribution memory feeDistribution) {
-        if (feeCalculator == IFeeCalculator(address(0))) {
-            // Fall back to fixed fee if a fee module is not configured
-            uint256 feeAmount = getFixedRedemptionFee(amount, toRetire);
-            return getFixedRedemptionFeeRecipients(feeAmount);
-        }
-
-        // Use the fee module if one is configured
-        return
-            feeCalculator.calculateRedemptionFees(tco2, address(this), amount);
     }
 
     function getFixedRedemptionFee(uint256 amount, bool toRetire)
@@ -544,7 +593,7 @@ abstract contract Pool is
         IToucanCarbonOffsets(tco2).burnFrom(msg.sender, amount);
     }
 
-    function _redeemMany(
+    function _redeemInMany(
         address[] memory tco2s,
         uint256[] memory amounts,
         uint256 maxFee,
@@ -559,6 +608,10 @@ abstract contract Pool is
         onlyUnpaused();
         uint256 tco2Length = tco2s.length;
         require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        require(
+            feeCalculator == IFeeCalculator(address(0)),
+            Errors.CP_NOT_SUPPORTED
+        );
 
         // Initialize return arrays
         redeemedAmounts = new uint256[](tco2Length);
@@ -566,8 +619,11 @@ abstract contract Pool is
             retirementIds = new uint256[](tco2Length);
         }
 
-        // Exempted addresses pay no fees
-        bool isExempted = redeemFeeExemptedAddresses[msg.sender];
+        // Calculate the fees to be paid for the TCO2 redemptions
+        (
+            uint256[] memory feeAmounts,
+            FeeDistribution memory feeDistribution
+        ) = _calculateRedemptionInFees(tco2s, amounts, toRetire);
 
         // Execute redemptions
         uint256 totalFee = 0;
@@ -575,25 +631,8 @@ abstract contract Pool is
             _checkEligible(tco2s[i]);
 
             uint256 amountToRedeem = amounts[i];
-            if (!isExempted) {
-                // Calculate the fee to be paid for the current TCO2 redemption
-                FeeDistribution memory feeDistribution = calculateRedemptionFee(
-                    tco2s[i],
-                    amounts[i],
-                    toRetire
-                );
-                uint256 feeDistributionTotal = getFeeDistributionTotal(
-                    feeDistribution
-                );
-                amountToRedeem -= feeDistributionTotal;
-                totalFee += feeDistributionTotal;
-
-                // Distribute the fee between the recipients
-                distributeRedemptionFee(
-                    feeDistribution.recipients,
-                    feeDistribution.shares
-                );
-            }
+            amountToRedeem -= feeAmounts[i];
+            totalFee += feeAmounts[i];
 
             // Redeem the amount minus the fee
             redeemSingle(tco2s[i], amountToRedeem);
@@ -616,6 +655,72 @@ abstract contract Pool is
         if (maxFee != 0) {
             // Protect caller against getting charged a higher fee than expected
             require(totalFee <= maxFee, Errors.CP_FEE_TOO_HIGH);
+        }
+
+        // Distribute the fee between the recipients
+        if (totalFee > 0) {
+            distributeRedemptionFee(
+                feeDistribution.recipients,
+                feeDistribution.shares
+            );
+        }
+    }
+
+    function _redeemOutMany(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        uint256 maxFee,
+        bool toRetire
+    )
+        internal
+        returns (uint256[] memory retirementIds, uint256 poolAmountSpent)
+    {
+        onlyUnpaused();
+        uint256 tco2Length = tco2s.length;
+        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+
+        // Initialize return arrays
+        if (toRetire) {
+            retirementIds = new uint256[](tco2Length);
+        }
+
+        // Calculate the fee to be paid for the TCO2 redemptions
+        (
+            uint256 feeDistributionTotal,
+            FeeDistribution memory feeDistribution
+        ) = _calculateRedemptionOutFees(tco2s, amounts, toRetire);
+        if (maxFee != 0) {
+            // Protect caller against getting charged a higher fee than expected
+            require(feeDistributionTotal <= maxFee, Errors.CP_FEE_TOO_HIGH);
+        }
+        poolAmountSpent += feeDistributionTotal;
+
+        // Distribute the fee between the recipients
+        if (feeDistributionTotal != 0) {
+            distributeRedemptionFee(
+                feeDistribution.recipients,
+                feeDistribution.shares
+            );
+        }
+
+        // Execute redemptions
+        for (uint256 i = 0; i < tco2Length; ++i) {
+            _checkEligible(tco2s[i]);
+
+            // Redeem the amount
+            uint256 amountToRedeem = amounts[i];
+            poolAmountSpent += amountToRedeem;
+            redeemSingle(tco2s[i], amountToRedeem);
+
+            // If requested, retire the TCO2s in one go. Callers should
+            // first approve the pool in order for the pool to retire
+            // on behalf of them
+            if (toRetire) {
+                retirementIds[i] = IToucanCarbonOffsets(tco2s[i]).retireFrom(
+                    msg.sender,
+                    amountToRedeem
+                );
+            }
         }
     }
 
@@ -642,9 +747,17 @@ abstract contract Pool is
 
     /// @dev Internal function that redeems a single underlying token
     function redeemSingle(address erc20, uint256 amount) internal virtual {
+        // Burn pool tokens
         _burn(msg.sender, amount);
-        IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+
+        // Update supply-related storage variables in the pool
+        VintageData memory vData = IToucanCarbonOffsets(erc20).getVintageData();
+        _totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
         _totalTCO2Supply -= amount;
+
+        // Transfer TCO2 tokens to the caller
+        IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+
         emit Redeemed(msg.sender, erc20, amount);
     }
 

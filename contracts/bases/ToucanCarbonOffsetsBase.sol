@@ -208,6 +208,20 @@ abstract contract ToucanCarbonOffsetsBase is
         return (projectData, vintageData);
     }
 
+    function getVintageData()
+        external
+        view
+        virtual
+        returns (VintageData memory vintageData)
+    {
+        address vc = IToucanContractRegistry(contractRegistry)
+            .carbonProjectVintagesAddress();
+
+        vintageData = ICarbonProjectVintages(vc).getProjectVintageDataByTokenId(
+                _projectVintageTokenId
+            );
+    }
+
     /// @dev Returns the remaining space in TCO2 contract before hitting the cap
     function getRemaining() public view returns (uint256 remaining) {
         uint256 cap = getDepositCap();
@@ -337,4 +351,8 @@ abstract contract ToucanCarbonOffsetsBase is
     /// factory is enabling to tokenize, eg., verra
     /// @dev this must be overridden in the child contract
     function standardRegistry() public virtual returns (string memory) {}
+
+    /// @notice Return the minimum precision supported by the registry
+    /// @dev this must be overridden in the child contract
+    function standardRegistryDecimals() public virtual returns (uint8) {}
 }

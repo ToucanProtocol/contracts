@@ -17,7 +17,7 @@ contract Biochar is PoolWithFeeCalculator {
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
     string public constant VERSION = '1.0.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
 
     // ----------------------------------------
     //      Upgradable related functions

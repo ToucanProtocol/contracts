@@ -6,6 +6,8 @@
 pragma solidity 0.8.14;
 
 import {Pool} from './Pool.sol';
+import {FeeDistribution} from './interfaces/IFeeCalculator.sol';
+import {IToucanCarbonOffsets} from '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
 
 /// @notice Pool with fixed fees template contract
@@ -17,10 +19,8 @@ abstract contract PoolWithFixedFees is Pool {
     // ----------------------------------------
 
     event RedeemFeeUpdated(uint256 feeBp);
-    event RedeemBurnFeeUpdated(uint256 feeBp);
     event RedeemRetireFeeUpdated(uint256 feeBp);
     event RedeemFeeReceiverUpdated(address receiver);
-    event RedeemFeeBurnAddressUpdated(address receiver);
     event TCO2ScoringUpdated(address[] tco2s);
 
     // ------------------------
@@ -52,33 +52,6 @@ abstract contract PoolWithFixedFees is Pool {
         require(feeRedeemReceiver_ != address(0), Errors.CP_EMPTY_ADDRESS);
         _feeRedeemReceiver = feeRedeemReceiver_;
         emit RedeemFeeReceiverUpdated(feeRedeemReceiver_);
-    }
-
-    /// @notice Update the fee redeem burn percentage
-    /// @param feeRedeemBurnPercentageInBase_ percentage of fee in base
-    function setFeeRedeemBurnPercentage(uint256 feeRedeemBurnPercentageInBase_)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        require(
-            feeRedeemBurnPercentageInBase_ < feeRedeemDivider,
-            Errors.CP_INVALID_FEE
-        );
-        _feeRedeemBurnPercentageInBase = feeRedeemBurnPercentageInBase_;
-        emit RedeemBurnFeeUpdated(feeRedeemBurnPercentageInBase_);
-    }
-
-    /// @notice Update the fee redeem burn address
-    /// @param feeRedeemBurnAddress_ address to transfer the fees to burn
-    function setFeeRedeemBurnAddress(address feeRedeemBurnAddress_)
-        external
-        virtual
-    {
-        onlyPoolOwner();
-        require(feeRedeemBurnAddress_ != address(0), Errors.CP_EMPTY_ADDRESS);
-        _feeRedeemBurnAddress = feeRedeemBurnAddress_;
-        emit RedeemFeeBurnAddressUpdated(feeRedeemBurnAddress_);
     }
 
     /// @notice Allows MANAGERs or the owner to pass an array to hold TCO2 contract addesses that are
@@ -123,6 +96,131 @@ abstract contract PoolWithFixedFees is Pool {
         return _feeRedeemRetirePercentageInBase;
     }
 
+    /// @notice View function to calculate deposit fees pre-execution
+    /// Note that currently no deposit fees are charged.
+    /// @dev User specifies in front-end the address and amount they want
+    /// First param is the TCO2 contract address to be deposited
+    /// Second param is the amount of TCO2 to be deposited
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateDepositFees(address, uint256)
+        external
+        view
+        override
+        returns (uint256 feeDistributionTotal)
+    {
+        onlyUnpaused();
+
+        return 0;
+    }
+
+    /// @notice View function to calculate fees pre-execution
+    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @param toRetire Whether the TCO2s will be retired atomically
+    /// with the redemption. It may be that lower fees will be charged
+    /// in this case.
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateRedemptionInFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    ) public view override returns (uint256 feeDistributionTotal) {
+        (uint256[] memory feeAmounts, ) = _calculateRedemptionInFees(
+            tco2s,
+            amounts,
+            toRetire
+        );
+        for (uint256 i = 0; i < feeAmounts.length; ++i) {
+            feeDistributionTotal += feeAmounts[i];
+        }
+    }
+
+    function _calculateRedemptionInFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    )
+        internal
+        view
+        override
+        returns (
+            uint256[] memory feeAmounts,
+            FeeDistribution memory feeDistribution
+        )
+    {
+        onlyUnpaused();
+
+        uint256 tco2Length = tco2s.length;
+        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+
+        // Exempted addresses pay no fees
+        if (redeemFeeExemptedAddresses[msg.sender]) {
+            return (
+                new uint256[](tco2Length),
+                FeeDistribution(new address[](0), new uint256[](0))
+            );
+        }
+
+        uint256 feeDistributionTotal = 0;
+        feeAmounts = new uint256[](tco2Length);
+        for (uint256 i = 0; i < tco2Length; ++i) {
+            uint256 feeAmount = getFixedRedemptionFee(amounts[i], toRetire);
+            feeDistributionTotal += feeAmount;
+            feeAmounts[i] = feeAmount;
+        }
+        feeDistribution = getFixedRedemptionFeeRecipients(feeDistributionTotal);
+    }
+
+    /// @notice View function to calculate fees pre-execution
+    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @param toRetire Whether the TCO2s will be retired atomically
+    /// with the redemption. It may be that lower fees will be charged
+    /// in this case.
+    /// @return feeDistributionTotal Total fee amount to be paid
+    function calculateRedemptionOutFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    ) external view override returns (uint256 feeDistributionTotal) {
+        (feeDistributionTotal, ) = _calculateRedemptionOutFees(
+            tco2s,
+            amounts,
+            toRetire
+        );
+    }
+
+    function _calculateRedemptionOutFees(
+        address[] memory tco2s,
+        uint256[] memory amounts,
+        bool toRetire
+    )
+        internal
+        view
+        override
+        returns (
+            uint256 feeDistributionTotal,
+            FeeDistribution memory feeDistribution
+        )
+    {
+        onlyUnpaused();
+
+        uint256 tco2Length = tco2s.length;
+        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+
+        // Exempted addresses pay no fees
+        if (redeemFeeExemptedAddresses[msg.sender]) {
+            return (0, FeeDistribution(new address[](0), new uint256[](0)));
+        }
+
+        for (uint256 i = 0; i < tco2Length; ++i) {
+            feeDistributionTotal += getFixedRedemptionFee(amounts[i], toRetire);
+        }
+        feeDistribution = getFixedRedemptionFeeRecipients(feeDistributionTotal);
+    }
+
     /// @notice Deposit function for pool that accepts TCO2s and mints pool token 1:1
     /// @param tco2 TCO2 contract address to be deposited, requires approve
     /// @param amount Amount of TCO2 to be deposited
@@ -136,24 +234,42 @@ abstract contract PoolWithFixedFees is Pool {
         return _deposit(tco2, amount, 0);
     }
 
-    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
+    /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
+    /// The amounts provided are the exact amounts of pool tokens the caller
+    /// is willing to spend in order to redeem TCO2s.
     /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem for each tco2s
-    /// Pool token in user's wallet get burned
+    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
+    /// The indexes of this array are matching 1:1 with the tco2s array.
     /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
-    function redeemMany(address[] memory tco2s, uint256[] memory amounts)
+    function redeemInMany(address[] memory tco2s, uint256[] memory amounts)
         external
         virtual
         returns (uint256[] memory redeemedAmounts)
     {
-        (, redeemedAmounts) = _redeemMany(tco2s, amounts, 0, false);
+        (, redeemedAmounts) = _redeemInMany(tco2s, amounts, 0, false);
     }
 
-    /// @notice Redeems pool tokens for multiple underlying TCO2s 1:1 minus fees
-    /// The redeemed TCO2s are retired in the same go in order to allow charging
-    /// a lower fee vs selective redemptions that do not retire the TCO2s.
+    /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
+    /// The amounts provided are the exact amounts of TCO2s to be redeemed.
     /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem and retire for each tco2s
+    /// @param amounts Array of TCO2 amounts to redeem
+    /// The indexes of this array are matching 1:1 with the tco2s array.
+    /// @return poolAmountSpent The amount of pool tokens that were spent
+    function redeemOutMany(address[] memory tco2s, uint256[] memory amounts)
+        external
+        virtual
+        returns (uint256 poolAmountSpent)
+    {
+        (, poolAmountSpent) = _redeemOutMany(tco2s, amounts, 0, false);
+    }
+
+    /// @notice Redeem and retire TCO2s for pool tokens 1:1 minus fees
+    /// The amounts provided are the exact amounts of pool tokens the caller
+    /// is willing to spend in order to retire TCO2s.
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of pool token amounts to spend in order to redeem
+    /// and retire TCO2s. The indexes of this array are matching 1:1 with the
+    /// tco2s array.
     /// @return retirementIds The retirements ids that were produced
     /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
     function redeemAndRetireMany(
@@ -167,7 +283,12 @@ abstract contract PoolWithFixedFees is Pool {
             uint256[] memory redeemedAmounts
         )
     {
-        (retirementIds, redeemedAmounts) = _redeemMany(tco2s, amounts, 0, true);
+        (retirementIds, redeemedAmounts) = _redeemInMany(
+            tco2s,
+            amounts,
+            0,
+            true
+        );
     }
 
     /// @notice Automatically redeems an amount of Pool tokens for underlying

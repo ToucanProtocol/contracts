@@ -52,11 +52,9 @@ abstract contract PoolStorageV1 {
     uint256 internal _feeRedeemPercentageInBase;
 
     /// @dev fees redeem burn address
-    //slither-disable-next-line uninitialized-state
     address internal _feeRedeemBurnAddress;
 
     /// @dev fees redeem burn percentage with 2 fixed decimals precision
-    //slither-disable-next-line uninitialized-state
     uint256 internal _feeRedeemBurnPercentageInBase;
 
     /// @dev repacked smaller variables here so new bools can be added below
@@ -100,7 +98,11 @@ abstract contract PoolStorageV1_5 {
     /// @notice module to calculate fees for the pool
     //slither-disable-next-line uninitialized-state
     IFeeCalculator public feeCalculator;
+    /// @notice Total TCO2 supply in the pool.
     uint256 internal _totalTCO2Supply;
+    /// @notice Project token id to total supply of the project
+    /// in the pool.
+    mapping(uint256 => uint256) internal _totalPerProjectTCO2Supply;
 }
 
 abstract contract PoolStorage is

@@ -92,4 +92,8 @@ contract ToucanCarbonOffsets is
     function standardRegistry() public pure override returns (string memory) {
         return 'verra';
     }
+
+    function standardRegistryDecimals() public pure override returns (uint8) {
+        return 18;
+    }
 }

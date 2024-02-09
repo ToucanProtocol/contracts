@@ -16,8 +16,8 @@ contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsEscrowableWithBatchBase {
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.1.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
+    string public constant VERSION = '1.2.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     // ----------------------------------------
     //       Upgradable related functions
@@ -36,5 +36,9 @@ contract PuroToucanCarbonOffsets is ToucanCarbonOffsetsEscrowableWithBatchBase {
 
     function standardRegistry() public pure override returns (string memory) {
         return 'puro';
+    }
+
+    function standardRegistryDecimals() public pure override returns (uint8) {
+        return 18;
     }
 }

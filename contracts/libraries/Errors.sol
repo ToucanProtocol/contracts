@@ -64,7 +64,7 @@ library Errors {
     // Carbon registry is already supported in COB
     string public constant COB_ALREADY_SUPPORTED = '23';
     // The caller is not granted the VERIFIER_ROLE in COB
-    string public constant COB_NOT_VERIFIER = '24';
+    string public constant COB_NOT_VERIFIER_OR_BATCH_OWNER = '24';
     // The caller does not own the provided batch
     string public constant COB_NOT_BATCH_OWNER = '25';
     // The caller is not a valid batch owner (not a TCO2 contract or verifier)
@@ -105,8 +105,8 @@ library Errors {
     string public constant COB_ONLY_MINTS = '43';
     // New batch status is invalid
     string public constant COB_INVALID_NEW_STATUS = '44';
-    // The TCO2 batch amount has a mismatch
-    string public constant TCO2_BATCH_AMT_MISMATCH = '45';
+    // The TCO2 batch amount is invalid
+    string public constant TCO2_BATCH_AMT_INVALID = '45';
     // The TCO2 batch amount approval has failed
     string public constant TCO2_APPROVAL_AMT_FAILED = '46';
     // The TCO2 batch not confirmed
@@ -123,4 +123,11 @@ library Errors {
     string public constant CP_INVALID_MAX_FEE = '52';
     // The pool feature is not supported
     string public constant CP_NOT_SUPPORTED = '53';
+    // Used for instance to check for sub-tonnage retirement requests
+    string public constant TCO2_INVALID_DECIMALS = '54';
+    // The TCO2 Quantity in the batch is invalid
+    string public constant COB_INVALID_QUANTITY = '55';
+    // Splitting is required on detokenization/retirement finalization, but 2 new serial numbers
+    // were not provided
+    string public constant TCO2_MISSING_SERIALS = '56';
 }

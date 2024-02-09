@@ -26,4 +26,11 @@ interface ICarbonOffsetBatches {
         uint256 tokenId,
         BatchStatus newStatus
     ) external;
+
+    function split(
+        uint256 tokenId,
+        string calldata tokenIdNewSerialNumber,
+        string calldata newTokenIdSerialNumber,
+        uint256 newTokenIdQuantity
+    ) external returns (uint256);
 }

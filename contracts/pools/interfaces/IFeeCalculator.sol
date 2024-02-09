@@ -14,26 +14,26 @@ struct FeeDistribution {
 /// @notice This interface defines methods for calculating fees.
 interface IFeeCalculator {
     /// @notice Calculates the deposit fee for a given amount.
-    /// @param tco2 The address of the TCO2 token.
     /// @param pool The address of the pool.
+    /// @param tco2 The address of the TCO2 token.
     /// @param depositAmount The amount to be deposited.
     /// @return feeDistribution How the fee is meant to be
     /// distributed among the fee recipients.
     function calculateDepositFees(
-        address tco2,
         address pool,
+        address tco2,
         uint256 depositAmount
     ) external view returns (FeeDistribution memory feeDistribution);
 
     /// @notice Calculates the redemption fees for a given amount.
-    /// @param tco2 The address of the TCO2 token.
     /// @param pool The address of the pool.
-    /// @param redemptionAmount The amount to be redeemed.
+    /// @param tco2s The addresses of the TCO2 tokens.
+    /// @param amounts The amounts to be redeemed.
     /// @return feeDistribution How the fee is meant to be
     /// distributed among the fee recipients.
     function calculateRedemptionFees(
-        address tco2,
         address pool,
-        uint256 redemptionAmount
+        address[] calldata tco2s,
+        uint256[] calldata amounts
     ) external view returns (FeeDistribution memory feeDistribution);
 }

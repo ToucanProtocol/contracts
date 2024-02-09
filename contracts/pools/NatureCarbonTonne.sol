@@ -44,6 +44,23 @@ contract NatureCarbonTonne is PoolWithFixedFees {
         address[] memory tco2s,
         uint256[] memory amounts
     ) external view virtual returns (uint256 totalFee) {
-        return calculateRedemptionFees(tco2s, amounts, false);
+        return calculateRedemptionInFees(tco2s, amounts, false);
+    }
+
+    /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
+    /// The amounts provided are the exact amounts of pool tokens the caller
+    /// is willing to spend in order to redeem TCO2s.
+    /// @dev Kept for backwards-compatibility. New clients should use
+    /// redeemInMany instead.
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
+    /// The indexes of this array are matching 1:1 with the tco2s array.
+    /// @return redeemedAmounts The amounts of the TCO2s that were redeemed
+    function redeemMany(address[] memory tco2s, uint256[] memory amounts)
+        external
+        virtual
+        returns (uint256[] memory redeemedAmounts)
+    {
+        (, redeemedAmounts) = _redeemInMany(tco2s, amounts, 0, false);
     }
 }
