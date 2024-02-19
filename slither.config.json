@@ -1,0 +1,7 @@
+{
+  "detectors_to_run": "all",
+  "exclude_informational": true,
+  "exclude_low": true,
+  "filter_paths": "node_modules/",
+  "ignore_compile": true
+}
