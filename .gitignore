@@ -9,4 +9,7 @@ typechain-types
 cache
 artifacts
 
+# Foundry files
+out
+
 *.log
