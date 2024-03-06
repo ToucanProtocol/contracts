@@ -360,6 +360,7 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
         uint256[] memory batchTokenIds
     ) internal view returns (uint256 totalBatchesAmount) {
         for (uint256 i = 0; i < batchTokenIds.length; ++i) {
+            //slither-disable-next-line unused-return
             (, uint256 batchAmount, ) = carbonOffsetBatches.getBatchNFTData(
                 batchTokenIds[i]
             );

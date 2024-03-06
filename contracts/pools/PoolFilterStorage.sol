@@ -7,22 +7,22 @@ pragma solidity 0.8.14;
 
 abstract contract PoolFilterStorageV1 {
     /// @dev Mappings for attributes that can be included or excluded
-    /// if set to `false`, attribute-values are blacklisted/rejected
-    /// if set to `true`, attribute-values are whitelisted/accepted
+    /// if set to `false`, attribute-values are blocklisted/rejected
+    /// if set to `true`, attribute-values are allowlisted/accepted
     mapping(string => bool) public regions;
     mapping(string => bool) public standards;
     mapping(string => bool) public methodologies;
 
-    /// @dev mapping to whitelist external non-TCO2 contracts by address
-    mapping(address => bool) public externalWhiteList;
+    /// @dev mapping to allowlist external non-TCO2 contracts by address
+    mapping(address => bool) public externalAllowlist;
 
     /// @dev mapping to include certain TCO2 contracts by address,
     /// overriding attribute matching checks
-    mapping(address => bool) public internalWhiteList;
+    mapping(address => bool) public internalAllowlist;
 
     /// @dev mapping to exclude certain TCO2 contracts by address,
     /// even if the attribute matching would pass
-    mapping(address => bool) public internalBlackList;
+    mapping(address => bool) public internalBlocklist;
 
     /// @dev address of the registry contract that knows
     /// the list of TCO2s

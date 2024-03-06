@@ -326,10 +326,7 @@ contract RetirementCertificates is
             _exists(tokenId),
             'ERC721URIStorage: URI query for nonexistent token'
         );
-        return
-            string(
-                abi.encodePacked(baseURI, StringsUpgradeable.toString(tokenId))
-            );
+        return string.concat(baseURI, StringsUpgradeable.toString(tokenId));
     }
 
     /// @notice Update retirementMessage, beneficiary, and beneficiaryString of a NFT

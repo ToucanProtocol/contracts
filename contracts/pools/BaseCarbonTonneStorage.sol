@@ -11,45 +11,33 @@ abstract contract BaseCarbonTonneStorageV1 {
     /// in the pool. It is meant to minimize the impact a potential
     /// compromise in the source registry (eg. Verra) can have to the pool.
     uint256 public supplyCap;
-    //slither-disable-next-line constable-states
     mapping(address => uint256) private DEPRECATED_tokenBalances;
-    //slither-disable-next-line constable-states
-    address private DEPRECATED_contractRegistry;
+    address public contractRegistry;
 
-    //slither-disable-next-line constable-states
-    uint64 private DEPRECATED_minimumVintageStartTime;
+    uint64 public minimumVintageStartTime;
 
     /// @dev Mappings for attributes that can be included or excluded
     /// if set to `false`, attribute-values are blacklisted/rejected
     /// if set to `true`, attribute-values are whitelisted/accepted
-    //slither-disable-next-line constable-states
-    bool private DEPRECATED_regionsIsAcceptedMapping;
-    //slither-disable-next-line constable-states
-    mapping(string => bool) private DEPRECATED_regions;
+    bool public regionsIsAcceptedMapping;
+    mapping(string => bool) public regions;
 
-    //slither-disable-next-line constable-states
-    bool private DEPRECATED_standardsIsAcceptedMapping;
-    //slither-disable-next-line constable-states
-    mapping(string => bool) private DEPRECATED_standards;
+    bool public standardsIsAcceptedMapping;
+    mapping(string => bool) public standards;
 
-    //slither-disable-next-line constable-states
-    bool private DEPRECATED_methodologiesIsAcceptedMapping;
-    //slither-disable-next-line constable-states
-    mapping(string => bool) private DEPRECATED_methodologies;
+    bool public methodologiesIsAcceptedMapping;
+    mapping(string => bool) public methodologies;
 
     /// @dev mapping to whitelist external non-TCO2 contracts by address
-    //slither-disable-next-line constable-states
-    mapping(address => bool) private DEPRECATED_externalWhiteList;
+    mapping(address => bool) public externalWhiteList;
 
     /// @dev mapping to include certain TCO2 contracts by address,
     /// overriding attribute matching checks
-    //slither-disable-next-line constable-states
-    mapping(address => bool) private DEPRECATED_internalWhiteList;
+    mapping(address => bool) public internalWhiteList;
 
     /// @dev mapping to exclude certain TCO2 contracts by address,
     /// even if the attribute matching would pass
-    //slither-disable-next-line constable-states
-    mapping(address => bool) private DEPRECATED_internalBlackList;
+    mapping(address => bool) public internalBlackList;
 }
 
 abstract contract BaseCarbonTonneStorageV1_1 {
@@ -84,18 +72,10 @@ abstract contract BaseCarbonTonneStorageV1_4 {
     address public router;
 }
 
-abstract contract BaseCarbonTonneStorageV1_5 {
-    /// @notice fee percentage in basis points charged for selective
-    /// redemptions that also retire the credits in the same transaction
-    uint256 public feeRedeemRetirePercentageInBase;
-    address public filter;
-}
-
 abstract contract BaseCarbonTonneStorage is
     BaseCarbonTonneStorageV1,
     BaseCarbonTonneStorageV1_1,
     BaseCarbonTonneStorageV1_2,
     BaseCarbonTonneStorageV1_3,
-    BaseCarbonTonneStorageV1_4,
-    BaseCarbonTonneStorageV1_5
+    BaseCarbonTonneStorageV1_4
 {}

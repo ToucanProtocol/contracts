@@ -21,15 +21,15 @@ library Errors {
     string public constant CP_EMPTY_ARRAY = '2';
     // Pool is full of TCO2s
     string public constant CP_FULL_POOL = '3';
-    // ERC20 is blacklisted in the pool. This error
-    // is returned for TCO2s that have been blacklisted
+    // ERC20 is blocklisted in the pool. This error
+    // is returned for TCO2s that have been blocklisted
     // like the HFC-23 project.
-    string public constant CP_BLACKLISTED = '4';
-    // ERC20 is not whitelisted in the pool
+    string public constant CP_BLOCKLISTED = '4';
+    // ERC20 is not allowlisted in the pool
     // This error is returned in case the ERC20 is
     // not a TCO2 in which case it has to be manually
-    // whitelisted in order to be allowed in the pool.
-    string public constant CP_NOT_WHITELISTED = '5';
+    // allowlisted in order to be allowed in the pool.
+    string public constant CP_NOT_ALLOWLISTED = '5';
     // Vintage start time of a TCO2 is too old
     string public constant CP_START_TIME_TOO_OLD = '6';
     string public constant CP_REGION_NOT_ACCEPTED = '7';

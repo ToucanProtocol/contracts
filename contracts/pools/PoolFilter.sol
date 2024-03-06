@@ -37,12 +37,12 @@ abstract contract PoolFilter is
     event AttributeRegionRemoved(string region);
     event AttributeStandardAdded(string standard);
     event AttributeStandardRemoved(string standard);
-    event ExternalAddressRemovedFromWhitelist(address erc20addr);
-    event ExternalAddressWhitelisted(address erc20addr);
-    event InternalAddressBlacklisted(address erc20addr);
-    event InternalAddressRemovedFromBlackList(address erc20addr);
-    event InternalAddressRemovedFromWhitelist(address erc20addr);
-    event InternalAddressWhitelisted(address erc20addr);
+    event ExternalAddressRemovedFromAllowlist(address erc20addr);
+    event ExternalAddressAllowlisted(address erc20addr);
+    event InternalAddressBlocklisted(address erc20addr);
+    event InternalAddressRemovedFromBlocklist(address erc20addr);
+    event InternalAddressRemovedFromAllowlist(address erc20addr);
+    event InternalAddressAllowlisted(address erc20addr);
     event MappingSwitched(string mappingName, bool accepted);
     event MinimumVintageStartTimeUpdated(uint256 minimumVintageStartTime);
     event ToucanRegistrySet(address registry);
@@ -95,16 +95,16 @@ abstract contract PoolFilter is
             .isValidERC20(erc20Addr);
 
         if (isToucanContract) {
-            if (internalWhiteList[erc20Addr]) {
+            if (internalAllowlist[erc20Addr]) {
                 return true;
             }
 
-            require(!internalBlackList[erc20Addr], Errors.CP_BLACKLISTED);
+            require(!internalBlocklist[erc20Addr], Errors.CP_BLOCKLISTED);
 
             checkAttributeMatching(erc20Addr);
         } else {
-            /// @dev If not Toucan native contract, check if address is whitelisted
-            require(externalWhiteList[erc20Addr], Errors.CP_NOT_WHITELISTED);
+            /// @dev If not Toucan native contract, check if address is allowlisted
+            require(externalAllowlist[erc20Addr], Errors.CP_NOT_ALLOWLISTED);
         }
 
         return true;
@@ -122,8 +122,8 @@ abstract contract PoolFilter is
         (projectData, vintageData) = IToucanCarbonOffsets(erc20Addr)
             .getAttributes();
 
-        /// @dev checks if any one of the attributes are blacklisted.
-        /// If mappings are set to "whitelist"-mode, require the opposite
+        /// @dev checks if any one of the attributes are blocklisted.
+        /// If mappings are set to "allowlist"-mode, require the opposite
         require(
             vintageData.startTime >= minimumVintageStartTime,
             Errors.CP_START_TIME_TOO_OLD
@@ -158,7 +158,7 @@ abstract contract PoolFilter is
     /// @notice Generic function to switch attributes mappings into either
     /// acceptance or rejection criteria
     /// @param _mappingName attribute mapping of project-vintage data
-    /// @param accepted determines if mapping works as black or whitelist
+    /// @param accepted determines if mapping works as a blocklist or allowlist
     function switchMapping(string memory _mappingName, bool accepted)
         external
         virtual
@@ -224,69 +224,69 @@ abstract contract PoolFilter is
         }
     }
 
-    /// @notice Function to whitelist selected external non-TCO2 contracts by their address
+    /// @notice Function to allowlist selected external non-TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
-    function addToExternalWhiteList(address[] memory erc20Addr) external {
+    function addToExternalAllowlist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            externalWhiteList[erc20Addr[i]] = true;
-            emit ExternalAddressWhitelisted(erc20Addr[i]);
+            externalAllowlist[erc20Addr[i]] = true;
+            emit ExternalAddressAllowlisted(erc20Addr[i]);
         }
     }
 
-    /// @notice Function to whitelist certain TCO2 contracts by their address
+    /// @notice Function to allowlist certain TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
-    function addToInternalWhiteList(address[] memory erc20Addr) external {
+    function addToInternalAllowlist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            internalWhiteList[erc20Addr[i]] = true;
-            emit InternalAddressWhitelisted(erc20Addr[i]);
+            internalAllowlist[erc20Addr[i]] = true;
+            emit InternalAddressAllowlisted(erc20Addr[i]);
         }
     }
 
-    /// @notice Function to blacklist certain TCO2 contracts by their address
+    /// @notice Function to blocklist certain TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
-    function addToInternalBlackList(address[] memory erc20Addr) external {
+    function addToInternalBlocklist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            internalBlackList[erc20Addr[i]] = true;
-            emit InternalAddressBlacklisted(erc20Addr[i]);
+            internalBlocklist[erc20Addr[i]] = true;
+            emit InternalAddressBlocklisted(erc20Addr[i]);
         }
     }
 
-    /// @notice Function to remove ERC20 addresses from external whitelist
+    /// @notice Function to remove ERC20 addresses from external allowlist
     /// @param erc20Addr accepts an array of contract addresses
-    function removeFromExternalWhiteList(address[] memory erc20Addr) external {
+    function removeFromExternalAllowlist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            externalWhiteList[erc20Addr[i]] = false;
-            emit ExternalAddressRemovedFromWhitelist(erc20Addr[i]);
+            externalAllowlist[erc20Addr[i]] = false;
+            emit ExternalAddressRemovedFromAllowlist(erc20Addr[i]);
         }
     }
 
-    /// @notice Function to remove TCO2 addresses from internal blacklist
+    /// @notice Function to remove TCO2 addresses from internal blocklist
     /// @param erc20Addr accepts an array of contract addresses
-    function removeFromInternalBlackList(address[] memory erc20Addr) external {
+    function removeFromInternalBlocklist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            internalBlackList[erc20Addr[i]] = false;
-            emit InternalAddressRemovedFromBlackList(erc20Addr[i]);
+            internalBlocklist[erc20Addr[i]] = false;
+            emit InternalAddressRemovedFromBlocklist(erc20Addr[i]);
         }
     }
 
-    /// @notice Function to remove TCO2 addresses from internal whitelist
+    /// @notice Function to remove TCO2 addresses from internal allowlist
     /// @param erc20Addr accepts an array of contract addressesc
-    function removeFromInternalWhiteList(address[] memory erc20Addr) external {
+    function removeFromInternalAllowlist(address[] memory erc20Addr) external {
         onlyPoolOwner();
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < erc20Addr.length; ++i) {
-            internalWhiteList[erc20Addr[i]] = false;
-            emit InternalAddressRemovedFromWhitelist(erc20Addr[i]);
+            internalAllowlist[erc20Addr[i]] = false;
+            emit InternalAddressRemovedFromAllowlist(erc20Addr[i]);
         }
     }
 

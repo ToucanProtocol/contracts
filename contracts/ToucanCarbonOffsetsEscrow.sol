@@ -148,6 +148,7 @@ contract ToucanCarbonOffsetsEscrow is
         );
 
         // Transfer TCO2 from user to escrow contract
+        //slither-disable-next-line arbitrary-send-erc20
         IERC20Upgradeable(msg.sender).safeTransferFrom(
             user,
             address(this),
@@ -195,6 +196,7 @@ contract ToucanCarbonOffsetsEscrow is
         );
 
         // Transfer TCO2 from user to escrow contract
+        //slither-disable-next-line arbitrary-send-erc20
         IERC20Upgradeable(msg.sender).safeTransferFrom(
             user,
             address(this),

@@ -49,7 +49,7 @@ contract CarbonOffsetBatches is
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
     string public constant VERSION = '1.4.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
@@ -286,8 +286,8 @@ contract CarbonOffsetBatches is
     /// @param tokenId The token ID of the batch
     function rejectBatch(uint256 tokenId) public virtual whenNotPaused {
         onlyWithRole(VERIFIER_ROLE);
-
         onlyPending(tokenId);
+
         // unsetting serialnumber with rejection
         serialNumberApproved[nftList[tokenId].serialNumber] = false;
         _updateStatus(tokenId, BatchStatus.Rejected);
@@ -300,17 +300,16 @@ contract CarbonOffsetBatches is
         whenNotPaused
     {
         rejectBatch(tokenId);
-        addComment(tokenId, comment);
+        _addComment(tokenId, comment);
     }
 
     /// @dev admin function to reject a previously approved batch
     /// Requires that the Batch-NFT has not been fractionalized yet
     function rejectApprovedWithComment(uint256 tokenId, string memory comment)
         external
-        virtual
-        onlyOwner
         whenNotPaused
     {
+        onlyWithRole(VERIFIER_ROLE);
         if (nftList[tokenId].status != BatchStatus.Confirmed)
             revert(Errors.COB_NOT_CONFIRMED);
         if (
@@ -319,7 +318,7 @@ contract CarbonOffsetBatches is
             )
         ) revert(Errors.COB_ALREADY_FRACTIONALIZED);
         _updateStatus(tokenId, BatchStatus.Rejected);
-        addComment(tokenId, comment);
+        _addComment(tokenId, comment);
     }
 
     /// @notice Set batches back to pending after a rejection. This can
@@ -513,6 +512,7 @@ contract CarbonOffsetBatches is
             BatchStatus
         )
     {
+        if (!_exists(tokenId)) revert(Errors.COB_NOT_EXISTS);
         return (
             nftList[tokenId].projectVintageTokenId,
             nftList[tokenId].quantity,
@@ -622,9 +622,8 @@ contract CarbonOffsetBatches is
         string memory uri = nftList[tokenId].uri;
         // If there is no base URI, return the token URI.
         if (bytes(_baseURI()).length == 0) return uri;
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
-        if (bytes(uri).length > 0)
-            return string(abi.encodePacked(_baseURI(), uri));
+        // If both are set, concatenate the baseURI and tokenURI
+        if (bytes(uri).length > 0) return string.concat(_baseURI(), uri);
 
         return super.tokenURI(tokenId);
     }
@@ -634,24 +633,21 @@ contract CarbonOffsetBatches is
         address from,
         address to,
         uint256 amount
-    ) internal virtual override {
+    ) internal virtual override whenNotPaused {
         super._beforeTokenTransfer(from, to, amount);
-
-        if (paused()) revert(Errors.COB_PAUSED_CONTRACT);
     }
 
     /// @notice Append a comment to a Batch-NFT
     /// @dev Don't allow the contract owner to comment.  When the contract owner
     /// can also be a verifier they should add them as a verifier first; this
     /// should prevent accidental comments from the wrong account.
-    function addComment(uint256 tokenId, string memory comment) public virtual {
+    function addComment(uint256 tokenId, string memory comment) external {
         // this also checks that tokenId exists, otherwise ERC721Upgradeable.ownerOf would revert on nonexistent token
-        require(
-            _msgSender() == ownerOf(tokenId) ||
-                hasRole(VERIFIER_ROLE, msg.sender) ||
-                msg.sender == owner(),
-            Errors.COB_INVALID_CALLER
-        );
+        onlyVerifierOrBatchOwner(tokenId);
+        _addComment(tokenId, comment);
+    }
+
+    function _addComment(uint256 tokenId, string memory comment) internal {
         nftList[tokenId].comments.push() = comment;
         nftList[tokenId].commentAuthors.push() = _msgSender();
         emit BatchComment(
@@ -732,14 +728,11 @@ contract CarbonOffsetBatches is
             status != BatchStatus.RetirementRequested &&
             status != BatchStatus.DetokenizationRequested
         ) revert(Errors.COB_INVALID_STATUS);
-        require(
-            nftList[tokenId].quantity > newTokenIdQuantity,
-            Errors.COB_INVALID_QUANTITY
-        );
+        if (nftList[tokenId].quantity <= newTokenIdQuantity)
+            revert(Errors.COB_INVALID_QUANTITY);
 
-        // update old batch
-        serialNumberApproved[nftList[tokenId].serialNumber] = false;
-
+        // keep old serial number to be able to unapprove it after checking and approving the new ones
+        string memory oldSerialNumber = nftList[tokenId].serialNumber;
         // this also performs the check that the new quantity is smaller than the old quantity, otherwise it would
         // underflow and revert. in case it is equal to the old quantity, _updateSerialAndQuantity would revert on
         // quantity == 0
@@ -748,7 +741,6 @@ contract CarbonOffsetBatches is
             tokenIdNewSerialNumber,
             nftList[tokenId].quantity - newTokenIdQuantity
         );
-
         serialNumberApproved[tokenIdNewSerialNumber] = true;
 
         // mint a new batch to be owned by the TCO2 contract
@@ -758,11 +750,21 @@ contract CarbonOffsetBatches is
             newTokenIdSerialNumber,
             newTokenIdQuantity
         ); // here we would revert in case newTokenIdQuantity == 0
-        _linkWithVintage(newTokenId, nftList[tokenId].projectVintageTokenId);
-        _updateStatus(newTokenId, status); // status will be either DetokenizationRequested or RetirementRequested
-        // transfer new batch to TCO2 contract with the right status so that it will not be fractionalized
-        _safeTransfer(address(this), msg.sender, newTokenId, '');
         serialNumberApproved[newTokenIdSerialNumber] = true;
+
+        // unapprove the old serial number
+        serialNumberApproved[oldSerialNumber] = false;
+
+        // link the new batch with the vintage of the old batch
+        _linkWithVintage(newTokenId, nftList[tokenId].projectVintageTokenId);
+
+        // Copy the status from the old batch
+        _updateStatus(newTokenId, status);
+
+        // transfer new batch to TCO2 contract with the right status so that
+        // it will not be fractionalized
+        _safeTransfer(address(this), msg.sender, newTokenId, '');
+
         emit Split(tokenId, newTokenId);
     }
 
@@ -771,7 +773,7 @@ contract CarbonOffsetBatches is
         address from, /* from */
         uint256, /* tokenId */
         bytes calldata /* data */
-    ) external view whenNotPaused returns (bytes4) {
+    ) external pure returns (bytes4) {
         // This hook is only used by the contract to mint batch-NFTs that
         // can be tokenized on behalf of end users.
         if (from != address(0)) revert(Errors.COB_ONLY_MINTS);

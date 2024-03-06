@@ -5,6 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
+import {Errors} from '../libraries/Errors.sol';
 import {PoolWithFixedFees} from './PoolWithFixedFees.sol';
 
 /// @notice Nature Carbon Tonne (or NatureCarbonTonne)
@@ -45,6 +46,36 @@ contract NatureCarbonTonne is PoolWithFixedFees {
         uint256[] memory amounts
     ) external view virtual returns (uint256 totalFee) {
         return calculateRedemptionInFees(tco2s, amounts, false);
+    }
+
+    /// @notice Need to set the total TCO2 supply of the pool and
+    /// the supply for each project token held by the pool
+    /// otherwise redemptions and crosschain rebalancing will fail.
+    /// This function will be executed once then removed in a future
+    /// upgrade.
+    /// @param projectTokenIds Project token ids held by the pool
+    /// @param projectSupply Total project supply held by the pool.
+    /// The indexes of this array are matching 1:1 with the
+    /// projectTokenIds array.
+    function setTotalTCO2Supply(
+        uint256[] calldata projectTokenIds,
+        uint256[] calldata projectSupply
+    ) external {
+        onlyWithRole(MANAGER_ROLE);
+        uint256 projectTokenIdsLen = projectTokenIds.length;
+        require(
+            projectTokenIdsLen == projectSupply.length,
+            Errors.CP_LENGTH_MISMATCH
+        );
+        require(projectTokenIdsLen != 0, Errors.CP_EMPTY_ARRAY);
+
+        uint256 _totalTCO2Supply = 0;
+        for (uint256 i = 0; i < projectTokenIdsLen; ++i) {
+            // Does not protect against duplicates
+            _totalTCO2Supply += projectSupply[i];
+            totalPerProjectTCO2Supply[projectTokenIds[i]] = projectSupply[i];
+        }
+        totalTCO2Supply = _totalTCO2Supply;
     }
 
     /// @notice Redeem TCO2s for pool tokens 1:1 minus fees

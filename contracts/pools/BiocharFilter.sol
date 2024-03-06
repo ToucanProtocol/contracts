@@ -13,6 +13,7 @@ contract BiocharFilter is PoolFilter {
     // ----------------------------------------
 
     string public constant VERSION = '1.0.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
     // ----------------------------------------
     //      Upgradable related functions

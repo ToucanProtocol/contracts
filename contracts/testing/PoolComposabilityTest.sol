@@ -122,6 +122,7 @@ contract PoolComposabilityTest {
         }
 
         // redeem and retire from the pool
+        //slither-disable-next-line unused-return
         (uint256[] memory retirementIds, ) = IToucanPoolTest(_poolToken)
             .redeemAndRetireMany(tco2s, amounts);
 
@@ -157,6 +158,7 @@ contract PoolComposabilityTest {
         }
 
         // redeem and retire from the pool
+        //slither-disable-next-line unused-return
         (uint256[] memory retirementIds, ) = IToucanPoolTest(_poolToken)
             .redeemAndRetireMany(tco2s, amounts);
 

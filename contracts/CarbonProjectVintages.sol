@@ -39,7 +39,7 @@ contract CarbonProjectVintages is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.1.1';
+    string public constant VERSION = '1.1.2';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
@@ -181,7 +181,9 @@ contract CarbonProjectVintages is
         return super._exists(tokenId);
     }
 
-    /// @notice Updates and existing carbon project
+    /// @notice Updates an existing carbon project
+    /// @param tokenId The tokenId of the vintage to update
+    /// @param _vintageData New vintage data
     /// @dev Only data-managers can update the data for correction
     /// except the sensitive `projectId`
     function updateProjectVintage(
@@ -191,7 +193,15 @@ contract CarbonProjectVintages is
         require(_exists(tokenId), 'Project not yet minted');
         // @dev very sensitive data, better update via separate function
         _vintageData.projectTokenId = vintageData[tokenId].projectTokenId;
+
+        delete pvToTokenId[_vintageData.projectTokenId][
+            vintageData[tokenId].startTime
+        ];
+
         vintageData[tokenId] = _vintageData;
+        pvToTokenId[_vintageData.projectTokenId][
+            _vintageData.startTime
+        ] = tokenId;
 
         emit ProjectVintageUpdated(tokenId);
     }
@@ -263,9 +273,9 @@ contract CarbonProjectVintages is
         if (bytes(base).length == 0) {
             return uri;
         }
-        // If both are set, concatenate the baseURI and tokenURI (via abi.encodePacked).
+        // If both are set, concatenate the baseURI and tokenURI
         if (bytes(uri).length > 0) {
-            return string(abi.encodePacked(base, uri));
+            return string.concat(base, uri);
         }
 
         return super.tokenURI(tokenId);

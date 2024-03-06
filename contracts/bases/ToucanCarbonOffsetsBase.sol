@@ -153,13 +153,11 @@ abstract contract ToucanCarbonOffsetsBase is
         string memory vintageName;
         (globalProjectId, vintageName) = getGlobalProjectVintageIdentifiers();
         return
-            string(
-                abi.encodePacked(
-                    'Toucan Protocol: TCO2-',
-                    globalProjectId,
-                    '-',
-                    vintageName
-                )
+            string.concat(
+                'Toucan Protocol: TCO2-',
+                globalProjectId,
+                '-',
+                vintageName
             );
     }
 
@@ -169,10 +167,7 @@ abstract contract ToucanCarbonOffsetsBase is
         string memory globalProjectId;
         string memory vintageName;
         (globalProjectId, vintageName) = getGlobalProjectVintageIdentifiers();
-        return
-            string(
-                abi.encodePacked('TCO2-', globalProjectId, '-', vintageName)
-            );
+        return string.concat('TCO2-', globalProjectId, '-', vintageName);
     }
 
     /// @dev Helper function to retrieve data fragments for `name()` and `symbol()`

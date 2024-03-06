@@ -5,7 +5,8 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {FeeDistribution, IFeeCalculator} from './interfaces/IFeeCalculator.sol';
+import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
+
 import {Pool} from './Pool.sol';
 import {Errors} from '../libraries/Errors.sol';
 
@@ -36,23 +37,6 @@ abstract contract PoolWithFeeCalculator is Pool {
     //   Permissionless functions
     // ----------------------------
 
-    /// @notice Returns the total TCO2 supply of the pool
-    function totalTCO2Supply() external view returns (uint256) {
-        return _totalTCO2Supply;
-    }
-
-    /// @notice Return the total TCO2 supply of a project in the pool
-    /// @param projectTokenId The token id of the project as it's found
-    /// in the CarbonProjects contract
-    /// @return The total supply of the project in the pool
-    function totalPerProjectTCO2Supply(uint256 projectTokenId)
-        external
-        view
-        returns (uint256)
-    {
-        return _totalPerProjectTCO2Supply[projectTokenId];
-    }
-
     /// @notice View function to calculate deposit fees pre-execution
     /// @dev User specifies in front-end the address and amount they want
     /// @param tco2 TCO2 contract address
@@ -72,28 +56,20 @@ abstract contract PoolWithFeeCalculator is Pool {
     }
 
     /// @notice View function to calculate fees pre-execution
-    /// @dev User specifies in front-end the addresses and amounts they want
-    /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of TCO2 amounts to redeem
-    /// The indexes of this array are matching 1:1 with the tco2s array.
-    /// @param toRetire Whether the TCO2s will be retired atomically
-    /// with the redemption. It may be that lower fees will be charged
-    /// in this case. Currently not supported.
-    /// @return feeDistributionTotal Total fee amount to be paid
+    /// NOTE: This function is not supported yet
     function calculateRedemptionInFees(
-        address[] memory tco2s,
-        uint256[] memory amounts,
-        bool toRetire
-    ) public view override returns (uint256 feeDistributionTotal) {
-        (uint256[] memory feeAmounts, ) = _calculateRedemptionInFees(
-            tco2s,
-            amounts,
-            toRetire
-        );
-        uint256 feeAmountsLen = feeAmounts.length;
-        for (uint256 i = 0; i < feeAmountsLen; ++i) {
-            feeDistributionTotal += feeAmounts[i];
-        }
+        address[] memory, /* tco2s */
+        uint256[] memory, /* amounts */
+        bool /* toRetire */
+    )
+        external
+        pure
+        override
+        returns (
+            uint256 /* feeDistribution */
+        )
+    {
+        revert(Errors.CP_NOT_SUPPORTED);
     }
 
     function _calculateRedemptionInFees(
@@ -102,14 +78,13 @@ abstract contract PoolWithFeeCalculator is Pool {
         bool /* toRetire */
     )
         internal
-        view
+        pure
         override
         returns (
             uint256[] memory, /* feeAmounts */
             FeeDistribution memory /* feeDistribution */
         )
     {
-        onlyUnpaused();
         revert(Errors.CP_NOT_SUPPORTED);
     }
 
@@ -192,7 +167,7 @@ abstract contract PoolWithFeeCalculator is Pool {
     /// @param amounts Array of TCO2 amounts to redeem
     /// The indexes of this array are matching 1:1 with the tco2s array.
     /// @param maxFee Maximum fee to be paid for the redemption. This value cannot be zero.
-    /// Use `calculateRedemptionFees(tco2s,amounts,false)` to determine the fee that will
+    /// Use `calculateRedemptionOutFees(tco2s,amounts,false)` to determine the fee that will
     /// be charged given the state of the pool during this call. Add a buffer on top of the
     /// returned fee amount up to the maximum fee you are willing to pay.
     /// @return poolAmountSpent The amount of pool tokens that were spent

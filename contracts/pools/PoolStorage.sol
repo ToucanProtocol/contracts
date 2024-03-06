@@ -5,7 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {IFeeCalculator} from './interfaces/IFeeCalculator.sol';
+import {IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
 abstract contract PoolStorageV1 {
     /// @notice The supply cap is used as a measure to guard deposits
@@ -45,10 +45,10 @@ abstract contract PoolStorageV1 {
     mapping(address => bool) private DEPRECATED_internalBlackList;
 
     /// @dev fees redeem receiver address
-    //slither-disable-next-line uninitialized-state
+    //slither-disable-next-line uninitialized-state,constable-states
     address internal _feeRedeemReceiver;
 
-    //slither-disable-next-line uninitialized-state
+    //slither-disable-next-line uninitialized-state,constable-states
     uint256 internal _feeRedeemPercentageInBase;
 
     /// @dev fees redeem burn address
@@ -89,20 +89,20 @@ abstract contract PoolStorageV1_3 {
 abstract contract PoolStorageV1_4 {
     /// @notice fee percentage in basis points charged for selective
     /// redemptions that also retire the credits in the same transaction
-    //slither-disable-next-line uninitialized-state
+    //slither-disable-next-line uninitialized-state,constable-states
     uint256 internal _feeRedeemRetirePercentageInBase;
     address public filter;
 }
 
 abstract contract PoolStorageV1_5 {
     /// @notice module to calculate fees for the pool
-    //slither-disable-next-line uninitialized-state
+    //slither-disable-next-line uninitialized-state,constable-states
     IFeeCalculator public feeCalculator;
     /// @notice Total TCO2 supply in the pool.
-    uint256 internal _totalTCO2Supply;
+    uint256 public totalTCO2Supply;
     /// @notice Project token id to total supply of the project
     /// in the pool.
-    mapping(uint256 => uint256) internal _totalPerProjectTCO2Supply;
+    mapping(uint256 => uint256) public totalPerProjectTCO2Supply;
 }
 
 abstract contract PoolStorage is

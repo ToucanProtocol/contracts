@@ -5,8 +5,9 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
+import {FeeDistribution} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
+
 import {Pool} from './Pool.sol';
-import {FeeDistribution} from './interfaces/IFeeCalculator.sol';
 import {IToucanCarbonOffsets} from '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
 

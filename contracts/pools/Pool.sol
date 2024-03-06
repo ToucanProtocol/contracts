@@ -13,9 +13,9 @@ import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
+import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
 import '../cross-chain/interfaces/IToucanCrosschainMessenger.sol';
-import {FeeDistribution, IFeeCalculator} from './interfaces/IFeeCalculator.sol';
 import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import '../libraries/Errors.sol';
@@ -296,7 +296,7 @@ abstract contract Pool is
         address recipient = _getRemotePoolAddress(tcm, destinationDomain);
 
         uint256 payment = msg.value / tco2Length;
-        uint256 tempSupply = _totalTCO2Supply;
+        uint256 tempSupply = totalTCO2Supply;
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
             address tco2 = tco2s[i];
@@ -306,7 +306,7 @@ abstract contract Pool is
                 // Update supply-related storage variables in the pool
                 VintageData memory vData = IToucanCarbonOffsets(tco2)
                     .getVintageData();
-                _totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
+                totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
                 tempSupply -= amount;
             }
 
@@ -318,7 +318,7 @@ abstract contract Pool is
 
             emit TCO2Bridged(destinationDomain, tco2, amount);
         }
-        _totalTCO2Supply = tempSupply;
+        totalTCO2Supply = tempSupply;
     }
 
     // ----------------------------
@@ -375,8 +375,8 @@ abstract contract Pool is
         // Update supply-related storage variables in the pool
         VintageData memory vData = IToucanCarbonOffsets(erc20Addr)
             .getVintageData();
-        _totalPerProjectTCO2Supply[vData.projectTokenId] += amount;
-        _totalTCO2Supply += amount;
+        totalPerProjectTCO2Supply[vData.projectTokenId] += amount;
+        totalTCO2Supply += amount;
 
         // Transfer the TCO2 to the pool
         IERC20Upgradeable(erc20Addr).safeTransferFrom(
@@ -421,9 +421,7 @@ abstract contract Pool is
         } catch (bytes memory reason) {
             // this most often results in a random bytes sequence,
             // but it's worth at least trying to log it
-            revert(
-                string(abi.encodePacked('unexpected error: ', string(reason)))
-            );
+            revert(string.concat('unexpected error: ', string(reason)));
         }
     }
 
@@ -474,7 +472,7 @@ abstract contract Pool is
         address[] memory tco2s,
         uint256[] memory amounts,
         bool toRetire
-    ) public view virtual returns (uint256 feeDistributionTotal);
+    ) external view virtual returns (uint256 feeDistributionTotal);
 
     /// @dev Internal function to calculate redemption fees.
     /// Made virtual so that each child contract can implement its own
@@ -752,8 +750,8 @@ abstract contract Pool is
 
         // Update supply-related storage variables in the pool
         VintageData memory vData = IToucanCarbonOffsets(erc20).getVintageData();
-        _totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
-        _totalTCO2Supply -= amount;
+        totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
+        totalTCO2Supply -= amount;
 
         // Transfer TCO2 tokens to the caller
         IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
