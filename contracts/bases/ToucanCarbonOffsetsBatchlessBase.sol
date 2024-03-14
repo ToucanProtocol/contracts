@@ -6,8 +6,6 @@
 pragma solidity 0.8.14;
 
 import './ToucanCarbonOffsetsBase.sol';
-import '../interfaces/IToucanCarbonOffsetsFactory.sol';
-import '../interfaces/IToucanContractRegistry.sol';
 
 /// @notice
 contract ToucanCarbonOffsetsBatchlessBase is ToucanCarbonOffsetsBase {

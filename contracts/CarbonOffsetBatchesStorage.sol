@@ -4,7 +4,7 @@
 
 pragma solidity 0.8.14;
 
-import './CarbonOffsetBatchesTypes.sol';
+import {BatchStatus} from './CarbonOffsetBatchesTypes.sol';
 
 /// @dev Separate storage contract to improve upgrade safety
 abstract contract CarbonOffsetBatchesStorageV1 {

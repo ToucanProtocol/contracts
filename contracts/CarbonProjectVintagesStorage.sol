@@ -7,7 +7,7 @@
 // Storage contract for CarbonProjects
 pragma solidity 0.8.14;
 
-import './CarbonProjectVintageTypes.sol';
+import {VintageData} from './CarbonProjectVintageTypes.sol';
 
 /// @dev Separate storage contract to improve upgrade safety
 abstract contract CarbonProjectVintagesStorage {

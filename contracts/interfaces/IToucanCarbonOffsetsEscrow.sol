@@ -5,8 +5,8 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import '../ToucanCarbonOffsetsEscrowTypes.sol';
-import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import {DetokenizationRequest, RetirementRequest, RequestStatus} from '../ToucanCarbonOffsetsEscrowTypes.sol';
+import {CreateRetirementRequestParams} from '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 
 interface IToucanCarbonOffsetsEscrow {
     function createDetokenizationRequest(
@@ -20,9 +20,17 @@ interface IToucanCarbonOffsetsEscrow {
         CreateRetirementRequestParams calldata params
     ) external returns (uint256);
 
-    function finalizeDetokenizationRequest(uint256 requestId) external;
+    function finalizeDetokenizationRequest(
+        uint256 requestId,
+        string calldata splitBalancingSerialNumber,
+        string calldata splitRemainingSerialNumber
+    ) external;
 
-    function finalizeRetirementRequest(uint256 requestId) external;
+    function finalizeRetirementRequest(
+        uint256 requestId,
+        string calldata splitBalancingSerialNumber,
+        string calldata splitRemainingSerialNumber
+    ) external;
 
     function revertDetokenizationRequest(uint256 requestId) external;
 

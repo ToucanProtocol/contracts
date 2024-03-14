@@ -14,7 +14,6 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 import './CarbonProjectsStorage.sol';
 import './interfaces/ICarbonProjects.sol';
 import './libraries/Modifiers.sol';
-import './libraries/Strings.sol';
 
 /// @notice The CarbonProjects contract stores carbon project-specific data
 /// The data is stored in structs via ERC721 tokens
@@ -33,8 +32,6 @@ contract CarbonProjects is
     AccessControlUpgradeable,
     UUPSUpgradeable
 {
-    using Strings for string;
-
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -138,7 +135,7 @@ contract CarbonProjects is
         string memory uri,
         address beneficiary
     ) external virtual override onlyManagers whenNotPaused returns (uint256) {
-        require(!projectId.equals(''), 'ProjectId cannot be empty');
+        require(bytes(projectId).length != 0, 'ProjectId cannot be empty');
         require(!projectIds[projectId], 'Project already exists');
         projectIds[projectId] = true;
 

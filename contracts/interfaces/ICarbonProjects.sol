@@ -7,7 +7,7 @@ pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
-import '../CarbonProjectTypes.sol';
+import {ProjectData} from '../CarbonProjectTypes.sol';
 
 interface ICarbonProjects is IERC721Upgradeable {
     function addNewProject(

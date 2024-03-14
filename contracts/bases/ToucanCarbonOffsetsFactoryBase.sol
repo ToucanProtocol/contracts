@@ -6,7 +6,6 @@
 pragma solidity 0.8.14;
 
 // ============ External Imports ============
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
@@ -15,7 +14,6 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 
 // ============ Internal Imports ============
 import '../interfaces/IToucanContractRegistry.sol';
-import '../interfaces/ICarbonOffsetBatches.sol';
 import '../interfaces/ICarbonProjects.sol';
 import '../interfaces/ICarbonProjectVintages.sol';
 import '../libraries/ProjectUtils.sol';

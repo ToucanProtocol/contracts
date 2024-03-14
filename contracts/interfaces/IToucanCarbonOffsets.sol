@@ -5,9 +5,9 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import '../CarbonProjectVintageTypes.sol';
-import '../CarbonProjectTypes.sol';
-import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import {VintageData} from '../CarbonProjectVintageTypes.sol';
+import {ProjectData} from '../CarbonProjectTypes.sol';
+import {CreateRetirementRequestParams} from '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 
 interface IToucanCarbonOffsets {
     function retireFrom(address account, uint256 amount)

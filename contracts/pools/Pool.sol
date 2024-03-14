@@ -5,7 +5,6 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
@@ -18,7 +17,7 @@ import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools
 import '../cross-chain/interfaces/IToucanCrosschainMessenger.sol';
 import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
-import '../libraries/Errors.sol';
+import {Errors} from '../libraries/Errors.sol';
 import './PoolStorage.sol';
 
 /// @notice Pool template contract

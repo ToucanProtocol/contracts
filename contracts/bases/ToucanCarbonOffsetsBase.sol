@@ -8,8 +8,6 @@ pragma solidity 0.8.14;
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol';
-import '@openzeppelin/contracts/utils/Context.sol';
-import '@openzeppelin/contracts/utils/Strings.sol';
 
 import '../interfaces/ICarbonOffsetBatches.sol';
 import '../interfaces/ICarbonProjects.sol';
@@ -19,10 +17,8 @@ import '../interfaces/IRetirementCertificates.sol';
 import '../interfaces/IToucanCarbonOffsetsEscrow.sol';
 import '../interfaces/IToucanCarbonOffsetsFactory.sol';
 import '../interfaces/IToucanContractRegistry.sol';
-import '../CarbonProjectTypes.sol';
-import '../CarbonProjectVintageTypes.sol';
 import '../ToucanCarbonOffsetsStorage.sol';
-import '../CarbonOffsetBatchesTypes.sol';
+import {BatchStatus} from '../CarbonOffsetBatchesTypes.sol';
 
 /// @notice Base contract for any specific contract implementation of the TCO2 tokens (ERC20)
 abstract contract ToucanCarbonOffsetsBase is

@@ -7,7 +7,6 @@ pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
@@ -35,7 +34,6 @@ contract RetirementCertificates is
     //      Libraries
     // ----------------------------------------
 
-    using AddressUpgradeable for address;
     using Strings for string;
 
     // ----------------------------------------

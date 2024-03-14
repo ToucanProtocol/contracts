@@ -5,7 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import './ToucanCarbonOffsetsEscrowTypes.sol';
+import {DetokenizationRequest, RetirementRequest} from './ToucanCarbonOffsetsEscrowTypes.sol';
 
 abstract contract ToucanCarbonOffsetsEscrowStorageV1 {
     address public contractRegistry;

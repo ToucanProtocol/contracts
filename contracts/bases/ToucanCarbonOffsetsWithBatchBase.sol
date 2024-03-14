@@ -6,8 +6,7 @@
 pragma solidity 0.8.14;
 
 import './ToucanCarbonOffsetsBase.sol';
-import './ToucanCarbonOffsetsWithBatchBaseTypes.sol';
-import '../libraries/Errors.sol';
+import {Errors} from '../libraries/Errors.sol';
 
 /// @notice Base contract that can be reused between different TCO2
 /// implementations that need to work with batch NFTs
@@ -145,14 +144,6 @@ abstract contract ToucanCarbonOffsetsWithBatchBase is
         returns (uint256)
     {
         return batchAmount * 10**decimals();
-    }
-
-    function _TCO2AmountToBatchAmount(uint256 TCO2Amount)
-        internal
-        view
-        returns (uint256)
-    {
-        return TCO2Amount / 10**decimals();
     }
 
     /// @dev Internal helper to check if CarbonOffsetBatches is whitelisted (official)

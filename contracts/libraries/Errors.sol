@@ -67,7 +67,7 @@ library Errors {
     string public constant COB_NOT_VERIFIER_OR_BATCH_OWNER = '24';
     // The caller does not own the provided batch
     string public constant COB_NOT_BATCH_OWNER = '25';
-    // The caller is not a valid batch owner (not a TCO2 contract or verifier)
+    // The owner of the batch is invalid (not a TCO2 contract)
     string public constant COB_INVALID_BATCH_OWNER = '26';
     // The batch is not in Confirmed status
     string public constant COB_NOT_CONFIRMED = '27';

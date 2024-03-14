@@ -13,7 +13,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol'
 
 import '../interfaces/IToucanCarbonOffsets.sol';
 import '../interfaces/IToucanContractRegistry.sol';
-import '../libraries/Errors.sol';
+import {Errors} from '../libraries/Errors.sol';
 import '../libraries/Strings.sol';
 import './PoolFilterStorage.sol';
 

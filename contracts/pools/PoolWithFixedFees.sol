@@ -8,7 +8,6 @@ pragma solidity 0.8.14;
 import {FeeDistribution} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
 import {Pool} from './Pool.sol';
-import {IToucanCarbonOffsets} from '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
 
 /// @notice Pool with fixed fees template contract
