@@ -5,7 +5,8 @@
   "dependencies": {
     "@hyperlane-xyz/core": "3.2.0",
     "@openzeppelin/contracts": "4.6.0",
-    "@openzeppelin/contracts-upgradeable": "4.6.0"
+    "@openzeppelin/contracts-upgradeable": "4.6.0",
+    "@toucanprotocol/dynamic-fee-pools": "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",

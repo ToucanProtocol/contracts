@@ -798,6 +798,11 @@
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.5.tgz#1eed23d4844c861a1835b5d33507c1017fa98de8"
   integrity sha512-ZK+W5mVhRppff9BE6YdR8CC52C8zAvsVAiWhEtQ5+oNxFE6h1WdeWo+FJSF8KKvtxxVYZ7MTP/5KoVpAU3aSWg==
 
+"@prb/math@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@prb/math/-/math-4.0.1.tgz#bc90277f4f1c085c973f502455bf12c2b3b67666"
+  integrity sha512-ANTz2KMV+dMdZ57mWgDTR6jZo5uQzUczQEHCxd7CvJZZ9yafnfPhUUILHvvigIOZ85fZbTPVkC8YoRG1z5Qf7g==
+
 "@scure/base@~1.1.0":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@scure/base/-/base-1.1.1.tgz#ebb651ee52ff84f420097055f4bf46cfba403938"
@@ -922,6 +927,13 @@
   integrity sha512-6dKnHZn7fg/iQATVEzqyUOyEidbn05q7YA2mQ9hC0MMXhhV3/JrsxmFSYZAcr7j1yUP700LLhTruvJ3MiQmjJg==
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
+
+"@toucanprotocol/dynamic-fee-pools@git+https://github.com/ToucanProtocol/dynamic-fee-pools.git":
+  version "1.0.0"
+  resolved "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#db24c72dd5d60e5ecd3d4a3af244fc77aef62aed"
+  dependencies:
+    "@openzeppelin/contracts" "4.6.0"
+    "@prb/math" "4.0.1"
 
 "@tsconfig/node10@^1.0.7":
   version "1.0.9"

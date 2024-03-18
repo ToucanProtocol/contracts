@@ -1,2 +1,3 @@
 @hyperlane-xyz/=node_modules/@hyperlane-xyz/
 @openzeppelin/=node_modules/@openzeppelin/
+@toucanprotocol/=node_modules/@toucanprotocol/
