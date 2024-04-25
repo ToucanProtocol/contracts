@@ -26,6 +26,14 @@ interface ICarbonProjects is IERC721Upgradeable {
 
     function isValidProjectTokenId(uint256 tokenId) external returns (bool);
 
+    function updateProjectId(uint256 tokenId, string calldata newProjectId)
+        external;
+
+    function updateProjectIds(
+        uint256[] calldata tokenIds,
+        string[] calldata newProjectIds
+    ) external;
+
     function getProjectDataByTokenId(uint256 tokenId)
         external
         view

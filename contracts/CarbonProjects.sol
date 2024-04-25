@@ -9,11 +9,12 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
+import './bases/RoleInitializer.sol';
 import './CarbonProjectsStorage.sol';
 import './interfaces/ICarbonProjects.sol';
 import './libraries/Modifiers.sol';
+import './libraries/Errors.sol';
 
 /// @notice The CarbonProjects contract stores carbon project-specific data
 /// The data is stored in structs via ERC721 tokens
@@ -29,7 +30,7 @@ contract CarbonProjects is
     OwnableUpgradeable,
     PausableUpgradeable,
     Modifiers,
-    AccessControlUpgradeable,
+    RoleInitializer,
     UUPSUpgradeable
 {
     // ----------------------------------------
@@ -39,7 +40,7 @@ contract CarbonProjects is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.1.1';
+    string public constant VERSION = '1.2.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
@@ -67,7 +68,11 @@ contract CarbonProjects is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
+    function initialize(address[] calldata accounts, bytes32[] calldata roles)
+        external
+        virtual
+        initializer
+    {
         __Context_init_unchained();
         __ERC721_init_unchained(
             'Toucan Protocol: Carbon Projects',
@@ -75,11 +80,8 @@ contract CarbonProjects is
         );
         __Ownable_init_unchained();
         __Pausable_init_unchained();
-        __AccessControl_init_unchained();
+        __RoleInitializer_init_unchained(accounts, roles);
         __UUPSUpgradeable_init_unchained();
-
-        /// @dev granting the deployer==owner the rights to grant other roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -194,28 +196,32 @@ contract CarbonProjects is
         emit ProjectUpdated(tokenId);
     }
 
+    /// @notice Updates a token to a new project id
     /// @dev Projects and their projectId's must be unique, changing them must be handled carefully
+    /// @param tokenId the token id to update
+    /// @param newProjectId the new project id
     function updateProjectId(uint256 tokenId, string memory newProjectId)
         external
         virtual
         onlyManagers
         whenNotPaused
     {
-        require(_exists(tokenId), 'Project not yet minted');
-        if (bytes(newProjectId).length != 0) {
-            require(
-                projectIds[newProjectId] == false,
-                'Cant change current projectId to an existing one'
-            );
+        _updateProjectId(tokenId, newProjectId);
+    }
+
+    /// @notice Updates multiple tokens to a new project it
+    /// @dev Projects and their projectId's must be unique, changing them must be handled carefully
+    /// @param tokenIds the token ids to update
+    /// @param newProjectIds the new project ids
+    function updateProjectIds(
+        uint256[] calldata tokenIds,
+        string[] calldata newProjectIds
+    ) external virtual onlyManagers whenNotPaused {
+        uint256 length = tokenIds.length;
+        require(length == newProjectIds.length, Errors.CP_LENGTH_MISMATCH);
+        for (uint256 i = 0; i < length; i++) {
+            _updateProjectId(tokenIds[i], newProjectIds[i]);
         }
-
-        string memory oldProjectId = projectData[tokenId].projectId;
-        projectIds[oldProjectId] = false;
-
-        projectData[tokenId].projectId = newProjectId;
-        projectIds[newProjectId] = true;
-
-        emit ProjectIdUpdated(tokenId);
     }
 
     /// @notice Updates the project beneficiary
@@ -317,5 +323,29 @@ contract CarbonProjects is
         }
 
         return super.tokenURI(tokenId);
+    }
+
+    // Internal
+
+    function _updateProjectId(uint256 tokenId, string memory newProjectId)
+        internal
+    {
+        require(_exists(tokenId), 'Project not yet minted');
+        if (bytes(newProjectId).length != 0) {
+            require(
+                projectIds[newProjectId] == false,
+                'Cant change current projectId to an existing one'
+            );
+        }
+
+        string memory oldProjectId = projectData[tokenId].projectId;
+        projectIds[oldProjectId] = false;
+        delete pidToTokenId[oldProjectId];
+
+        projectData[tokenId].projectId = newProjectId;
+        projectIds[newProjectId] = true;
+        pidToTokenId[newProjectId] = tokenId;
+
+        emit ProjectIdUpdated(tokenId);
     }
 }

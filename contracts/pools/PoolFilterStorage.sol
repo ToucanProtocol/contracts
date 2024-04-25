@@ -48,4 +48,13 @@ abstract contract PoolFilterStorageV1 {
     bool public methodologiesIsAcceptedMapping;
 }
 
-abstract contract PoolFilterStorage is PoolFilterStorageV1 {}
+abstract contract PoolFilterStorageV2 {
+    /// @dev mapping to allowlist external ERC-1155 tokens
+    mapping(address => mapping(uint256 => bool))
+        public externalERC1155Allowlist;
+}
+
+abstract contract PoolFilterStorage is
+    PoolFilterStorageV1,
+    PoolFilterStorageV2
+{}

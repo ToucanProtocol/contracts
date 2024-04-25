@@ -6,9 +6,9 @@
 pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 
+import './bases/RoleInitializer.sol';
 import './interfaces/IPausable.sol';
 import './interfaces/IToucanCarbonOffsetsFactory.sol';
 import './interfaces/IToucanContractRegistry.sol';
@@ -19,7 +19,7 @@ import './ToucanContractRegistryStorage.sol';
 contract ToucanContractRegistry is
     ToucanContractRegistryStorageLegacy,
     OwnableUpgradeable,
-    AccessControlUpgradeable,
+    RoleInitializer,
     IToucanContractRegistry,
     UUPSUpgradeable,
     ToucanContractRegistryStorage
@@ -127,13 +127,14 @@ contract ToucanContractRegistry is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
+    function initialize(address[] calldata _accounts, bytes32[] calldata _roles)
+        external
+        virtual
+        initializer
+    {
         __Ownable_init();
-        __AccessControl_init_unchained();
+        __RoleInitializer_init_unchained(_accounts, _roles);
         __UUPSUpgradeable_init_unchained();
-
-        /// @dev granting the deployer==owner the rights to grant other roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)
@@ -231,17 +232,6 @@ contract ToucanContractRegistry is
         _retirementCertificatesAddress = _address;
     }
 
-    /// Add valid TCO2 contracts for Verra
-    /// TODO: Kept for backwards-compatibility; will be removed in a future
-    /// upgrade in favor of addERC20(erc20, 'verra')
-    function addERC20(address erc20)
-        external
-        virtual
-        onlyBy(DEPRECATED_toucanCarbonOffsetsFactoryAddress, owner())
-    {
-        projectVintageERC20Registry[erc20] = true;
-    }
-
     /// @notice Keep track of TCO2s per standard
     function addERC20(address erc20, string calldata standardRegistry)
         external
@@ -285,19 +275,6 @@ contract ToucanContractRegistry is
         return _carbonProjectVintagesAddress;
     }
 
-    /// Returns the TCO2 factory for Verra
-    /// TODO: Kept for backwards-compatibility; will be removed in a future
-    /// upgrade in favor of toucanCarbonOffsetsFactory('verra')
-    function toucanCarbonOffsetsFactoryAddress()
-        external
-        view
-        virtual
-        override
-        returns (address)
-    {
-        return DEPRECATED_toucanCarbonOffsetsFactoryAddress;
-    }
-
     /// @dev return the TCO2 factory address for the provided standard
     function toucanCarbonOffsetsFactoryAddress(string memory standardRegistry)
         external
@@ -317,16 +294,6 @@ contract ToucanContractRegistry is
         returns (address)
     {
         return _toucanCarbonOffsetsEscrowAddress;
-    }
-
-    /// TODO: Remove in a future upgrade now that we have retirementCertificatesAddress
-    function carbonOffsetBadgesAddress()
-        external
-        view
-        virtual
-        returns (address)
-    {
-        return _retirementCertificatesAddress;
     }
 
     function retirementCertificatesAddress()

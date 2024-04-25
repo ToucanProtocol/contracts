@@ -6,14 +6,13 @@
 pragma solidity 0.8.14;
 
 import {FeeDistribution} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
-
-import {Pool} from './Pool.sol';
+import {PoolERC20able} from './PoolERC20able.sol';
 import {Errors} from '../libraries/Errors.sol';
 
 /// @notice Pool with fixed fees template contract
 /// Any pool that inherits from this contract will be able to
 // charge fixed fees on redemptions.
-abstract contract PoolWithFixedFees is Pool {
+abstract contract PoolWithFixedFees is PoolERC20able {
     // ----------------------------------------
     //      Events
     // ----------------------------------------
@@ -126,8 +125,9 @@ abstract contract PoolWithFixedFees is Pool {
         uint256[] memory amounts,
         bool toRetire
     ) public view override returns (uint256 feeDistributionTotal) {
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (uint256[] memory feeAmounts, ) = _calculateRedemptionInFees(
-            tco2s,
+            vintages,
             amounts,
             toRetire
         );
@@ -137,7 +137,7 @@ abstract contract PoolWithFixedFees is Pool {
     }
 
     function _calculateRedemptionInFees(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         bool toRetire
     )
@@ -151,20 +151,20 @@ abstract contract PoolWithFixedFees is Pool {
     {
         onlyUnpaused();
 
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        uint256 vintageLength = vintages.length;
+        _checkLength(vintageLength, amounts.length);
 
         // Exempted addresses pay no fees
         if (redeemFeeExemptedAddresses[msg.sender]) {
             return (
-                new uint256[](tco2Length),
+                new uint256[](vintageLength),
                 FeeDistribution(new address[](0), new uint256[](0))
             );
         }
 
         uint256 feeDistributionTotal = 0;
-        feeAmounts = new uint256[](tco2Length);
-        for (uint256 i = 0; i < tco2Length; ++i) {
+        feeAmounts = new uint256[](vintageLength);
+        for (uint256 i = 0; i < vintageLength; ++i) {
             uint256 feeAmount = getFixedRedemptionFee(amounts[i], toRetire);
             feeDistributionTotal += feeAmount;
             feeAmounts[i] = feeAmount;
@@ -185,15 +185,16 @@ abstract contract PoolWithFixedFees is Pool {
         uint256[] memory amounts,
         bool toRetire
     ) external view override returns (uint256 feeDistributionTotal) {
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (feeDistributionTotal, ) = _calculateRedemptionOutFees(
-            tco2s,
+            vintages,
             amounts,
             toRetire
         );
     }
 
     function _calculateRedemptionOutFees(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         bool toRetire
     )
@@ -207,15 +208,15 @@ abstract contract PoolWithFixedFees is Pool {
     {
         onlyUnpaused();
 
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        uint256 vintageLength = vintages.length;
+        _checkLength(vintageLength, amounts.length);
 
         // Exempted addresses pay no fees
         if (redeemFeeExemptedAddresses[msg.sender]) {
             return (0, FeeDistribution(new address[](0), new uint256[](0)));
         }
 
-        for (uint256 i = 0; i < tco2Length; ++i) {
+        for (uint256 i = 0; i < vintageLength; ++i) {
             feeDistributionTotal += getFixedRedemptionFee(amounts[i], toRetire);
         }
         feeDistribution = getFixedRedemptionFeeRecipients(feeDistributionTotal);
@@ -231,7 +232,7 @@ abstract contract PoolWithFixedFees is Pool {
         external
         returns (uint256 mintedPoolTokenAmount)
     {
-        return _deposit(tco2, amount, 0);
+        return _deposit(_buildPoolVintageToken(tco2), amount, 0);
     }
 
     /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
@@ -246,7 +247,8 @@ abstract contract PoolWithFixedFees is Pool {
         virtual
         returns (uint256[] memory redeemedAmounts)
     {
-        (, redeemedAmounts) = _redeemInMany(tco2s, amounts, 0, false);
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
+        (, redeemedAmounts) = _redeemInMany(vintages, amounts, 0, false);
     }
 
     /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
@@ -260,7 +262,8 @@ abstract contract PoolWithFixedFees is Pool {
         virtual
         returns (uint256 poolAmountSpent)
     {
-        (, poolAmountSpent) = _redeemOutMany(tco2s, amounts, 0, false);
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
+        (, poolAmountSpent) = _redeemOutMany(vintages, amounts, 0, false);
     }
 
     /// @notice Redeem and retire TCO2s for pool tokens 1:1 minus fees
@@ -283,8 +286,9 @@ abstract contract PoolWithFixedFees is Pool {
             uint256[] memory redeemedAmounts
         )
     {
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (retirementIds, redeemedAmounts) = _redeemInMany(
-            tco2s,
+            vintages,
             amounts,
             0,
             true
@@ -353,11 +357,13 @@ abstract contract PoolWithFixedFees is Pool {
 
                 tco2s[nonZeroCount - 1] = tco2;
                 amounts[nonZeroCount - 1] = amountToRedeem;
-                redeemSingle(tco2, amountToRedeem);
+                _redeemSingle(_buildPoolVintageToken(tco2), amountToRedeem);
             }
         }
 
-        require(amount == 0, Errors.CP_NON_ZERO_REMAINING);
+        if (amount != 0) {
+            revert(Errors.CP_NON_ZERO_REMAINING);
+        }
 
         // Execute the second iteration by avoiding to run the last index
         // since we have already executed that in the first iteration.
@@ -377,7 +383,7 @@ abstract contract PoolWithFixedFees is Pool {
 
             tco2s[nonZeroCount] = tco2;
             amounts[nonZeroCount] = balance;
-            redeemSingle(tco2, balance);
+            _redeemSingle(_buildPoolVintageToken(tco2), balance);
             unchecked {
                 ++nonZeroCount;
             }
@@ -386,5 +392,33 @@ abstract contract PoolWithFixedFees is Pool {
 
     function getScoredTCO2s() external view returns (address[] memory) {
         return scoredTCO2s;
+    }
+
+    function getFixedRedemptionFee(uint256 amount, bool toRetire)
+        internal
+        view
+        returns (uint256)
+    {
+        // Use appropriate fee bp to charge
+        uint256 feeBp = 0;
+        if (toRetire) {
+            feeBp = _feeRedeemRetirePercentageInBase;
+        } else {
+            feeBp = _feeRedeemPercentageInBase;
+        }
+        // Calculate fee
+        return (amount * feeBp) / feeRedeemDivider;
+    }
+
+    function getFixedRedemptionFeeRecipients(uint256 totalFee)
+        internal
+        view
+        returns (FeeDistribution memory feeDistribution)
+    {
+        address[] memory recipients = new address[](1);
+        uint256[] memory shares = new uint256[](1);
+        recipients[0] = _feeRedeemReceiver;
+        shares[0] = totalFee;
+        return FeeDistribution(recipients, shares);
     }
 }

@@ -7,14 +7,14 @@ pragma solidity 0.8.14;
 
 import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
-import {Pool} from './Pool.sol';
+import {PoolERC20able} from './PoolERC20able.sol';
 import {Errors} from '../libraries/Errors.sol';
 
 /// @notice Pool with fee calculator template contract
 /// Any pool that inherits from this contract will be able to
 // charge fees both on deposits and redemptions with the use
 /// of a fee calculator contract.
-abstract contract PoolWithFeeCalculator is Pool {
+abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
     // ----------------------------------------
     //      Events
     // ----------------------------------------
@@ -50,6 +50,11 @@ abstract contract PoolWithFeeCalculator is Pool {
     {
         onlyUnpaused();
 
+        // If the fee calculator is not configured, no fees are paid
+        if (address(feeCalculator) == address(0)) {
+            return 0;
+        }
+
         FeeDistribution memory feeDistribution = feeCalculator
             .calculateDepositFees(address(this), tco2, amount);
         feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
@@ -73,7 +78,7 @@ abstract contract PoolWithFeeCalculator is Pool {
     }
 
     function _calculateRedemptionInFees(
-        address[] memory, /* tco2s */
+        PoolVintageToken[] memory, /* tco2s */
         uint256[] memory, /* amounts */
         bool /* toRetire */
     )
@@ -102,15 +107,16 @@ abstract contract PoolWithFeeCalculator is Pool {
         uint256[] memory amounts,
         bool toRetire
     ) external view override returns (uint256 feeDistributionTotal) {
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (feeDistributionTotal, ) = _calculateRedemptionOutFees(
-            tco2s,
+            vintages,
             amounts,
             toRetire
         );
     }
 
     function _calculateRedemptionOutFees(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         bool toRetire
     )
@@ -126,13 +132,21 @@ abstract contract PoolWithFeeCalculator is Pool {
         // Calculating fees for retiring is not supported yet
         require(!toRetire, Errors.CP_NOT_SUPPORTED);
         // Calculating fees for multi-TCO2 redemptions is not supported yet
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == 1, Errors.CP_NOT_SUPPORTED);
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        uint256 vintageLength = vintages.length;
+        require(vintageLength == 1, Errors.CP_NOT_SUPPORTED);
+        require(vintageLength == amounts.length, Errors.CP_LENGTH_MISMATCH);
 
-        // Exempted addresses pay no fees
-        if (redeemFeeExemptedAddresses[msg.sender]) {
+        // If the fee calculator is not configured or the caller is exempted, no fees are paid
+        if (
+            address(feeCalculator) == address(0) ||
+            redeemFeeExemptedAddresses[msg.sender]
+        ) {
             return (0, FeeDistribution(new address[](0), new uint256[](0)));
+        }
+
+        address[] memory tco2s = new address[](vintageLength);
+        for (uint256 i = 0; i < vintageLength; i++) {
+            tco2s[i] = vintages[i].vintageToken;
         }
 
         feeDistribution = feeCalculator.calculateRedemptionFees(
@@ -158,7 +172,7 @@ abstract contract PoolWithFeeCalculator is Pool {
         uint256 maxFee
     ) external returns (uint256 mintedPoolTokenAmount) {
         require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
-        return _deposit(tco2, amount, maxFee);
+        return super._deposit(_buildPoolVintageToken(tco2), amount, maxFee);
     }
 
     /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
@@ -178,6 +192,7 @@ abstract contract PoolWithFeeCalculator is Pool {
     ) external virtual returns (uint256 poolAmountSpent) {
         require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
         require(tco2s.length == 1, Errors.CP_NOT_SUPPORTED);
-        (, poolAmountSpent) = _redeemOutMany(tco2s, amounts, maxFee, false);
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
+        (, poolAmountSpent) = _redeemOutMany(vintages, amounts, maxFee, false);
     }
 }

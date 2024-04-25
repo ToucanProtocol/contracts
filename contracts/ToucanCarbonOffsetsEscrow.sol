@@ -5,14 +5,15 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 
+import './bases/RoleInitializer.sol';
 import {CreateRetirementRequestParams} from './bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 import {Errors} from './libraries/Errors.sol';
+import {SerialNumber, PuroSerialNumbers} from './libraries/PuroSerialNumbers.sol';
 import {ICarbonOffsetBatches} from './interfaces/ICarbonOffsetBatches.sol';
 import './interfaces/IToucanCarbonOffsets.sol';
 import './interfaces/IToucanCarbonOffsetsEscrow.sol';
@@ -28,10 +29,11 @@ contract ToucanCarbonOffsetsEscrow is
     OwnableUpgradeable,
     PausableUpgradeable,
     UUPSUpgradeable,
-    AccessControlUpgradeable,
+    RoleInitializer,
     ToucanCarbonOffsetsEscrowStorage
 {
     using SafeERC20Upgradeable for IERC20Upgradeable;
+    using PuroSerialNumbers for *;
 
     // ----------------------------------------
     //      Constants
@@ -40,8 +42,8 @@ contract ToucanCarbonOffsetsEscrow is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.1.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 3;
+    string public constant VERSION = '1.3.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
@@ -64,6 +66,11 @@ contract ToucanCarbonOffsetsEscrow is
         _;
     }
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     // ----------------------------------------
     //       Upgradable related functions
     // ----------------------------------------
@@ -73,19 +80,11 @@ contract ToucanCarbonOffsetsEscrow is
         address[] calldata _accounts,
         bytes32[] calldata _roles
     ) external virtual initializer {
-        require(_accounts.length == _roles.length, 'Array length mismatch');
-
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __UUPSUpgradeable_init_unchained();
-        __AccessControl_init_unchained();
+        __RoleInitializer_init_unchained(_accounts, _roles);
 
-        bool hasDefaultAdmin = false;
-        for (uint256 i = 0; i < _accounts.length; ++i) {
-            _grantRole(_roles[i], _accounts[i]);
-            if (_roles[i] == DEFAULT_ADMIN_ROLE) hasDefaultAdmin = true;
-        }
-        require(hasDefaultAdmin, 'No admin specified');
         contractRegistry = _contractRegistry;
         emit ContractRegistryUpdated(_contractRegistry);
     }
@@ -196,70 +195,98 @@ contract ToucanCarbonOffsetsEscrow is
     }
 
     /// @dev Check if splitting is required and split the last batch if so
-    function _checkFinalizeRequestAndSplit(
-        uint256 amount,
-        uint256[] memory batchTokenIds,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) internal {
+    function _splitIfNeeded(uint256 amount, uint256[] memory batchTokenIds)
+        internal
+        returns (uint256[] memory)
+    {
         ICarbonOffsetBatches carbonOffsetBatches = ICarbonOffsetBatches(
             IToucanContractRegistry(contractRegistry)
                 .carbonOffsetBatchesAddress()
         );
-        uint256 totalBatchesAmount = _getTotalBatchesAmount(
-            carbonOffsetBatches,
-            batchTokenIds
-        );
+        (
+            uint256 totalBatchesAmount,
+            uint256 lastBatchAmount
+        ) = _getTotalBatchesAmount(carbonOffsetBatches, batchTokenIds);
         uint256 normalizedAmount = amount / 1e18;
         // if the amount requested is not equal to the total amount of TCO2 in the batches, we need to split the last
         // batch
         // NOTE: the batches are split according to normalized amounts, so if the amount requested is not a multiple of
         // the TCO2 decimals, the batches retired will not match the amount of TCO2 burnt
-        if (normalizedAmount < totalBatchesAmount) {
-            _executeSplit(
+        if (totalBatchesAmount > normalizedAmount) {
+            uint256 surplus = totalBatchesAmount - normalizedAmount;
+            uint256 newTokenId = _executeSplit(
                 carbonOffsetBatches,
-                batchTokenIds,
-                splitBalancingSerialNumber,
-                splitRemainingSerialNumber,
-                totalBatchesAmount - normalizedAmount
+                batchTokenIds[batchTokenIds.length - 1],
+                lastBatchAmount - surplus
             );
+            batchTokenIds[batchTokenIds.length - 1] = newTokenId;
         }
+
+        return batchTokenIds;
     }
 
     function _getTotalBatchesAmount(
         ICarbonOffsetBatches carbonOffsetBatches,
         uint256[] memory batchTokenIds
-    ) internal view returns (uint256 totalBatchesAmount) {
+    )
+        internal
+        view
+        returns (uint256 totalBatchesAmount, uint256 lastBatchAmount)
+    {
         for (uint256 i = 0; i < batchTokenIds.length; ++i) {
             //slither-disable-next-line unused-return
             (, uint256 batchAmount, ) = carbonOffsetBatches.getBatchNFTData(
                 batchTokenIds[i]
             );
             totalBatchesAmount += batchAmount;
+            lastBatchAmount = batchAmount;
         }
     }
 
     function _executeSplit(
         ICarbonOffsetBatches carbonOffsetBatches,
-        uint256[] memory batchTokenIds,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber,
-        uint256 newAmount
-    ) internal {
-        require(
-            bytes(splitBalancingSerialNumber).length != 0 &&
-                bytes(splitRemainingSerialNumber).length != 0,
-            Errors.TCO2_MISSING_SERIALS
+        uint256 tokenId,
+        uint256 balancingAmount
+    ) internal returns (uint256 newTokenId) {
+        string memory serialNumber = carbonOffsetBatches.getSerialNumber(
+            tokenId
         );
-        uint256 newTokenId = carbonOffsetBatches.split(
-            batchTokenIds[batchTokenIds.length - 1],
-            splitBalancingSerialNumber,
-            splitRemainingSerialNumber,
-            newAmount
+
+        // Determine the new serial numbers on the fly
+        (
+            string memory balancingSerialNumber,
+            string memory remainingSerialNumber
+        ) = splitSerialNumber(serialNumber, balancingAmount);
+
+        // Execute the split
+        newTokenId = carbonOffsetBatches.split(
+            tokenId,
+            remainingSerialNumber,
+            balancingSerialNumber,
+            balancingAmount
         );
-        // change the status of the new batch with the remaining amount to Confirmed
+
+        // Change the status of the existing batch with the remaining amount
+        // to Confirmed so it can be used by other requests in parallel that
+        // can be still serviced by the batch.
+        //
+        // Imagine the following scenario:
+        // 1. Frontend A selects a batch to use in its request
+        // 2. Client B selects the same batch to use in its request
+        // 3. Frontend A submits its request onchain
+        // 4. Client B submits its request onchain
+        //
+        // The scenario above will work because we set the batch that both
+        // clients selected back to Confirmed here and as long as the
+        // remaining amount in the batch is still big enough.
+        //
+        // Obviously, clients can still have race conditions if they can select
+        // multiple overlapping batches for which no batch splitting needs to
+        // be performed, eg., in a scenario where a TCO2 owns many small batches.
+        // We could mitigate race conditions in that case by defragmenting the
+        // batches.
         carbonOffsetBatches.setStatusForDetokenizationOrRetirement(
-            newTokenId,
+            tokenId,
             BatchStatus.Confirmed
         );
     }
@@ -287,6 +314,19 @@ contract ToucanCarbonOffsetsEscrow is
         }
         detokenizationRequestIdCounter = requestId;
 
+        // Validate the amount matches the batch quantities and update the batch statuses
+        _validateAndUpdateBatches(
+            amount,
+            batchTokenIds,
+            BatchStatus.DetokenizationRequested
+        );
+
+        // Split the last batch if needed
+        uint256[] memory updatedBatchTokenIds = _splitIfNeeded(
+            amount,
+            batchTokenIds
+        );
+
         // Keep track of the project vintage token id
         uint256 projectVintageTokenId = getProjectVintageTokenId(msg.sender);
 
@@ -295,15 +335,8 @@ contract ToucanCarbonOffsetsEscrow is
             user,
             amount,
             RequestStatus.Pending,
-            batchTokenIds,
+            updatedBatchTokenIds,
             projectVintageTokenId
-        );
-
-        // Validate the amount matches the batch quantities and update the batch statuses
-        _validateAndUpdateBatches(
-            amount,
-            batchTokenIds,
-            BatchStatus.DetokenizationRequested
         );
 
         // Transfer TCO2 from user to escrow contract
@@ -334,6 +367,19 @@ contract ToucanCarbonOffsetsEscrow is
         }
         retirementRequestIdCounter = requestId;
 
+        // Validate the amount matches the batch quantities and update the batch statuses
+        _validateAndUpdateBatches(
+            params.amount,
+            params.tokenIds,
+            BatchStatus.RetirementRequested
+        );
+
+        // Split the last batch if needed
+        uint256[] memory updatedBatchTokenIds = _splitIfNeeded(
+            params.amount,
+            params.tokenIds
+        );
+
         // Keep track of the project vintage token id
         uint256 projectVintageTokenId = getProjectVintageTokenId(msg.sender);
 
@@ -342,7 +388,7 @@ contract ToucanCarbonOffsetsEscrow is
             user,
             params.amount,
             RequestStatus.Pending,
-            params.tokenIds,
+            updatedBatchTokenIds,
             params.retiringEntityString,
             params.beneficiary,
             params.beneficiaryString,
@@ -352,13 +398,6 @@ contract ToucanCarbonOffsetsEscrow is
             params.consumptionPeriodStart,
             params.consumptionPeriodEnd,
             projectVintageTokenId
-        );
-
-        // Validate the amount matches the batch quantities and update the batch statuses
-        _validateAndUpdateBatches(
-            params.amount,
-            params.tokenIds,
-            BatchStatus.RetirementRequested
         );
 
         // Transfer TCO2 from user to escrow contract
@@ -378,26 +417,17 @@ contract ToucanCarbonOffsetsEscrow is
     /// After retiring the amount of TCO2 is burned.
     /// @dev Only the TCO2 contract can call this function.
     /// @param requestId The id of the request to finalize.
-    /// @param splitBalancingSerialNumber The serial number of the new batch that balances the total amount to be the
-    /// amount requested. This batch will be retired with the rest of the batches. Ignored if no splitting is required.
-    /// @param splitRemainingSerialNumber The serial number of the new batch with the remaining amount. This batch will
-    /// not be retired and will be in Confirmed status. Ignored if no splitting is required.
-    function finalizeRetirementRequest(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external virtual override onlyTCO2 {
+    function finalizeRetirementRequest(uint256 requestId)
+        external
+        virtual
+        override
+        onlyTCO2
+    {
         RetirementRequest storage request = _retirementRequests[requestId];
         require(request.status == RequestStatus.Pending, 'Not pending request');
 
         request.status = RequestStatus.Finalized;
 
-        _checkFinalizeRequestAndSplit(
-            request.amount,
-            request.batchTokenIds,
-            splitBalancingSerialNumber,
-            splitRemainingSerialNumber
-        );
         _updateBatchStatuses(
             request.batchTokenIds,
             BatchStatus.RetirementFinalized
@@ -426,16 +456,12 @@ contract ToucanCarbonOffsetsEscrow is
     /// its amount of TCO2.
     /// @dev Only the TCO2 contract can call this function.
     /// @param requestId The id of the request to finalize.
-    /// @param splitBalancingSerialNumber The serial number of the new batch that balances the total amount to be the
-    /// amount requested. This batch will be detokenized with the rest of the batches. Ignored if no splitting is
-    /// required.
-    /// @param splitRemainingSerialNumber The serial number of the new batch with the remaining amount. This batch will
-    /// not be detokenized and will be in Confirmed status. Ignored if no splitting is required.
-    function finalizeDetokenizationRequest(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external virtual override onlyTCO2 {
+    function finalizeDetokenizationRequest(uint256 requestId)
+        external
+        virtual
+        override
+        onlyTCO2
+    {
         DetokenizationRequest storage request = _detokenizationRequests[
             requestId
         ];
@@ -443,19 +469,12 @@ contract ToucanCarbonOffsetsEscrow is
 
         request.status = RequestStatus.Finalized;
 
-        uint256 amount = request.amount;
-
-        _checkFinalizeRequestAndSplit(
-            amount,
-            request.batchTokenIds,
-            splitBalancingSerialNumber,
-            splitRemainingSerialNumber
-        );
         _updateBatchStatuses(
             request.batchTokenIds,
             BatchStatus.DetokenizationFinalized
         );
 
+        uint256 amount = request.amount;
         IERC20Upgradeable(msg.sender).safeApprove(address(this), amount);
         IToucanCarbonOffsets(msg.sender).burnFrom(address(this), amount);
     }
@@ -511,6 +530,26 @@ contract ToucanCarbonOffsetsEscrow is
     // ----------------------------------------
     //           Read-only functions
     // ----------------------------------------
+
+    /// @notice Split a serial number range into two parts based on
+    /// the given amount.
+    /// @param serialNumber The serial number to split.
+    /// @param amount The amount to split by.
+    /// @return balancingSerialNumber remainingSerialNumber The serial
+    /// numbers split from the original serial number.
+    function splitSerialNumber(string memory serialNumber, uint256 amount)
+        public
+        pure
+        returns (
+            string memory balancingSerialNumber,
+            string memory remainingSerialNumber
+        )
+    {
+        SerialNumber memory typedSerialNumber = serialNumber
+            .parseSerialNumber();
+        (balancingSerialNumber, remainingSerialNumber) = typedSerialNumber
+            .splitSerialNumber(amount);
+    }
 
     function getProjectVintageTokenId(address tco2)
         internal

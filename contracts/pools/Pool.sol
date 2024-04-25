@@ -6,33 +6,29 @@
 pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
-import '../cross-chain/interfaces/IToucanCrosschainMessenger.sol';
+import '../bases/RoleInitializer.sol';
 import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
 import './PoolStorage.sol';
 
 /// @notice Pool template contract
-/// ERC20 compliant token that acts as a pool for TCO2 tokens
+/// ERC20 compliant token that acts as a pool for vintage tokens
 abstract contract Pool is
     ContextUpgradeable,
     ERC20Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    AccessControlUpgradeable,
+    RoleInitializer,
     UUPSUpgradeable,
     PoolStorage
 {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -60,17 +56,63 @@ abstract contract Pool is
     event FilterUpdated(address filter);
     event AddFeeExemptedTCO2(address tco2);
     event RemoveFeeExemptedTCO2(address tco2);
-    event RouterUpdated(address router);
-    event TCO2Bridged(
-        uint32 indexed destinationDomain,
-        address indexed tco2,
-        uint256 amount
-    );
+
+    struct PoolVintageToken {
+        address vintageToken;
+        // This field only makes sense for ERC-1155 tokens
+        uint256 erc1155VintageTokenId;
+        // This field is meant to separate projects for both
+        // ERC-20 and ERC-1155 tokens.
+        uint256 projectTokenId;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
+
+    function __Pool_init_unchained(
+        address[] calldata accounts,
+        bytes32[] calldata roles
+    ) internal {
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+        __Pausable_init_unchained();
+        __UUPSUpgradeable_init_unchained();
+        __RoleInitializer_init_unchained(accounts, roles);
+    }
+
+    // ----------------------------------------
+    //                Abstract
+    // ----------------------------------------
+
+    function _increaseSupply(PoolVintageToken memory vintage, int256 delta)
+        internal
+        virtual;
+
+    function _feeDistribution(PoolVintageToken memory vintage, uint256)
+        internal
+        view
+        virtual
+        returns (FeeDistribution memory);
+
+    function _transfer(
+        PoolVintageToken memory vintage,
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual;
+
+    function _retire(
+        PoolVintageToken memory vintage,
+        address from,
+        uint256 amount
+    ) internal virtual returns (uint256);
+
+    function _checkEligible(PoolVintageToken memory vintage)
+        internal
+        view
+        virtual;
 
     // ----------------------------------------
     //      Upgradable related functions
@@ -195,148 +237,26 @@ abstract contract Pool is
         emit FilterUpdated(_filter);
     }
 
-    // -------------------------------------
-    //   ToucanCrosschainMessenger functions
-    // -------------------------------------
-
-    function onlyRouter() internal view {
-        require(msg.sender == router, Errors.CP_ONLY_ROUTER);
-    }
-
-    /// @notice method to set router address
-    /// @dev use this method to set router address
-    /// @param _router address of ToucanCrosschainMessenger
-    function setRouter(address _router) external {
-        onlyPoolOwner();
-        // router address can be set to zero to make bridgeMint and bridgeBurn unusable
-        router = _router;
-        emit RouterUpdated(_router);
-    }
-
-    /// @notice mint tokens to receiver account that were cross-chain bridged
-    /// @dev invoked only by the ToucanCrosschainMessenger (Router)
-    /// @param _account account that will be minted with corss-chain bridged tokens
-    /// @param _amount amount of tokens that will be minted
-    function bridgeMint(address _account, uint256 _amount) external {
-        onlyRouter();
-        _mint(_account, _amount);
-    }
-
-    /// @notice burn tokens from account to be cross-chain bridged
-    /// @dev invoked only by the ToucanCrosschainMessenger (Router)
-    /// @param _account account that will be burned with corss-chain bridged tokens
-    /// @param _amount amount of tokens that will be burned
-    function bridgeBurn(address _account, uint256 _amount) external {
-        onlyRouter();
-        _burn(_account, _amount);
-    }
-
-    function _getRemotePoolAddress(address tcm, uint32 destinationDomain)
-        internal
-        view
-        returns (address recipient)
-    {
-        RemoteTokenInformation memory remoteInfo = IToucanCrosschainMessenger(
-            tcm
-        ).remoteTokens(address(this), destinationDomain);
-        recipient = remoteInfo.tokenAddress;
-        require(recipient != address(0), Errors.CP_EMPTY_ADDRESS);
-    }
-
-    /// @notice Get the fee needed to bridge TCO2s into the destination domain.
-    /// @param destinationDomain The domain to bridge TCO2s to
-    /// @param tco2s The TCO2s to bridge
-    /// @param amounts The amounts of TCO2s to bridge
-    /// @return fee The fee amount to be paid
-    function quoteBridgeTCO2sFee(
-        uint32 destinationDomain,
-        address[] calldata tco2s,
-        uint256[] calldata amounts
-    ) external view returns (uint256 fee) {
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
-
-        address tcm = router;
-        address recipient = _getRemotePoolAddress(tcm, destinationDomain);
-
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ++i) {
-            fee += IToucanCrosschainMessenger(tcm).quoteTokenTransferFee(
-                destinationDomain,
-                tco2s[i],
-                amounts[i],
-                recipient
-            );
-        }
-    }
-
-    /// @notice Allows MANAGER or the owner to bridge TCO2s into
-    /// another domain.
-    /// @param destinationDomain The domain to bridge TCO2s to
-    /// @param tco2s The TCO2s to bridge
-    /// @param amounts The amounts of TCO2s to bridge
-    function bridgeTCO2s(
-        uint32 destinationDomain,
-        address[] calldata tco2s,
-        uint256[] calldata amounts
-    ) external payable {
-        onlyWithRole(MANAGER_ROLE);
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length != 0, Errors.CP_EMPTY_ARRAY);
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
-
-        // TODO: Disallow bridging more TCO2s than an amount that
-        // would bring the pool to imbalance, ie., end up with more
-        // pool tokens than TCO2s in the pool in the source chain.
-
-        // Read the address of the remote pool from ToucanCrosschainMessenger
-        // and set that as a recipient in our cross-chain messages.
-        address tcm = router;
-        address recipient = _getRemotePoolAddress(tcm, destinationDomain);
-
-        uint256 payment = msg.value / tco2Length;
-        uint256 tempSupply = totalTCO2Supply;
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ++i) {
-            address tco2 = tco2s[i];
-            uint256 amount = amounts[i];
-
-            {
-                // Update supply-related storage variables in the pool
-                VintageData memory vData = IToucanCarbonOffsets(tco2)
-                    .getVintageData();
-                totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
-                tempSupply -= amount;
-            }
-
-            // Transfer tokens to recipient
-            //slither-disable-next-line reentrancy-eth
-            IToucanCrosschainMessenger(tcm).transferTokensToRecipient{
-                value: payment
-            }(destinationDomain, tco2, amount, recipient);
-
-            emit TCO2Bridged(destinationDomain, tco2, amount);
-        }
-        totalTCO2Supply = tempSupply;
-    }
-
     // ----------------------------
     //   Permissionless functions
     // ----------------------------
 
     function _deposit(
-        address erc20Addr,
+        PoolVintageToken memory vintage,
         uint256 amount,
         uint256 maxFee
     ) internal returns (uint256 mintedPoolTokenAmount) {
         onlyUnpaused();
 
-        // Ensure the TCO2 is eligible to be deposited
-        _checkEligible(erc20Addr);
+        // Ensure the vintage token is eligible to be deposited
+        _checkEligible(vintage);
 
         // Ensure there is space in the pool
         uint256 remainingSpace = getRemaining();
-        require(remainingSpace != 0, Errors.CP_FULL_POOL);
+        //slither-disable-next-line incorrect-equality
+        if (remainingSpace == 0) {
+            revert(Errors.CP_FULL_POOL);
+        }
 
         // If the amount to be deposited exceeds the remaining space, deposit
         // the maximum amount possible up to the cap instead of failing.
@@ -345,19 +265,14 @@ abstract contract Pool is
         uint256 depositedAmount = amount;
         if (feeCalculator != IFeeCalculator(address(0))) {
             // If a fee module is configured, use it to calculate the minting fees
-            FeeDistribution memory feeDistribution = feeCalculator
-                .calculateDepositFees(
-                    address(this),
-                    erc20Addr,
-                    depositedAmount
-                );
+            FeeDistribution memory feeDistribution = _feeDistribution(
+                vintage,
+                depositedAmount
+            );
             uint256 feeDistributionTotal = getFeeDistributionTotal(
                 feeDistribution
             );
-            if (maxFee != 0) {
-                // Protect caller against getting charged a higher fee than expected
-                require(feeDistributionTotal <= maxFee, Errors.CP_FEE_TOO_HIGH);
-            }
+            _checkMaxFee(maxFee, feeDistributionTotal);
             depositedAmount -= feeDistributionTotal;
 
             // Distribute the fee between the recipients
@@ -372,56 +287,14 @@ abstract contract Pool is
         _mint(msg.sender, depositedAmount);
 
         // Update supply-related storage variables in the pool
-        VintageData memory vData = IToucanCarbonOffsets(erc20Addr)
-            .getVintageData();
-        totalPerProjectTCO2Supply[vData.projectTokenId] += amount;
-        totalTCO2Supply += amount;
+        _increaseSupply(vintage, int256(amount));
 
         // Transfer the TCO2 to the pool
-        IERC20Upgradeable(erc20Addr).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        _transfer(vintage, msg.sender, address(this), amount);
 
-        emit Deposited(erc20Addr, amount);
+        emit Deposited(vintage.vintageToken, amount);
 
         return depositedAmount;
-    }
-
-    /// @notice Checks if token to be deposited is eligible for this pool.
-    /// Reverts if not.
-    /// Beware that the revert reason might depend on the underlying implementation
-    /// of IPoolFilter.checkEligible
-    /// @param erc20Addr the contract to check
-    /// @return isEligible true if address is eligible and no other issues occur
-    function checkEligible(address erc20Addr)
-        external
-        view
-        virtual
-        returns (bool isEligible)
-    {
-        _checkEligible(erc20Addr);
-
-        return true;
-    }
-
-    function _checkEligible(address erc20Addr) internal view {
-        //slither-disable-next-line unused-return
-        try IPoolFilter(filter).checkEligible(erc20Addr) returns (
-            //slither-disable-next-line uninitialized-local
-            bool isEligible
-        ) {
-            require(isEligible, Errors.CP_NOT_ELIGIBLE);
-            //slither-disable-next-line uninitialized-local
-        } catch Error(string memory reason) {
-            revert(reason);
-            //slither-disable-next-line uninitialized-local
-        } catch (bytes memory reason) {
-            // this most often results in a random bytes sequence,
-            // but it's worth at least trying to log it
-            revert(string.concat('unexpected error: ', string(reason)));
-        }
     }
 
     /// @notice Returns minimum vintage start time for this pool
@@ -448,31 +321,6 @@ abstract contract Pool is
         return IPoolFilter(filter).methodologies(methodology);
     }
 
-    /// @notice View function to calculate deposit fees pre-execution
-    /// @dev User specifies in front-end the address and amount they want
-    /// @param tco2 TCO2 contract addresses
-    /// @param amount Amount to redeem
-    /// @return feeDistributionTotal Total fee amount to be paid
-    function calculateDepositFees(address tco2, uint256 amount)
-        external
-        view
-        virtual
-        returns (uint256 feeDistributionTotal);
-
-    /// @notice View function to calculate redemption fees pre-execution
-    /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
-    /// The indexes of this array are matching 1:1 with the tco2s array.
-    /// @param toRetire Whether the TCO2s will be retired atomically
-    /// with the redemption. It may be that lower fees will be charged
-    /// in this case.
-    /// @return feeDistributionTotal Total fee amount to be paid
-    function calculateRedemptionInFees(
-        address[] memory tco2s,
-        uint256[] memory amounts,
-        bool toRetire
-    ) external view virtual returns (uint256 feeDistributionTotal);
-
     /// @dev Internal function to calculate redemption fees.
     /// Made virtual so that each child contract can implement its own
     /// internal fee calculation logic that can be shared with the
@@ -482,7 +330,7 @@ abstract contract Pool is
     /// external clients who only care about the total fee amount and
     /// not how the fee is going to be distributed.
     function _calculateRedemptionInFees(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         bool toRetire
     )
@@ -494,20 +342,6 @@ abstract contract Pool is
             FeeDistribution memory feeDistribution
         );
 
-    /// @notice View function to calculate redemption fees pre-execution
-    /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of TCO2 amounts to redeem
-    /// The indexes of this array are matching 1:1 with the tco2s array.
-    /// @param toRetire Whether the TCO2s will be retired atomically
-    /// with the redemption. It may be that lower fees will be charged
-    /// in this case.
-    /// @return feeDistributionTotal Total fee amount to be paid
-    function calculateRedemptionOutFees(
-        address[] memory tco2s,
-        uint256[] memory amounts,
-        bool toRetire
-    ) external view virtual returns (uint256 feeDistributionTotal);
-
     /// @dev Internal function to calculate redemption fees.
     /// Made virtual so that each child contract can implement its own
     /// internal fee calculation logic that can be shared with the
@@ -517,7 +351,7 @@ abstract contract Pool is
     /// external clients who only care about the total fee amount and
     /// not how the fee is going to be distributed.
     function _calculateRedemptionOutFees(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         bool toRetire
     )
@@ -535,63 +369,16 @@ abstract contract Pool is
         returns (uint256 feeAmount)
     {
         uint256 recipientLen = feeDistribution.recipients.length;
-        //slither-disable-next-line incorrect-equality
-        require(
-            recipientLen == feeDistribution.shares.length,
-            Errors.CP_LENGTH_MISMATCH
-        );
+        _checkLength(recipientLen, feeDistribution.shares.length);
+
         for (uint256 i = 0; i < recipientLen; ++i) {
             feeAmount += feeDistribution.shares[i];
         }
         return feeAmount;
     }
 
-    function getFixedRedemptionFee(uint256 amount, bool toRetire)
-        internal
-        view
-        returns (uint256)
-    {
-        // Use appropriate fee bp to charge
-        uint256 feeBp = 0;
-        if (toRetire) {
-            feeBp = _feeRedeemRetirePercentageInBase;
-        } else {
-            feeBp = _feeRedeemPercentageInBase;
-        }
-        // Calculate fee
-        return (amount * feeBp) / feeRedeemDivider;
-    }
-
-    function getFixedRedemptionFeeRecipients(uint256 totalFee)
-        internal
-        view
-        returns (FeeDistribution memory feeDistribution)
-    {
-        address[] memory recipients = new address[](1);
-        uint256[] memory shares = new uint256[](1);
-        recipients[0] = _feeRedeemReceiver;
-        shares[0] = totalFee;
-        return FeeDistribution(recipients, shares);
-    }
-
-    /// @notice Redeem a whitelisted TCO2 without paying any fees and burn
-    /// the TCO2. Initially added to burn HFC-23 credits, can be used in the
-    /// future to dispose of any other whitelisted credits.
-    /// @dev User needs to approve the pool contract in the TCO2 contract for
-    /// the amount to be burnt before executing this function.
-    /// @param tco2 TCO2 to redeem and burn
-    /// @param amount Amount to redeem and burn
-    function redeemAndBurn(address tco2, uint256 amount) external {
-        onlyUnpaused();
-        require(redeemFeeExemptedTCO2s[tco2], Errors.CP_NOT_EXEMPTED);
-        redeemSingle(tco2, amount);
-        // User has to approve the pool contract in the TCO2 contract
-        // in order for this function to successfully burn the tokens
-        IToucanCarbonOffsets(tco2).burnFrom(msg.sender, amount);
-    }
-
     function _redeemInMany(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         uint256 maxFee,
         bool toRetire
@@ -603,42 +390,43 @@ abstract contract Pool is
         )
     {
         onlyUnpaused();
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        uint256 vintageLength = vintages.length;
+        _checkLength(vintageLength, amounts.length);
         require(
             feeCalculator == IFeeCalculator(address(0)),
             Errors.CP_NOT_SUPPORTED
         );
 
         // Initialize return arrays
-        redeemedAmounts = new uint256[](tco2Length);
+        redeemedAmounts = new uint256[](vintageLength);
         if (toRetire) {
-            retirementIds = new uint256[](tco2Length);
+            retirementIds = new uint256[](vintageLength);
         }
 
-        // Calculate the fees to be paid for the TCO2 redemptions
+        // Calculate the fees to be paid for the vintage token redemptions
         (
             uint256[] memory feeAmounts,
             FeeDistribution memory feeDistribution
-        ) = _calculateRedemptionInFees(tco2s, amounts, toRetire);
+        ) = _calculateRedemptionInFees(vintages, amounts, toRetire);
 
         // Execute redemptions
         uint256 totalFee = 0;
-        for (uint256 i = 0; i < tco2Length; ++i) {
-            _checkEligible(tco2s[i]);
+        for (uint256 i = 0; i < vintageLength; ++i) {
+            _checkEligible(vintages[i]);
 
             uint256 amountToRedeem = amounts[i];
             amountToRedeem -= feeAmounts[i];
             totalFee += feeAmounts[i];
 
             // Redeem the amount minus the fee
-            redeemSingle(tco2s[i], amountToRedeem);
+            _redeemSingle(vintages[i], amountToRedeem);
 
-            // If requested, retire the TCO2s in one go. Callers should
+            // If requested, retire the vintage tokens in one go. Callers should
             // first approve the pool in order for the pool to retire
             // on behalf of them
             if (toRetire) {
-                retirementIds[i] = IToucanCarbonOffsets(tco2s[i]).retireFrom(
+                retirementIds[i] = _retire(
+                    vintages[i],
                     msg.sender,
                     amountToRedeem
                 );
@@ -649,10 +437,7 @@ abstract contract Pool is
             redeemedAmounts[i] = amountToRedeem;
         }
 
-        if (maxFee != 0) {
-            // Protect caller against getting charged a higher fee than expected
-            require(totalFee <= maxFee, Errors.CP_FEE_TOO_HIGH);
-        }
+        _checkMaxFee(maxFee, totalFee);
 
         // Distribute the fee between the recipients
         if (totalFee > 0) {
@@ -663,8 +448,15 @@ abstract contract Pool is
         }
     }
 
+    function _checkMaxFee(uint256 maxFee, uint256 amount) internal pure {
+        if (maxFee != 0) {
+            // Protect caller against getting charged a higher fee than expected
+            require(amount <= maxFee, Errors.CP_FEE_TOO_HIGH);
+        }
+    }
+
     function _redeemOutMany(
-        address[] memory tco2s,
+        PoolVintageToken[] memory vintages,
         uint256[] memory amounts,
         uint256 maxFee,
         bool toRetire
@@ -673,23 +465,20 @@ abstract contract Pool is
         returns (uint256[] memory retirementIds, uint256 poolAmountSpent)
     {
         onlyUnpaused();
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        uint256 vintageLength = vintages.length;
+        _checkLength(vintageLength, amounts.length);
 
         // Initialize return arrays
         if (toRetire) {
-            retirementIds = new uint256[](tco2Length);
+            retirementIds = new uint256[](vintageLength);
         }
 
-        // Calculate the fee to be paid for the TCO2 redemptions
+        // Calculate the fee to be paid for the vintage token redemptions
         (
             uint256 feeDistributionTotal,
             FeeDistribution memory feeDistribution
-        ) = _calculateRedemptionOutFees(tco2s, amounts, toRetire);
-        if (maxFee != 0) {
-            // Protect caller against getting charged a higher fee than expected
-            require(feeDistributionTotal <= maxFee, Errors.CP_FEE_TOO_HIGH);
-        }
+        ) = _calculateRedemptionOutFees(vintages, amounts, toRetire);
+        _checkMaxFee(maxFee, feeDistributionTotal);
         poolAmountSpent += feeDistributionTotal;
 
         // Distribute the fee between the recipients
@@ -701,19 +490,20 @@ abstract contract Pool is
         }
 
         // Execute redemptions
-        for (uint256 i = 0; i < tco2Length; ++i) {
-            _checkEligible(tco2s[i]);
+        for (uint256 i = 0; i < vintageLength; ++i) {
+            _checkEligible(vintages[i]);
 
             // Redeem the amount
             uint256 amountToRedeem = amounts[i];
             poolAmountSpent += amountToRedeem;
-            redeemSingle(tco2s[i], amountToRedeem);
+            _redeemSingle(vintages[i], amountToRedeem);
 
-            // If requested, retire the TCO2s in one go. Callers should
+            // If requested, retire the vintage tokens in one go. Callers should
             // first approve the pool in order for the pool to retire
             // on behalf of them
             if (toRetire) {
-                retirementIds[i] = IToucanCarbonOffsets(tco2s[i]).retireFrom(
+                retirementIds[i] = _retire(
+                    vintages[i],
                     msg.sender,
                     amountToRedeem
                 );
@@ -743,19 +533,20 @@ abstract contract Pool is
     }
 
     /// @dev Internal function that redeems a single underlying token
-    function redeemSingle(address erc20, uint256 amount) internal virtual {
+    function _redeemSingle(PoolVintageToken memory vintage, uint256 amount)
+        internal
+        virtual
+    {
         // Burn pool tokens
         _burn(msg.sender, amount);
 
         // Update supply-related storage variables in the pool
-        VintageData memory vData = IToucanCarbonOffsets(erc20).getVintageData();
-        totalPerProjectTCO2Supply[vData.projectTokenId] -= amount;
-        totalTCO2Supply -= amount;
+        _increaseSupply(vintage, int256(amount) * -1);
 
-        // Transfer TCO2 tokens to the caller
-        IERC20Upgradeable(erc20).safeTransfer(msg.sender, amount);
+        // Transfer vintage token tokens to the caller
+        _transfer(vintage, address(this), msg.sender, amount);
 
-        emit Redeemed(msg.sender, erc20, amount);
+        emit Redeemed(msg.sender, vintage.vintageToken, amount);
     }
 
     /// @dev Implemented in order to disable transfers when paused
@@ -769,14 +560,15 @@ abstract contract Pool is
         onlyUnpaused();
     }
 
+    function _checkLength(uint256 l1, uint256 l2) internal pure {
+        if (l1 != l2) {
+            revert(Errors.CP_LENGTH_MISMATCH);
+        }
+    }
+
     /// @dev Returns the remaining space in pool before hitting the cap
     function getRemaining() public view returns (uint256) {
         return (supplyCap - totalSupply());
-    }
-
-    /// @notice Returns the balance of the TCO2 found in the pool
-    function tokenBalances(address tco2) public view returns (uint256) {
-        return IERC20Upgradeable(tco2).balanceOf(address(this));
     }
 
     // -----------------------------

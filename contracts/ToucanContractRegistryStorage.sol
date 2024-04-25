@@ -9,6 +9,7 @@ abstract contract ToucanContractRegistryStorageLegacy {
     address internal _carbonOffsetBatchesAddress;
     address internal _carbonProjectsAddress;
     address internal _carbonProjectVintagesAddress;
+    // Deprecated in favor of toucanCarbonOffsetFactories
     //slither-disable-next-line uninitialized-state,constable-states
     address internal DEPRECATED_toucanCarbonOffsetsFactoryAddress;
     address internal _retirementCertificatesAddress;

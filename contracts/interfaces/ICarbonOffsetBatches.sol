@@ -22,6 +22,11 @@ interface ICarbonOffsetBatches {
             BatchStatus
         );
 
+    function getSerialNumber(uint256 tokenId)
+        external
+        view
+        returns (string memory);
+
     function setStatusForDetokenizationOrRetirement(
         uint256 tokenId,
         BatchStatus newStatus

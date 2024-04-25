@@ -58,24 +58,17 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
     /// balances the total to be the amount requested and the other with the remaining amount.
     /// @dev Callable only by a detokenizer.
     /// @param requestId The id of the request to finalize.
-    /// @param splitBalancingSerialNumber The serial number of the new batch that balances the total amount to be the
-    /// amount requested. This batch will be detokenized with the rest of the batches. Ignored if no splitting is
-    /// required.
-    /// @param splitRemainingSerialNumber The serial number of the new batch with the remaining amount. This batch will
-    /// not be detokenized and will be in Confirmed status. Ignored if no splitting is required.
-    function finalizeDetokenization(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external whenNotPaused onlyWithRole(DETOKENIZER_ROLE) {
+    function finalizeDetokenization(uint256 requestId)
+        external
+        whenNotPaused
+        onlyWithRole(DETOKENIZER_ROLE)
+    {
         address escrow = IToucanContractRegistry(contractRegistry)
             .toucanCarbonOffsetsEscrowAddress();
 
         // Finalize escrow request
         IToucanCarbonOffsetsEscrow(escrow).finalizeDetokenizationRequest(
-            requestId,
-            splitBalancingSerialNumber,
-            splitRemainingSerialNumber
+            requestId
         );
 
         emit DetokenizationFinalized(requestId);
@@ -106,24 +99,16 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
     /// the remaining amount.
     /// @dev Callable only by a retirement approver.
     /// @param requestId The ID of the request to finalize.
-    /// @param splitBalancingSerialNumber The serial number of the new batch that balances the total amount to be the
-    /// amount requested. This batch will be retired with the rest of the batches. Ignored if no splitting is required.
-    /// @param splitRemainingSerialNumber The serial number of the new batch with the remaining amount. This batch will
-    /// not be retired and will be in Confirmed status. Ignored if no splitting is required.
-    function finalizeRetirement(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external whenNotPaused onlyWithRole(RETIREMENT_ROLE) {
+    function finalizeRetirement(uint256 requestId)
+        external
+        whenNotPaused
+        onlyWithRole(RETIREMENT_ROLE)
+    {
         address escrow = IToucanContractRegistry(contractRegistry)
             .toucanCarbonOffsetsEscrowAddress();
 
         // Finalize escrow request
-        IToucanCarbonOffsetsEscrow(escrow).finalizeRetirementRequest(
-            requestId,
-            splitBalancingSerialNumber,
-            splitRemainingSerialNumber
-        );
+        IToucanCarbonOffsetsEscrow(escrow).finalizeRetirementRequest(requestId);
 
         emit RetirementFinalized(requestId);
     }

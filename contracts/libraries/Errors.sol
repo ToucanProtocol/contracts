@@ -13,6 +13,7 @@ pragma solidity 0.8.14;
  * Error messages prefix glossary:
  *  - CP = CarbonPool
  *  - COB = CarbonOffsetBatches
+ *  - TCO2 = TCO2
  */
 library Errors {
     // User is not authorized

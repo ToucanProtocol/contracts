@@ -19,7 +19,11 @@ contract BiocharFilter is PoolFilter {
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
-        __PoolFilter_init();
+    function initialize(address[] calldata accounts, bytes32[] calldata roles)
+        external
+        virtual
+        initializer
+    {
+        __PoolFilter_init_unchained(accounts, roles);
     }
 }

@@ -9,8 +9,8 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
+import './bases/RoleInitializer.sol';
 import './interfaces/ICarbonProjectVintages.sol';
 import './CarbonProjectVintagesStorage.sol';
 import './libraries/ProjectUtils.sol';
@@ -26,7 +26,7 @@ contract CarbonProjectVintages is
     ERC721Upgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    AccessControlUpgradeable,
+    RoleInitializer,
     UUPSUpgradeable,
     Modifiers,
     ProjectUtils
@@ -65,7 +65,11 @@ contract CarbonProjectVintages is
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
+    function initialize(address[] calldata accounts, bytes32[] calldata roles)
+        external
+        virtual
+        initializer
+    {
         __Context_init_unchained();
         __ERC721_init_unchained(
             'Toucan Protocol: Carbon Project Vintages',
@@ -73,11 +77,8 @@ contract CarbonProjectVintages is
         );
         __Ownable_init_unchained();
         __Pausable_init_unchained();
-        __AccessControl_init_unchained();
+        __RoleInitializer_init_unchained(accounts, roles);
         __UUPSUpgradeable_init_unchained();
-
-        /// @dev granting the deployer==owner the rights to grant other roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     function _authorizeUpgrade(address newImplementation)

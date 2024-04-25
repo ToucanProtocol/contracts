@@ -83,6 +83,7 @@ abstract contract PoolStorageV1_2 {
 abstract contract PoolStorageV1_3 {
     /// @notice bridge router who has access to the bridgeMint & bridgeBurn functions which
     /// mint/burn pool tokens for cross chain messenges
+    //slither-disable-next-line constable-states
     address public router;
 }
 
@@ -102,7 +103,7 @@ abstract contract PoolStorageV1_5 {
     uint256 public totalTCO2Supply;
     /// @notice Project token id to total supply of the project
     /// in the pool.
-    mapping(uint256 => uint256) public totalPerProjectTCO2Supply;
+    mapping(uint256 => uint256) public totalProjectSupply;
 }
 
 abstract contract PoolStorage is

@@ -20,17 +20,9 @@ interface IToucanCarbonOffsetsEscrow {
         CreateRetirementRequestParams calldata params
     ) external returns (uint256);
 
-    function finalizeDetokenizationRequest(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external;
+    function finalizeDetokenizationRequest(uint256 requestId) external;
 
-    function finalizeRetirementRequest(
-        uint256 requestId,
-        string calldata splitBalancingSerialNumber,
-        string calldata splitRemainingSerialNumber
-    ) external;
+    function finalizeRetirementRequest(uint256 requestId) external;
 
     function revertDetokenizationRequest(uint256 requestId) external;
 

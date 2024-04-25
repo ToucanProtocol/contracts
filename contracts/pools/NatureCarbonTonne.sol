@@ -6,11 +6,12 @@
 pragma solidity 0.8.14;
 
 import {Errors} from '../libraries/Errors.sol';
+import {PoolBridgeable} from './PoolBridgeable.sol';
 import {PoolWithFixedFees} from './PoolWithFixedFees.sol';
 
 /// @notice Nature Carbon Tonne (or NatureCarbonTonne)
 /// Contract is an ERC20 compliant token that acts as a pool for TCO2 tokens
-contract NatureCarbonTonne is PoolWithFixedFees {
+contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeable {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -73,7 +74,7 @@ contract NatureCarbonTonne is PoolWithFixedFees {
         for (uint256 i = 0; i < projectTokenIdsLen; ++i) {
             // Does not protect against duplicates
             _totalTCO2Supply += projectSupply[i];
-            totalPerProjectTCO2Supply[projectTokenIds[i]] = projectSupply[i];
+            totalProjectSupply[projectTokenIds[i]] = projectSupply[i];
         }
         totalTCO2Supply = _totalTCO2Supply;
     }
@@ -92,6 +93,7 @@ contract NatureCarbonTonne is PoolWithFixedFees {
         virtual
         returns (uint256[] memory redeemedAmounts)
     {
-        (, redeemedAmounts) = _redeemInMany(tco2s, amounts, 0, false);
+        PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
+        (, redeemedAmounts) = _redeemInMany(vintages, amounts, 0, false);
     }
 }

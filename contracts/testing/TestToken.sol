@@ -6,6 +6,8 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
+import {VintageData} from '../interfaces/IToucanCarbonOffsets.sol';
+
 contract TestToken is ERC20, Ownable {
     address public router;
 
@@ -34,4 +36,6 @@ contract TestToken is ERC20, Ownable {
     function bridgeMint(address _account, uint256 _amount) external onlyRouter {
         _mint(_account, _amount);
     }
+
+    function getVintageData() external returns (VintageData memory) {}
 }

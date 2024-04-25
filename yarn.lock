@@ -930,7 +930,7 @@
 
 "@toucanprotocol/dynamic-fee-pools@git+https://github.com/ToucanProtocol/dynamic-fee-pools.git":
   version "1.0.0"
-  resolved "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#db24c72dd5d60e5ecd3d4a3af244fc77aef62aed"
+  resolved "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#09f9cddaca6b39214095f239d4c940f577eb6ec0"
   dependencies:
     "@openzeppelin/contracts" "4.6.0"
     "@prb/math" "4.0.1"

@@ -5,10 +5,11 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {PoolWithFeeCalculator} from './PoolWithFeeCalculator.sol';
+import {PoolBridgeable} from './PoolBridgeable.sol';
+import {PoolWithFeeCalculatorERC20} from './PoolWithFeeCalculatorERC20.sol';
 
 /// @notice Biochar pool contract
-contract Biochar is PoolWithFeeCalculator {
+contract Biochar is PoolWithFeeCalculatorERC20, PoolBridgeable {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -23,15 +24,22 @@ contract Biochar is PoolWithFeeCalculator {
     //      Upgradable related functions
     // ----------------------------------------
 
-    function initialize() external virtual initializer {
-        __Context_init_unchained();
-        __Ownable_init_unchained();
-        __Pausable_init_unchained();
+    function initialize(address[] calldata accounts, bytes32[] calldata roles)
+        external
+        virtual
+        initializer
+    {
+        __Pool_init_unchained(accounts, roles);
         __ERC20_init_unchained('Biochar', 'CHAR');
-        __AccessControl_init_unchained();
-        __UUPSUpgradeable_init_unchained();
+    }
 
-        // TODO: set the roles based on calldata
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+    /// @dev Exposed for backwards compatibility and will be removed
+    /// in a future version. Use totalProjectSupply instead.
+    function totalPerProjectTCO2Supply(uint256 projectTokenId)
+        external
+        view
+        returns (uint256)
+    {
+        return totalProjectSupply[projectTokenId];
     }
 }

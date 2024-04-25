@@ -12,9 +12,9 @@ abstract contract CarbonOffsetBatchesStorageV1 {
     /// @custom:oz-upgrades-renamed-from serialNumberExist
     mapping(string => bool) public serialNumberApproved;
     mapping(string => bool) private DEPRECATED_URIs;
-    mapping(address => bool) public verifiers; // has been removed, but must stay here because of storage layout
+    mapping(address => bool) private DEPRECATED_VERIFIERS;
 
-    string public baseURI;
+    string internal baseURI;
     address public contractRegistry;
 
     struct NFTData {
@@ -31,7 +31,7 @@ abstract contract CarbonOffsetBatchesStorageV1 {
 }
 
 abstract contract CarbonOffsetBatchesStorageV2 {
-    mapping(string => bool) public supportedRegistries;
+    mapping(string => bool) internal supportedRegistries;
 }
 
 abstract contract CarbonOffsetBatchesStorage is

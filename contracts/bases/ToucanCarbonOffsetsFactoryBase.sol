@@ -5,14 +5,12 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-// ============ External Imports ============
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
-// ============ Internal Imports ============
+import '../bases/RoleInitializer.sol';
 import '../interfaces/IToucanContractRegistry.sol';
 import '../interfaces/ICarbonProjects.sol';
 import '../interfaces/ICarbonProjectVintages.sol';
@@ -32,7 +30,7 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     ProjectVintageUtils,
     Modifiers,
     ToucanCarbonOffsetsFactoryStorage,
-    AccessControlUpgradeable
+    RoleInitializer
 {
     using Strings for string;
 
@@ -64,20 +62,11 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
         address[] calldata accounts,
         bytes32[] calldata roles
     ) internal {
-        require(accounts.length == roles.length, 'Array length mismatch');
-
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
         __UUPSUpgradeable_init_unchained();
-        __AccessControl_init_unchained();
-
-        bool hasDefaultAdmin = false;
-        for (uint256 i = 0; i < accounts.length; ++i) {
-            _grantRole(roles[i], accounts[i]);
-            if (roles[i] == DEFAULT_ADMIN_ROLE) hasDefaultAdmin = true;
-        }
-        require(hasDefaultAdmin, 'No admin specified');
+        __RoleInitializer_init_unchained(accounts, roles);
     }
 
     // ----------------------------------------

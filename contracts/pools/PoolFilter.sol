@@ -9,8 +9,8 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 
+import '../bases/RoleInitializer.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import '../interfaces/IToucanContractRegistry.sol';
 import {Errors} from '../libraries/Errors.sol';
@@ -21,7 +21,7 @@ abstract contract PoolFilter is
     ContextUpgradeable,
     OwnableUpgradeable,
     PausableUpgradeable,
-    AccessControlUpgradeable,
+    RoleInitializer,
     UUPSUpgradeable,
     PoolFilterStorage
 {
@@ -39,6 +39,14 @@ abstract contract PoolFilter is
     event AttributeStandardRemoved(string standard);
     event ExternalAddressRemovedFromAllowlist(address erc20addr);
     event ExternalAddressAllowlisted(address erc20addr);
+    event ExternalERC1155TokenAllowlisted(
+        address tokenAddress,
+        uint256 tokenId
+    );
+    event ExternalERC1155TokenRemovedFromAllowlist(
+        address tokenAddress,
+        uint256 tokenId
+    );
     event InternalAddressBlocklisted(address erc20addr);
     event InternalAddressRemovedFromBlocklist(address erc20addr);
     event InternalAddressRemovedFromAllowlist(address erc20addr);
@@ -52,14 +60,15 @@ abstract contract PoolFilter is
         _disableInitializers();
     }
 
-    function __PoolFilter_init() internal initializer {
+    function __PoolFilter_init_unchained(
+        address[] calldata accounts,
+        bytes32[] calldata roles
+    ) internal initializer {
         __Context_init_unchained();
         __Ownable_init_unchained();
         __Pausable_init_unchained();
-        __AccessControl_init_unchained();
+        __RoleInitializer_init_unchained(accounts, roles);
         __UUPSUpgradeable_init_unchained();
-
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     // ----------------------------------------
@@ -84,7 +93,7 @@ abstract contract PoolFilter is
     //      Read-only functions
     // ----------------------------------------
 
-    /// @notice Checks if token to be deposited is eligible for this pool
+    /// @notice Checks if an ERC-20 token is eligible for this pool
     function checkEligible(address erc20Addr)
         external
         view
@@ -107,6 +116,22 @@ abstract contract PoolFilter is
             require(externalAllowlist[erc20Addr], Errors.CP_NOT_ALLOWLISTED);
         }
 
+        return true;
+    }
+
+    /// @notice Checks if an ERC-1155 token is eligible for this pool
+    /// @param tokenAddress address of the ERC1155 token
+    /// @param tokenId ID of the ERC1155 token
+    /// @return true if token is eligible, reverts otherwise
+    function checkERC1155Eligible(address tokenAddress, uint256 tokenId)
+        external
+        view
+        returns (bool)
+    {
+        require(
+            externalERC1155Allowlist[tokenAddress][tokenId],
+            Errors.CP_NOT_ALLOWLISTED
+        );
         return true;
     }
 
@@ -235,6 +260,28 @@ abstract contract PoolFilter is
         }
     }
 
+    /// @notice Add ERC-1155 tokens to external allowlist
+    /// @param tokenAddresses An array of contract addresses
+    /// @param tokenIds An array of token IDs
+    /// @dev Both arrays must be of the same length. Each token address is associated
+    /// with the token ID at the same index.
+    function addToExternalERC1155Allowlist(
+        address[] calldata tokenAddresses,
+        uint256[] calldata tokenIds
+    ) external {
+        onlyPoolOwner();
+        uint256 tokensLen = tokenAddresses.length;
+        if (tokensLen != tokenIds.length) revert(Errors.CP_LENGTH_MISMATCH);
+
+        for (uint256 i = 0; i < tokensLen; ++i) {
+            externalERC1155Allowlist[tokenAddresses[i]][tokenIds[i]] = true;
+            emit ExternalERC1155TokenAllowlisted(
+                tokenAddresses[i],
+                tokenIds[i]
+            );
+        }
+    }
+
     /// @notice Function to allowlist certain TCO2 contracts by their address
     /// @param erc20Addr accepts an array of contract addresses
     function addToInternalAllowlist(address[] memory erc20Addr) external {
@@ -265,6 +312,28 @@ abstract contract PoolFilter is
         for (uint256 i; i < erc20Addr.length; ++i) {
             externalAllowlist[erc20Addr[i]] = false;
             emit ExternalAddressRemovedFromAllowlist(erc20Addr[i]);
+        }
+    }
+
+    /// @notice Remove ERC-1155 tokens from external allowlist
+    /// @param tokenAddresses An array of contract addresses
+    /// @param tokenIds An array of token IDs
+    /// @dev Both arrays must be of the same length. Each token address is associated
+    /// with the token ID at the same index.
+    function removeFromExternalERC1155Allowlist(
+        address[] calldata tokenAddresses,
+        uint256[] calldata tokenIds
+    ) external {
+        onlyPoolOwner();
+        uint256 tokensLen = tokenAddresses.length;
+        if (tokensLen != tokenIds.length) revert(Errors.CP_LENGTH_MISMATCH);
+
+        for (uint256 i = 0; i < tokensLen; ++i) {
+            externalERC1155Allowlist[tokenAddresses[i]][tokenIds[i]] = false;
+            emit ExternalERC1155TokenRemovedFromAllowlist(
+                tokenAddresses[i],
+                tokenIds[i]
+            );
         }
     }
 

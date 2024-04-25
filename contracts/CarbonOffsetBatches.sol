@@ -47,8 +47,8 @@ contract CarbonOffsetBatches is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.4.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
+    string public constant VERSION = '1.5.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant VERIFIER_ROLE = keccak256('VERIFIER_ROLE');
@@ -523,6 +523,20 @@ contract CarbonOffsetBatches is
             nftList[tokenId].quantity,
             nftList[tokenId].status
         );
+    }
+
+    /// @notice Returns the serial number of a batch token id
+    /// @param tokenId The token ID of the batch
+    /// @return The serial number of the batch
+    function getSerialNumber(uint256 tokenId)
+        external
+        view
+        virtual
+        override
+        returns (string memory)
+    {
+        if (!_exists(tokenId)) revert(Errors.COB_NOT_EXISTS);
+        return nftList[tokenId].serialNumber;
     }
 
     /// @dev This is necessary because the automatically generated nftList
