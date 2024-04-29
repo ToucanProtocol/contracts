@@ -146,7 +146,7 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
 
         address[] memory tco2s = new address[](vintageLength);
         for (uint256 i = 0; i < vintageLength; i++) {
-            tco2s[i] = vintages[i].vintageToken;
+            tco2s[i] = vintages[i].tokenAddress;
         }
 
         feeDistribution = feeCalculator.calculateRedemptionFees(

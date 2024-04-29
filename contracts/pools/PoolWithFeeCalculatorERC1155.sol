@@ -141,7 +141,7 @@ abstract contract PoolWithFeeCalculatorERC1155 is PoolERC1155able {
         address[] memory erc1155s = new address[](vintageLength);
         uint256[] memory tokenIds = new uint256[](vintageLength);
         for (uint256 i = 0; i < vintageLength; i++) {
-            erc1155s[i] = vintages[i].vintageToken;
+            erc1155s[i] = vintages[i].tokenAddress;
             tokenIds[i] = vintages[i].erc1155VintageTokenId;
         }
 

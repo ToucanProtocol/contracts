@@ -58,11 +58,16 @@ abstract contract Pool is
     event RemoveFeeExemptedTCO2(address tco2);
 
     struct PoolVintageToken {
-        address vintageToken;
-        // This field only makes sense for ERC-1155 tokens
+        // Address of the token contract. This can be either
+        // an ERC-20 or an ERC-1155 token.
+        address tokenAddress;
+        // Token id for ERC-1155 tokens. For ERC-20 tokens,
+        // this field should always be 0.
         uint256 erc1155VintageTokenId;
-        // This field is meant to separate projects for both
-        // ERC-20 and ERC-1155 tokens.
+        // Token id to identify uniquely a project for a vintage
+        // token in the pool. This id should be derived from the
+        // combination of tokenAddress and erc1155VintageTokenId,
+        // depending on the token type of the vintage.
         uint256 projectTokenId;
     }
 
@@ -292,7 +297,7 @@ abstract contract Pool is
         // Transfer the TCO2 to the pool
         _transfer(vintage, msg.sender, address(this), amount);
 
-        emit Deposited(vintage.vintageToken, amount);
+        emit Deposited(vintage.tokenAddress, amount);
 
         return depositedAmount;
     }
@@ -546,7 +551,7 @@ abstract contract Pool is
         // Transfer vintage token tokens to the caller
         _transfer(vintage, address(this), msg.sender, amount);
 
-        emit Redeemed(msg.sender, vintage.vintageToken, amount);
+        emit Redeemed(msg.sender, vintage.tokenAddress, amount);
     }
 
     /// @dev Implemented in order to disable transfers when paused

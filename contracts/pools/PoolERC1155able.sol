@@ -119,7 +119,7 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         //slither-disable-next-line unused-return
         try
             IPoolFilter(filter).checkERC1155Eligible(
-                vintage.vintageToken,
+                vintage.tokenAddress,
                 vintage.erc1155VintageTokenId
             )
         returns (
@@ -184,7 +184,7 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         return
             feeCalculator.calculateDepositFees(
                 address(this),
-                vintage.vintageToken,
+                vintage.tokenAddress,
                 vintage.erc1155VintageTokenId,
                 amount
             );
@@ -196,7 +196,7 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         address to,
         uint256 amount
     ) internal virtual override {
-        IERC1155(vintage.vintageToken).safeTransferFrom(
+        IERC1155(vintage.tokenAddress).safeTransferFrom(
             from,
             to,
             vintage.erc1155VintageTokenId,

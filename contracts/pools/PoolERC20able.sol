@@ -111,7 +111,7 @@ abstract contract PoolERC20able is Pool {
         override
     {
         //slither-disable-next-line unused-return
-        try IPoolFilter(filter).checkEligible(vintage.vintageToken) returns (
+        try IPoolFilter(filter).checkEligible(vintage.tokenAddress) returns (
             //slither-disable-next-line uninitialized-local
             bool isEligible
         ) {
@@ -148,7 +148,7 @@ abstract contract PoolERC20able is Pool {
         return
             feeCalculator.calculateDepositFees(
                 address(this),
-                vintage.vintageToken,
+                vintage.tokenAddress,
                 amount
             );
     }
@@ -160,9 +160,9 @@ abstract contract PoolERC20able is Pool {
         uint256 amount
     ) internal virtual override {
         if (from == address(this)) {
-            IERC20Upgradeable(vintage.vintageToken).safeTransfer(to, amount);
+            IERC20Upgradeable(vintage.tokenAddress).safeTransfer(to, amount);
         } else {
-            IERC20Upgradeable(vintage.vintageToken).safeTransferFrom(
+            IERC20Upgradeable(vintage.tokenAddress).safeTransferFrom(
                 from,
                 to,
                 amount
@@ -176,7 +176,7 @@ abstract contract PoolERC20able is Pool {
         uint256 amount
     ) internal override returns (uint256) {
         return
-            IToucanCarbonOffsets(vintage.vintageToken).retireFrom(from, amount);
+            IToucanCarbonOffsets(vintage.tokenAddress).retireFrom(from, amount);
     }
 
     function _buildPoolVintageTokens(address[] memory tco2s)
