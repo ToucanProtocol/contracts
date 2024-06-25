@@ -38,7 +38,8 @@ contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeable {
     }
 
     /// @notice View function to calculate fees pre-execution
-    /// @dev Kept for backwards-compatibility
+    /// @dev Kept for backwards-compatibility. New clients should use
+    /// calculateRedemptionInFees instead.
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of amounts to redeem for each tco2s
     /// @return totalFee Total fees amount
@@ -70,13 +71,13 @@ contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeable {
         );
         require(projectTokenIdsLen != 0, Errors.CP_EMPTY_ARRAY);
 
-        uint256 _totalTCO2Supply = 0;
+        uint256 _totalUnderlyingSupply = 0;
         for (uint256 i = 0; i < projectTokenIdsLen; ++i) {
             // Does not protect against duplicates
-            _totalTCO2Supply += projectSupply[i];
+            _totalUnderlyingSupply += projectSupply[i];
             totalProjectSupply[projectTokenIds[i]] = projectSupply[i];
         }
-        totalTCO2Supply = _totalTCO2Supply;
+        totalUnderlyingSupply = _totalUnderlyingSupply;
     }
 
     /// @notice Redeem TCO2s for pool tokens 1:1 minus fees
@@ -95,5 +96,13 @@ contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeable {
     {
         PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (, redeemedAmounts) = _redeemInMany(vintages, amounts, 0, false);
+    }
+
+    /// @notice Returns the balance of the carbon offset found in the pool
+    /// @dev Kept for backwards compatibility. Use tokenBalance instead.
+    /// @param tco2 TCO2 contract address
+    /// @return balance pool balance
+    function tokenBalances(address tco2) public view returns (uint256) {
+        return tokenBalance(tco2);
     }
 }

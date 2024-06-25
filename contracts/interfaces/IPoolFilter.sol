@@ -6,12 +6,15 @@
 pragma solidity 0.8.14;
 
 interface IPoolFilter {
-    function checkEligible(address erc20Addr) external view returns (bool);
+    function checkEligible(address erc20Addr)
+        external
+        view
+        returns (string memory);
 
     function checkERC1155Eligible(address token, uint256 tokenId)
         external
         view
-        returns (bool);
+        returns (string memory);
 
     function minimumVintageStartTime() external view returns (uint64);
 

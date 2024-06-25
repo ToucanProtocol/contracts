@@ -15,6 +15,63 @@ import {IPoolFilter} from '../interfaces/IPoolFilter.sol';
 import {Errors} from '../libraries/Errors.sol';
 
 abstract contract PoolERC1155able is Pool, ERC1155Holder {
+    event ERC1155Deposited(
+        address erc1155Addr,
+        uint256 tokenId,
+        uint256 amount
+    );
+    event ERC1155Redeemed(
+        address account,
+        address erc1155Addr,
+        uint256 tokenId,
+        uint256 amount
+    );
+    event UnderlyingDecimalsUpdated(uint8 decimals);
+
+    /// @notice Set the underlying decimals for ERC-1155 tokens.
+    /// @dev The underlying decimals are the number of decimals the ERC-1155
+    /// token uses to represent the underlying asset. For example, if the
+    /// ERC-1155 token represents a tonne of carbon, then the underlying
+    /// decimals would be 0. If it represents a kilogram of carbon, then the
+    /// underlying decimals would be 3.
+    /// @param underlyingDecimals_ The number of decimals the ERC-1155 token
+    /// uses to represent a tonne of carbon.
+    function setUnderlyingDecimals(uint8 underlyingDecimals_) external {
+        onlyPoolOwner();
+        uint8 poolDecimals = decimals();
+        // Underlying decimals cannot be higher than pool decimals, otherwise
+        // the conversions in _poolTokenAmount and _underlyingAmount will fail.
+        // Also if we allow a higher fidelity token to be deposited then the
+        // difference in decimals will be unredeemable. In theory we could check
+        // that low decimals in such deposits are not used but we don't have any
+        // need to do that yet.
+        if (underlyingDecimals_ > poolDecimals)
+            revert(Errors.UNDERLYING_DECIMALS_TOO_HIGH);
+        _underlyingDecimals = underlyingDecimals_;
+        emit UnderlyingDecimalsUpdated(underlyingDecimals_);
+    }
+
+    /// @notice Function to limit the maximum pool supply
+    /// @dev supplyCap is initially set to 0 and must be increased before deposits
+    /// @param newCap New pool supply cap
+    function setSupplyCap(uint256 newCap) external override {
+        onlyPoolOwner();
+        // The supply cap must be of valid precision for the underlying token
+        uint256 precision = 10**(decimals() - _underlyingDecimals);
+        if (newCap % precision != 0) {
+            revert(Errors.INVALID_SUPPLY_CAP);
+        }
+        supplyCap = newCap;
+        emit SupplyCapUpdated(newCap);
+    }
+
+    /// @notice Underlying decimals for ERC-1155 tokens. 0 decimals means
+    /// that the smallest denomination the ERC-1155 token can represent is
+    /// a tonne, 3 decimals means a kilogram, etc.
+    function underlyingDecimals() external view returns (uint8) {
+        return _underlyingDecimals;
+    }
+
     /// @notice Return the total supply of the project for the
     /// given ERC1155 token.
     /// @return supply
@@ -38,14 +95,16 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         uint256 amount
     ) external view virtual returns (uint256 feeDistributionTotal);
 
-    /// @notice View function to calculate redemption fees pre-execution
+    /// @notice View function to calculate redemption fees pre-execution,
+    /// according to the amounts of pool tokens to be spent.
     /// @param erc1155s Array of ERC1155 contract addresses
     /// @param tokenIds ids of the vintages of each project
-    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
-    /// The indexes of this array are matching 1:1 with the tco2s array.
-    /// @param toRetire Whether the TCO2s will be retired atomically
-    /// with the redemption. It may be that lower fees will be charged
-    /// in this case.
+    /// @param amounts Array of pool token amounts to spend in order to redeem
+    /// underlying tokens.
+    /// @dev The indexes of all arrays should be matching 1:1.
+    /// @param toRetire No-op, retirements of ERC-1155 tokens are not
+    /// supported from within the pool yet and there are no immediate plans
+    /// to add support.
     /// @return feeDistributionTotal Total fee amount to be paid
     function calculateRedemptionInFees(
         address[] memory erc1155s,
@@ -54,12 +113,15 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         bool toRetire
     ) external view virtual returns (uint256 feeDistributionTotal);
 
-    /// @notice View function to calculate redemption fees pre-execution
+    /// @notice View function to calculate redemption fees pre-execution,
+    /// according to the amounts of underlying tokens to be redeemed.
     /// @param erc1155s Array of ERC1155 contract addresses
     /// @param tokenIds ids of the vintages of each project
-    /// @param toRetire Whether the TCO2s will be retired atomically
-    /// with the redemption. It may be that lower fees will be charged
-    /// in this case.
+    /// @param amounts Array of underlying token amounts to redeem.
+    /// @dev The indexes of all arrays should be matching 1:1.
+    /// @param toRetire No-op, retirements of ERC-1155 tokens are not
+    /// supported from within the pool yet and there are no immediate plans
+    /// to add support.
     /// @return feeDistributionTotal Total fee amount to be paid
     function calculateRedemptionOutFees(
         address[] memory erc1155s,
@@ -72,7 +134,7 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
     /// @param erc1155 ERC1155 contract address
     /// @param tokenId id representing the vintage
     /// @return balance pool balance
-    function tokenBalances(address erc1155, uint256 tokenId)
+    function tokenBalance(address erc1155, uint256 tokenId)
         public
         view
         returns (uint256 balance)
@@ -94,7 +156,6 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         returns (bool isEligible)
     {
         _checkEligible(_buildPoolVintageToken(erc1155, tokenId));
-
         return true;
     }
 
@@ -116,26 +177,44 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         view
         override
     {
-        //slither-disable-next-line unused-return
-        try
-            IPoolFilter(filter).checkERC1155Eligible(
+        string memory eligibilityError = IPoolFilter(filter)
+            .checkERC1155Eligible(
                 vintage.tokenAddress,
                 vintage.erc1155VintageTokenId
-            )
-        returns (
-            //slither-disable-next-line uninitialized-local
-            bool isEligible
-        ) {
-            require(isEligible, Errors.CP_NOT_ELIGIBLE);
-            //slither-disable-next-line uninitialized-local
-        } catch Error(string memory reason) {
-            revert(reason);
-            //slither-disable-next-line uninitialized-local
-        } catch (bytes memory reason) {
-            // this most often results in a random bytes sequence,
-            // but it's worth at least trying to log it
-            revert(string.concat('unexpected error: ', string(reason)));
+            );
+        if (bytes(eligibilityError).length > 0) {
+            revert(eligibilityError);
         }
+    }
+
+    function _changeSupply(PoolVintageToken memory vintage, int256 delta)
+        internal
+        override
+    {
+        super._changeSupply(vintage, _underlyingAmount(delta));
+    }
+
+    function _emitDepositedEvent(
+        PoolVintageToken memory vintage,
+        uint256 amount
+    ) internal override {
+        emit ERC1155Deposited(
+            vintage.tokenAddress,
+            vintage.erc1155VintageTokenId,
+            _underlyingAmount(amount)
+        );
+    }
+
+    function _emitRedeemedEvent(PoolVintageToken memory vintage, uint256 amount)
+        internal
+        override
+    {
+        emit ERC1155Redeemed(
+            msg.sender,
+            vintage.tokenAddress,
+            vintage.erc1155VintageTokenId,
+            _underlyingAmount(amount)
+        );
     }
 
     function _buildPoolVintageTokens(
@@ -160,18 +239,6 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
                 tokenId,
                 _projectTokenId(erc1155, tokenId)
             );
-    }
-
-    function _increaseSupply(PoolVintageToken memory vintage, int256 delta)
-        internal
-        virtual
-        override
-    {
-        uint256 currentSupply = totalProjectSupply[vintage.projectTokenId];
-        totalProjectSupply[vintage.projectTokenId] = uint256(
-            int256(currentSupply) + delta
-        );
-        totalTCO2Supply = uint256(int256(totalTCO2Supply) + delta);
     }
 
     function _feeDistribution(PoolVintageToken memory vintage, uint256 amount)
@@ -200,7 +267,7 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
             from,
             to,
             vintage.erc1155VintageTokenId,
-            amount,
+            _underlyingAmount(amount),
             ''
         );
     }
@@ -216,4 +283,53 @@ abstract contract PoolERC1155able is Pool, ERC1155Holder {
         view
         virtual
         returns (uint256);
+
+    /// @dev The underlying amount conversions are helpful to execute
+    /// so internal logic can be kept simple by always operating on
+    /// pool token decimals. For example, underlying token amounts are
+    /// converted to pool token amounts internally so pool ops like
+    /// charging fees can be performed.
+    function _underlyingAmount(uint256 poolTokenAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        uint8 decimals = decimals();
+        decimals -= _underlyingDecimals;
+        return poolTokenAmount / (10**decimals);
+    }
+
+    function _underlyingAmount(int256 poolTokenAmount)
+        internal
+        view
+        returns (int256)
+    {
+        uint8 decimals = decimals();
+        decimals -= _underlyingDecimals;
+        // The minimum decimals value that can overflow in the int256
+        // conversion below is 78 so not anything to be worried about.
+        return poolTokenAmount / int256(10**decimals);
+    }
+
+    function _poolTokenAmount(uint256 underlyingAmount)
+        internal
+        view
+        returns (uint256)
+    {
+        uint8 decimals = decimals();
+        decimals -= _underlyingDecimals;
+        return underlyingAmount * (10**decimals);
+    }
+
+    function _poolTokenAmounts(uint256[] memory amounts)
+        internal
+        view
+        returns (uint256[] memory poolTokenAmounts)
+    {
+        uint256 length = amounts.length;
+        poolTokenAmounts = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            poolTokenAmounts[i] = _poolTokenAmount(amounts[i]);
+        }
+    }
 }

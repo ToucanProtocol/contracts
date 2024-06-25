@@ -244,6 +244,9 @@ contract CarbonProjects is
         onlyManagers
         whenNotPaused
     {
+        string memory pid = projectData[projectTokenId].projectId;
+        projectIds[pid] = false;
+        delete pidToTokenId[pid];
         delete projectData[projectTokenId];
         /// @dev set projectTokenId to invalid
         totalSupply--;

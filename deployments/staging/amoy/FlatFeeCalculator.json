@@ -1,0 +1,572 @@
+{
+  "address": "0xee145247798aA22D14746F7E2754F5A0212A8DbE",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "feeBasisPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "FeeBasisPointsUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address[]",
+          "name": "recipients",
+          "type": "address[]"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256[]",
+          "name": "shares",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "FeeSetup",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "VERSION",
+      "outputs": [
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "VERSION_RELEASE_CANDIDATE",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "depositAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "calculateDepositFees",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address[]",
+              "name": "recipients",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "shares",
+              "type": "uint256[]"
+            }
+          ],
+          "internalType": "struct FeeDistribution",
+          "name": "feeDistribution",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "depositAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "calculateDepositFees",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address[]",
+              "name": "recipients",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "shares",
+              "type": "uint256[]"
+            }
+          ],
+          "internalType": "struct FeeDistribution",
+          "name": "feeDistribution",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address[]",
+          "name": "erc1155s",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "tokenIds",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "redemptionAmounts",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "calculateRedemptionFees",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address[]",
+              "name": "recipients",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "shares",
+              "type": "uint256[]"
+            }
+          ],
+          "internalType": "struct FeeDistribution",
+          "name": "feeDistribution",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address[]",
+          "name": "tco2s",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "redemptionAmounts",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "calculateRedemptionFees",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address[]",
+              "name": "recipients",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "shares",
+              "type": "uint256[]"
+            }
+          ],
+          "internalType": "struct FeeDistribution",
+          "name": "feeDistribution",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "feeBasisPoints",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "recipients",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "shares",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "feeSetup",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getFeeSetup",
+      "outputs": [
+        {
+          "internalType": "address[]",
+          "name": "recipients",
+          "type": "address[]"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "shares",
+          "type": "uint256[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_feeBasisPoints",
+          "type": "uint256"
+        }
+      ],
+      "name": "setFeeBasisPoints",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0x338c5f14ad97b0bb7a5f62df2f15ec502202de91bf2b7c051d1c19144388df02",
+  "receipt": {
+    "to": null,
+    "from": "0xdDD839b4f218AFe5ac09D1C9E0E42f38543C50bD",
+    "contractAddress": "0xee145247798aA22D14746F7E2754F5A0212A8DbE",
+    "transactionIndex": 1,
+    "gasUsed": "1090242",
+    "logsBloom": "0x00000000080000000000000000000000000000000000000000800000000000000000000000000000000000000000000000008000400000000000000000800000000000080000000000000000000000800001000000000000000100000000000000000000020000000000000000000800020000000000000080000010000000400000000000000000000000000000000000000000000010000000000000000000200000000000000000000000000000000000000000000000000000000000004000000000000000000001000000000000000000010000000000100004000020000000000000000000000000000000000000000000000000000000000000100000",
+    "blockHash": "0x7cc364249b6c87a34c1cec2a3294db526f918833a464fef3b4666da1e6742bf7",
+    "transactionHash": "0x338c5f14ad97b0bb7a5f62df2f15ec502202de91bf2b7c051d1c19144388df02",
+    "logs": [
+      {
+        "transactionIndex": 1,
+        "blockNumber": 8140314,
+        "transactionHash": "0x338c5f14ad97b0bb7a5f62df2f15ec502202de91bf2b7c051d1c19144388df02",
+        "address": "0xee145247798aA22D14746F7E2754F5A0212A8DbE",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x000000000000000000000000ddd839b4f218afe5ac09d1c9e0e42f38543c50bd"
+        ],
+        "data": "0x",
+        "logIndex": 2,
+        "blockHash": "0x7cc364249b6c87a34c1cec2a3294db526f918833a464fef3b4666da1e6742bf7"
+      },
+      {
+        "transactionIndex": 1,
+        "blockNumber": 8140314,
+        "transactionHash": "0x338c5f14ad97b0bb7a5f62df2f15ec502202de91bf2b7c051d1c19144388df02",
+        "address": "0x0000000000000000000000000000000000001010",
+        "topics": [
+          "0x4dfe1bbbcf077ddc3e01291eea2d5c70c2b422b415d95645b9adcfd678cb1d63",
+          "0x0000000000000000000000000000000000000000000000000000000000001010",
+          "0x000000000000000000000000ddd839b4f218afe5ac09d1c9e0e42f38543c50bd",
+          "0x0000000000000000000000006ab3d36c46ecfb9b9c0bd51cb1c3da5a2c81cea6"
+        ],
+        "data": "0x000000000000000000000000000000000000000000000000000b9eb53d633c0000000000000000000000000000000000000000000000000001ca7b703228cb7b0000000000000000000000000000000000000000000001b68bd543d1eba801fd00000000000000000000000000000000000000000000000001bedcbaf4c58f7b0000000000000000000000000000000000000000000001b68be0e287290b3dfd",
+        "logIndex": 3,
+        "blockHash": "0x7cc364249b6c87a34c1cec2a3294db526f918833a464fef3b4666da1e6742bf7"
+      }
+    ],
+    "blockNumber": 8140314,
+    "cumulativeGasUsed": "1260239",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "5bb5d769a6db2830d895cffd55ae7b70",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.19+commit.7dd6d404\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"feeBasisPoints\",\"type\":\"uint256\"}],\"name\":\"FeeBasisPointsUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"name\":\"FeeSetup\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"VERSION\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"VERSION_RELEASE_CANDIDATE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"depositAmount\",\"type\":\"uint256\"}],\"name\":\"calculateDepositFees\",\"outputs\":[{\"components\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"internalType\":\"struct FeeDistribution\",\"name\":\"feeDistribution\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"depositAmount\",\"type\":\"uint256\"}],\"name\":\"calculateDepositFees\",\"outputs\":[{\"components\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"internalType\":\"struct FeeDistribution\",\"name\":\"feeDistribution\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"erc1155s\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"tokenIds\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"redemptionAmounts\",\"type\":\"uint256[]\"}],\"name\":\"calculateRedemptionFees\",\"outputs\":[{\"components\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"internalType\":\"struct FeeDistribution\",\"name\":\"feeDistribution\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"address[]\",\"name\":\"tco2s\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"redemptionAmounts\",\"type\":\"uint256[]\"}],\"name\":\"calculateRedemptionFees\",\"outputs\":[{\"components\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"internalType\":\"struct FeeDistribution\",\"name\":\"feeDistribution\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"feeBasisPoints\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"name\":\"feeSetup\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getFeeSetup\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"recipients\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shares\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_feeBasisPoints\",\"type\":\"uint256\"}],\"name\":\"setFeeBasisPoints\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"author\":\"Neutral Labs Inc. & Toucan Protocol\",\"details\":\"It implements the IFeeCalculator interface.\",\"kind\":\"dev\",\"methods\":{\"calculateDepositFees(address,address,uint256)\":{\"params\":{\"depositAmount\":\"The amount to be deposited.\"},\"returns\":{\"feeDistribution\":\"How the fee is meant to be distributed among the fee recipients.\"}},\"calculateDepositFees(address,address,uint256,uint256)\":{\"params\":{\"depositAmount\":\"The amount to be deposited.\"},\"returns\":{\"feeDistribution\":\"How the fee is meant to be distributed among the fee recipients.\"}},\"calculateRedemptionFees(address,address[],uint256[])\":{\"params\":{\"redemptionAmounts\":\"The amounts to be redeemed.\",\"tco2s\":\"The addresses of the TCO2 token.\"},\"returns\":{\"feeDistribution\":\"How the fee is meant to be distributed among the fee recipients.\"}},\"calculateRedemptionFees(address,address[],uint256[],uint256[])\":{\"params\":{\"erc1155s\":\"The addresses of the ERC1155 projects.\",\"redemptionAmounts\":\"The amounts to be redeemed.\",\"tokenIds\":\"The tokenIds of the project vintages.\"},\"returns\":{\"feeDistribution\":\"How the fee is meant to be distributed among the fee recipients.\"}},\"feeSetup(address[],uint256[])\":{\"details\":\"Can only be called by the current owner.\",\"params\":{\"recipients\":\"The addresses of the fee recipients.\",\"shares\":\"The share of the fee each recipient should receive.\"}},\"getFeeSetup()\":{\"returns\":{\"recipients\":\"shares The fee recipients and their share of the total fee.\"}},\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner.\"},\"setFeeBasisPoints(uint256)\":{\"details\":\"Can only be called by the current owner.\",\"params\":{\"_feeBasisPoints\":\"The new fee basis points.\"}},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"stateVariables\":{\"VERSION\":{\"details\":\"Version-related parameters. VERSION keeps track of production releases. VERSION_RELEASE_CANDIDATE keeps track of iterations of a VERSION in our staging environment.\"}},\"title\":\"FlatFeeCalculator\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"calculateDepositFees(address,address,uint256)\":{\"notice\":\"Calculates the deposit fee for a given amount.\"},\"calculateDepositFees(address,address,uint256,uint256)\":{\"notice\":\"Calculates the deposit fee for a given amount of an ERC1155 project.\"},\"calculateRedemptionFees(address,address[],uint256[])\":{\"notice\":\"Calculates the redemption fees for a given amount.\"},\"calculateRedemptionFees(address,address[],uint256[],uint256[])\":{\"notice\":\"Calculates the redemption fees for a given amount on ERC1155 projects.\"},\"feeSetup(address[],uint256[])\":{\"notice\":\"Sets up the fee distribution among recipients.\"},\"getFeeSetup()\":{\"notice\":\"Returns the current fee setup.\"},\"setFeeBasisPoints(uint256)\":{\"notice\":\"Sets the fee basis points.\"}},\"notice\":\"This contract calculates deposit and redemption fees for a given pool.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol\":\"FlatFeeCalculator\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"@openzeppelin/contracts/access/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (access/Ownable.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../utils/Context.sol\\\";\\n\\n/**\\n * @dev Contract module which provides a basic access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership}.\\n *\\n * This module is used through inheritance. It will make available the modifier\\n * `onlyOwner`, which can be applied to your functions to restrict their use to\\n * the owner.\\n */\\nabstract contract Ownable is Context {\\n    address private _owner;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Initializes the contract setting the deployer as the initial owner.\\n     */\\n    constructor() {\\n        _transferOwnership(_msgSender());\\n    }\\n\\n    /**\\n     * @dev Returns the address of the current owner.\\n     */\\n    function owner() public view virtual returns (address) {\\n        return _owner;\\n    }\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        require(owner() == _msgSender(), \\\"Ownable: caller is not the owner\\\");\\n        _;\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions anymore. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby removing any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        _transferOwnership(address(0));\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), \\\"Ownable: new owner is the zero address\\\");\\n        _transferOwnership(newOwner);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Internal function without access restriction.\\n     */\\n    function _transferOwnership(address newOwner) internal virtual {\\n        address oldOwner = _owner;\\n        _owner = newOwner;\\n        emit OwnershipTransferred(oldOwner, newOwner);\\n    }\\n}\\n\",\"keccak256\":\"0x24e0364e503a9bbde94c715d26573a76f14cd2a202d45f96f52134ab806b67b9\",\"license\":\"MIT\"},\"@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v4.6.0) (token/ERC20/IERC20.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Interface of the ERC20 standard as defined in the EIP.\\n */\\ninterface IERC20 {\\n    /**\\n     * @dev Emitted when `value` tokens are moved from one account (`from`) to\\n     * another (`to`).\\n     *\\n     * Note that `value` may be zero.\\n     */\\n    event Transfer(address indexed from, address indexed to, uint256 value);\\n\\n    /**\\n     * @dev Emitted when the allowance of a `spender` for an `owner` is set by\\n     * a call to {approve}. `value` is the new allowance.\\n     */\\n    event Approval(address indexed owner, address indexed spender, uint256 value);\\n\\n    /**\\n     * @dev Returns the amount of tokens in existence.\\n     */\\n    function totalSupply() external view returns (uint256);\\n\\n    /**\\n     * @dev Returns the amount of tokens owned by `account`.\\n     */\\n    function balanceOf(address account) external view returns (uint256);\\n\\n    /**\\n     * @dev Moves `amount` tokens from the caller's account to `to`.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transfer(address to, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Returns the remaining number of tokens that `spender` will be\\n     * allowed to spend on behalf of `owner` through {transferFrom}. This is\\n     * zero by default.\\n     *\\n     * This value changes when {approve} or {transferFrom} are called.\\n     */\\n    function allowance(address owner, address spender) external view returns (uint256);\\n\\n    /**\\n     * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * IMPORTANT: Beware that changing an allowance with this method brings the risk\\n     * that someone may use both the old and the new allowance by unfortunate\\n     * transaction ordering. One possible solution to mitigate this race\\n     * condition is to first reduce the spender's allowance to 0 and set the\\n     * desired value afterwards:\\n     * https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729\\n     *\\n     * Emits an {Approval} event.\\n     */\\n    function approve(address spender, uint256 amount) external returns (bool);\\n\\n    /**\\n     * @dev Moves `amount` tokens from `from` to `to` using the\\n     * allowance mechanism. `amount` is then deducted from the caller's\\n     * allowance.\\n     *\\n     * Returns a boolean value indicating whether the operation succeeded.\\n     *\\n     * Emits a {Transfer} event.\\n     */\\n    function transferFrom(\\n        address from,\\n        address to,\\n        uint256 amount\\n    ) external returns (bool);\\n}\\n\",\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\"},\"@openzeppelin/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes calldata) {\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0xe2e337e6dde9ef6b680e07338c493ebea1b5fd09b43424112868e9cc1706bca7\",\"license\":\"MIT\"},\"@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2024 Toucan Protocol\\n//\\n// SPDX-License-Identifier: UNLICENSED\\n\\n// If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth\\npragma solidity 0.8.19;\\n\\nimport \\\"@openzeppelin/contracts/token/ERC20/IERC20.sol\\\";\\nimport \\\"@openzeppelin/contracts/access/Ownable.sol\\\";\\n\\nimport {IFeeCalculator, FeeDistribution} from \\\"./interfaces/IFeeCalculator.sol\\\";\\nimport \\\"./interfaces/IPool.sol\\\";\\n\\n/// @title FlatFeeCalculator\\n/// @author Neutral Labs Inc. & Toucan Protocol\\n/// @notice This contract calculates deposit and redemption fees for a given pool.\\n/// @dev It implements the IFeeCalculator interface.\\ncontract FlatFeeCalculator is IFeeCalculator, Ownable {\\n    /// @dev Version-related parameters. VERSION keeps track of production\\n    /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations\\n    /// of a VERSION in our staging environment.\\n    string public constant VERSION = \\\"1.0.0\\\";\\n    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;\\n\\n    uint256 public feeBasisPoints = 300;\\n\\n    address[] private _recipients;\\n    uint256[] private _shares;\\n\\n    event FeeBasisPointsUpdated(uint256 feeBasisPoints);\\n    event FeeSetup(address[] recipients, uint256[] shares);\\n\\n    constructor() Ownable() {}\\n\\n    /// @notice Sets the fee basis points.\\n    /// @dev Can only be called by the current owner.\\n    /// @param _feeBasisPoints The new fee basis points.\\n    function setFeeBasisPoints(uint256 _feeBasisPoints) external onlyOwner {\\n        require(_feeBasisPoints < 10000, \\\"Fee basis points should be less than 10000\\\");\\n\\n        feeBasisPoints = _feeBasisPoints;\\n        emit FeeBasisPointsUpdated(_feeBasisPoints);\\n    }\\n\\n    /// @notice Sets up the fee distribution among recipients.\\n    /// @dev Can only be called by the current owner.\\n    /// @param recipients The addresses of the fee recipients.\\n    /// @param shares The share of the fee each recipient should receive.\\n    function feeSetup(address[] memory recipients, uint256[] memory shares) external onlyOwner {\\n        require(recipients.length == shares.length, \\\"Recipients and shares arrays must have the same length\\\");\\n\\n        uint256 totalShares = sumOf(shares);\\n        require(totalShares == 100, \\\"Total shares must equal 100\\\");\\n\\n        _recipients = recipients;\\n        _shares = shares;\\n        emit FeeSetup(recipients, shares);\\n    }\\n\\n    /// @notice Calculates the deposit fee for a given amount.\\n    /// @param depositAmount The amount to be deposited.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateDepositFees(address, address, uint256 depositAmount)\\n        external\\n        view\\n        override\\n        returns (FeeDistribution memory feeDistribution)\\n    {\\n        feeDistribution = _calculateFee(depositAmount);\\n    }\\n\\n    /// @notice Calculates the fee shares and recipients based on the total fee.\\n    /// @param totalFee The total fee to be distributed.\\n    /// @return feeDistribution The recipients and the amount of fees each\\n    /// recipient should receive.\\n    function calculateFeeShares(uint256 totalFee) internal view returns (FeeDistribution memory feeDistribution) {\\n        uint256 recipientsLength = _recipients.length;\\n        uint256[] memory shares = new uint256[](recipientsLength);\\n\\n        uint256 restFee = totalFee;\\n        for (uint256 i = 0; i < recipientsLength; i++) {\\n            shares[i] = (totalFee * _shares[i]) / 100;\\n            restFee -= shares[i];\\n        }\\n\\n        // If any fee is left, it is distributed to the first recipient.\\n        // This may happen if any of the shares of the fee to be distributed\\n        // has leftover from the division by 100 above.\\n        shares[0] += restFee;\\n\\n        feeDistribution.recipients = _recipients;\\n        feeDistribution.shares = shares;\\n    }\\n\\n    /// @notice Calculates the redemption fees for a given amount.\\n    /// @param tco2s The addresses of the TCO2 token.\\n    /// @param redemptionAmounts The amounts to be redeemed.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateRedemptionFees(address, address[] calldata tco2s, uint256[] calldata redemptionAmounts)\\n        external\\n        view\\n        override\\n        returns (FeeDistribution memory feeDistribution)\\n    {\\n        require(tco2s.length == redemptionAmounts.length, \\\"length mismatch\\\");\\n\\n        uint256 totalRedemptionAmount = sumOf(redemptionAmounts);\\n\\n        feeDistribution = _calculateFee(totalRedemptionAmount);\\n    }\\n\\n    /// @notice Calculates the deposit fee for a given amount of an ERC1155 project.\\n    /// @param depositAmount The amount to be deposited.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateDepositFees(address, address, uint256, uint256 depositAmount)\\n        external\\n        view\\n        override\\n        returns (FeeDistribution memory feeDistribution)\\n    {\\n        feeDistribution = _calculateFee(depositAmount);\\n    }\\n\\n    /// @notice Calculates the redemption fees for a given amount on ERC1155 projects.\\n    /// @param erc1155s The addresses of the ERC1155 projects.\\n    /// @param tokenIds The tokenIds of the project vintages.\\n    /// @param redemptionAmounts The amounts to be redeemed.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateRedemptionFees(\\n        address,\\n        address[] calldata erc1155s,\\n        uint256[] calldata tokenIds,\\n        uint256[] calldata redemptionAmounts\\n    ) external view override returns (FeeDistribution memory feeDistribution) {\\n        require(erc1155s.length == tokenIds.length, \\\"erc1155s/tokenIds length mismatch\\\");\\n        require(erc1155s.length == redemptionAmounts.length, \\\"erc1155s/redemptionAmounts length mismatch\\\");\\n\\n        uint256 totalRedemptionAmount = sumOf(redemptionAmounts);\\n\\n        feeDistribution = _calculateFee(totalRedemptionAmount);\\n    }\\n\\n    /// @notice Returns the current fee setup.\\n    /// @return recipients shares The fee recipients and their share of the total fee.\\n    function getFeeSetup() external view returns (address[] memory recipients, uint256[] memory shares) {\\n        recipients = _recipients;\\n        shares = _shares;\\n    }\\n\\n    /// @notice Calculates the fee for a given amount.\\n    /// @param requestedAmount The amount to be used for the fee calculation.\\n    /// @return feeDistribution How the fee is meant to be\\n    function _calculateFee(uint256 requestedAmount) internal view returns (FeeDistribution memory) {\\n        require(requestedAmount != 0, \\\"requested amount must be > 0\\\");\\n\\n        uint256 feeAmount = requestedAmount * feeBasisPoints / 10000;\\n        require(feeAmount != 0, \\\"Fee must be greater than 0\\\");\\n\\n        return calculateFeeShares(feeAmount);\\n    }\\n\\n    function sumOf(uint256[] memory array) private pure returns (uint256) {\\n        uint256 total = 0;\\n        for (uint256 i = 0; i < array.length; i++) {\\n            total += array[i];\\n        }\\n        return total;\\n    }\\n}\\n\",\"keccak256\":\"0x2f9c1ae1fbcfbaf684c61e2cd70c77f849bf35c3d9ce597684de589170042355\",\"license\":\"UNLICENSED\"},\"@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2024 Toucan Protocol\\n//\\n// SPDX-License-Identifier: UNLICENSED\\n\\n// If you encounter a vulnerability or an issue, please contact <info@neutralx.com>\\npragma solidity ^0.8.13;\\n\\nstruct FeeDistribution {\\n    address[] recipients;\\n    uint256[] shares;\\n}\\n\\n/// @title IFeeCalculator\\n/// @author Neutral Labs Inc.\\n/// @notice This interface defines methods for calculating fees.\\ninterface IFeeCalculator {\\n    /// @notice Calculates the deposit fee for a given amount.\\n    /// @param pool The address of the pool.\\n    /// @param tco2 The address of the TCO2 token.\\n    /// @param depositAmount The amount to be deposited.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateDepositFees(address pool, address tco2, uint256 depositAmount)\\n        external\\n        view\\n        returns (FeeDistribution memory feeDistribution);\\n\\n    /// @notice Calculates the redemption fees for a given amount.\\n    /// @param pool The address of the pool.\\n    /// @param tco2s The addresses of the TCO2 token.\\n    /// @param redemptionAmounts The amounts to be redeemed.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateRedemptionFees(address pool, address[] calldata tco2s, uint256[] calldata redemptionAmounts)\\n        external\\n        view\\n        returns (FeeDistribution memory feeDistribution);\\n\\n    /// @notice Calculates the deposit fee for a given amount of an ERC1155 project.\\n    /// @param pool The address of the pool.\\n    /// @param erc1155 The address of the ERC1155 project\\n    /// @param tokenId The tokenId of the vintage.\\n    /// @param depositAmount The amount to be deposited.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateDepositFees(address pool, address erc1155, uint256 tokenId, uint256 depositAmount)\\n        external\\n        view\\n        returns (FeeDistribution memory feeDistribution);\\n\\n    /// @notice Calculates the redemption fees for a given amount on ERC1155 projects.\\n    /// @param pool The address of the pool.\\n    /// @param erc1155s The addresses of the ERC1155 projects.\\n    /// @param tokenIds The tokenIds of the project vintages.\\n    /// @param redemptionAmounts The amounts to be redeemed.\\n    /// @return feeDistribution How the fee is meant to be\\n    /// distributed among the fee recipients.\\n    function calculateRedemptionFees(\\n        address pool,\\n        address[] calldata erc1155s,\\n        uint256[] calldata tokenIds,\\n        uint256[] calldata redemptionAmounts\\n    ) external view returns (FeeDistribution memory feeDistribution);\\n}\\n\",\"keccak256\":\"0x0296da64fa291f4809fc3e04b176bd9c0bc2c87ea302f0a82b478bc970baf404\",\"license\":\"UNLICENSED\"},\"@toucanprotocol/dynamic-fee-pools/src/interfaces/IPool.sol\":{\"content\":\"// SPDX-FileCopyrightText: 2024 Toucan Protocol\\n//\\n// SPDX-License-Identifier: UNLICENSED\\n\\n// If you encounter a vulnerability or an issue, please contact <info@neutralx.com>\\npragma solidity ^0.8.13;\\n\\n/// @title IPool\\n/// @author Neutral Labs Inc.\\n/// @notice This interface defines methods exposed by the Pool\\ninterface IPool {\\n    /// @notice Exposes the total TCO2 supply, tracked as the aggregation of deposit,\\n    /// redemption and bridge actions\\n    /// @return supply Current supply\\n    function totalTCO2Supply() external view returns (uint256 supply);\\n\\n    /// @notice Exposes the total TCO2 supply of a project in a pool,\\n    /// tracked as the aggregation of deposit, redemmption and bridge actions\\n    /// @param tco2 The TCO2 address of the project\\n    /// @return supply Current supply of a project in the pool\\n    function totalPerProjectSupply(address tco2) external view returns (uint256 supply);\\n\\n    /// @notice Exposes the total TCO2 supply of a project in a pool,\\n    /// tracked as the aggregation of deposit, redemmption and bridge actions\\n    /// @param erc1155 The ERC1155 address of the project\\n    /// @param tokenId The token id of the project\\n    /// @return supply Current supply of a project in the pool\\n    function totalPerProjectSupply(address erc1155, uint256 tokenId) external view returns (uint256 supply);\\n}\\n\",\"keccak256\":\"0x7411aae7a682aa50764cff874a32ee2777ddbfdbf6e15a1a79f93f5db0e253e5\",\"license\":\"UNLICENSED\"}},\"version\":1}",
+  "bytecode": "0x608060405261012c60015534801561001657600080fd5b5061002033610025565b610075565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6111e6806100846000396000f3fe608060405234801561001057600080fd5b50600436106100cf5760003560e01c8063927542741161008c578063b8606eef11610066578063b8606eef14610193578063bf1204341461019c578063f2fde38b146101b2578063ffa1ad74146101c557600080fd5b8063927542741461015a5780639ef3009d1461016d578063a5bd84c21461018057600080fd5b80630165dd27146100d45780636ca0b0d7146100e9578063715018a614610104578063721134961461010c5780638925ba9f1461012c5780638da5cb5b1461013f575b600080fd5b6100e76100e2366004610b85565b6101f6565b005b6100f1600281565b6040519081526020015b60405180910390f35b6100e76102c8565b61011f61011a366004610c06565b6102fe565b6040516100fb9190610cb1565b61011f61013a366004610d4f565b610423565b6000546040516001600160a01b0390911681526020016100fb565b61011f610168366004610d8b565b610448565b6100e761017b366004610ea3565b61046e565b61011f61018e366004610f63565b6105cb565b6100f160015481565b6101a4610674565b6040516100fb929190610fe4565b6100e76101c0366004611068565b61072b565b6101e9604051806040016040528060058152602001640312e302e360dc1b81525081565b6040516100fb9190611083565b6000546001600160a01b031633146102295760405162461bcd60e51b8152600401610220906110d1565b60405180910390fd5b612710811061028d5760405162461bcd60e51b815260206004820152602a60248201527f46656520626173697320706f696e74732073686f756c64206265206c6573732060448201526907468616e2031303030360b41b6064820152608401610220565b60018190556040518181527f3a81812ce3d900b6196b2d0a225da9df123054670067cf761d52294251a967409060200160405180910390a150565b6000546001600160a01b031633146102f25760405162461bcd60e51b8152600401610220906110d1565b6102fc60006107c6565b565b604080518082019091526060808252602082015285841461036b5760405162461bcd60e51b815260206004820152602160248201527f65726331313535732f746f6b656e496473206c656e677468206d69736d6174636044820152600d60fb1b6064820152608401610220565b8582146103cd5760405162461bcd60e51b815260206004820152602a60248201527f65726331313535732f726564656d7074696f6e416d6f756e7473206c656e67746044820152690d040dad2e6dac2e8c6d60b31b6064820152608401610220565b600061040b84848080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061081692505050565b905061041681610864565b9998505050505050505050565b604080518082019091526060808252602082015261044082610864565b949350505050565b604080518082019091526060808252602082015261046582610864565b95945050505050565b6000546001600160a01b031633146104985760405162461bcd60e51b8152600401610220906110d1565b80518251146105085760405162461bcd60e51b815260206004820152603660248201527f526563697069656e747320616e642073686172657320617272617973206d75736044820152750e840d0c2ecca40e8d0ca40e6c2daca40d8cadccee8d60531b6064820152608401610220565b600061051382610816565b9050806064146105655760405162461bcd60e51b815260206004820152601b60248201527f546f74616c20736861726573206d75737420657175616c2031303000000000006044820152606401610220565b8251610578906002906020860190610ad0565b50815161058c906003906020850190610b35565b507f919670197286461f736c76f6283ed050bb2801865950326d8f151b1fcd64a4a283836040516105be929190610fe4565b60405180910390a1505050565b60408051808201909152606080825260208201528382146106205760405162461bcd60e51b815260206004820152600f60248201526e0d8cadccee8d040dad2e6dac2e8c6d608b1b6044820152606401610220565b600061065e84848080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061081692505050565b905061066981610864565b979650505050505050565b60608060028054806020026020016040519081016040528092919081815260200182805480156106cd57602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106af575b50505050509150600380548060200260200160405190810160405280929190818152602001828054801561072057602002820191906000526020600020905b81548152602001906001019080831161070c575b505050505090509091565b6000546001600160a01b031633146107555760405162461bcd60e51b8152600401610220906110d1565b6001600160a01b0381166107ba5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610220565b6107c3816107c6565b50565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b600080805b835181101561085d5783818151811061083657610836611106565b6020026020010151826108499190611132565b9150806108558161114b565b91505061081b565b5092915050565b6040805180820190915260608082526020820152816000036108c85760405162461bcd60e51b815260206004820152601c60248201527f72657175657374656420616d6f756e74206d757374206265203e2030000000006044820152606401610220565b6000612710600154846108db9190611164565b6108e5919061117b565b9050806000036109375760405162461bcd60e51b815260206004820152601a60248201527f466565206d7573742062652067726561746572207468616e20300000000000006044820152606401610220565b61094081610947565b9392505050565b604080518082019091526060808252602082015260025460008167ffffffffffffffff81111561097957610979610dcd565b6040519080825280602002602001820160405280156109a2578160200160208202803683370190505b5090508360005b83811015610a3d576064600382815481106109c6576109c6611106565b9060005260206000200154876109dc9190611164565b6109e6919061117b565b8382815181106109f8576109f8611106565b602002602001018181525050828181518110610a1657610a16611106565b602002602001015182610a29919061119d565b915080610a358161114b565b9150506109a9565b508082600081518110610a5257610a52611106565b60200260200101818151610a669190611132565b9052506002805460408051602080840282018101909252828152929190830182828015610abc57602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610a9e575b505050918652505050602083015250919050565b828054828255906000526020600020908101928215610b25579160200282015b82811115610b2557825182546001600160a01b0319166001600160a01b03909116178255602090920191600190910190610af0565b50610b31929150610b70565b5090565b828054828255906000526020600020908101928215610b25579160200282015b82811115610b25578251825591602001919060010190610b55565b5b80821115610b315760008155600101610b71565b600060208284031215610b9757600080fd5b5035919050565b80356001600160a01b0381168114610bb557600080fd5b919050565b60008083601f840112610bcc57600080fd5b50813567ffffffffffffffff811115610be457600080fd5b6020830191508360208260051b8501011115610bff57600080fd5b9250929050565b60008060008060008060006080888a031215610c2157600080fd5b610c2a88610b9e565b9650602088013567ffffffffffffffff80821115610c4757600080fd5b610c538b838c01610bba565b909850965060408a0135915080821115610c6c57600080fd5b610c788b838c01610bba565b909650945060608a0135915080821115610c9157600080fd5b50610c9e8a828b01610bba565b989b979a50959850939692959293505050565b6020808252825160408383015280516060840181905260009291820190839060808601905b80831015610cff5783516001600160a01b03168252928401926001929092019190840190610cd6565b5086840151868203601f190160408801528051808352908501935090840191506000905b80821015610d435783518352928401929184019160019190910190610d23565b50909695505050505050565b600080600060608486031215610d6457600080fd5b610d6d84610b9e565b9250610d7b60208501610b9e565b9150604084013590509250925092565b60008060008060808587031215610da157600080fd5b610daa85610b9e565b9350610db860208601610b9e565b93969395505050506040820135916060013590565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715610e0c57610e0c610dcd565b604052919050565b600067ffffffffffffffff821115610e2e57610e2e610dcd565b5060051b60200190565b600082601f830112610e4957600080fd5b81356020610e5e610e5983610e14565b610de3565b82815260059290921b84018101918181019086841115610e7d57600080fd5b8286015b84811015610e985780358352918301918301610e81565b509695505050505050565b60008060408385031215610eb657600080fd5b823567ffffffffffffffff80821115610ece57600080fd5b818501915085601f830112610ee257600080fd5b81356020610ef2610e5983610e14565b82815260059290921b84018101918181019089841115610f1157600080fd5b948201945b83861015610f3657610f2786610b9e565b82529482019490820190610f16565b96505086013592505080821115610f4c57600080fd5b50610f5985828601610e38565b9150509250929050565b600080600080600060608688031215610f7b57600080fd5b610f8486610b9e565b9450602086013567ffffffffffffffff80821115610fa157600080fd5b610fad89838a01610bba565b90965094506040880135915080821115610fc657600080fd5b50610fd388828901610bba565b969995985093965092949392505050565b604080825283519082018190526000906020906060840190828701845b828110156110265781516001600160a01b031684529284019290840190600101611001565b5050508381038285015284518082528583019183019060005b8181101561105b5783518352928401929184019160010161103f565b5090979650505050505050565b60006020828403121561107a57600080fd5b61094082610b9e565b600060208083528351808285015260005b818110156110b057858101830151858201604001528201611094565b506000604082860101526040601f19601f8301168501019250505092915050565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b808201808211156111455761114561111c565b92915050565b60006001820161115d5761115d61111c565b5060010190565b80820281158282048414176111455761114561111c565b60008261119857634e487b7160e01b600052601260045260246000fd5b500490565b818103818111156111455761114561111c56fea2646970667358221220476c7a249bb79fb63ef083f0e28a4fe0922bcc826479835f4d6bd22ae51bb0ce64736f6c63430008130033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b50600436106100cf5760003560e01c8063927542741161008c578063b8606eef11610066578063b8606eef14610193578063bf1204341461019c578063f2fde38b146101b2578063ffa1ad74146101c557600080fd5b8063927542741461015a5780639ef3009d1461016d578063a5bd84c21461018057600080fd5b80630165dd27146100d45780636ca0b0d7146100e9578063715018a614610104578063721134961461010c5780638925ba9f1461012c5780638da5cb5b1461013f575b600080fd5b6100e76100e2366004610b85565b6101f6565b005b6100f1600281565b6040519081526020015b60405180910390f35b6100e76102c8565b61011f61011a366004610c06565b6102fe565b6040516100fb9190610cb1565b61011f61013a366004610d4f565b610423565b6000546040516001600160a01b0390911681526020016100fb565b61011f610168366004610d8b565b610448565b6100e761017b366004610ea3565b61046e565b61011f61018e366004610f63565b6105cb565b6100f160015481565b6101a4610674565b6040516100fb929190610fe4565b6100e76101c0366004611068565b61072b565b6101e9604051806040016040528060058152602001640312e302e360dc1b81525081565b6040516100fb9190611083565b6000546001600160a01b031633146102295760405162461bcd60e51b8152600401610220906110d1565b60405180910390fd5b612710811061028d5760405162461bcd60e51b815260206004820152602a60248201527f46656520626173697320706f696e74732073686f756c64206265206c6573732060448201526907468616e2031303030360b41b6064820152608401610220565b60018190556040518181527f3a81812ce3d900b6196b2d0a225da9df123054670067cf761d52294251a967409060200160405180910390a150565b6000546001600160a01b031633146102f25760405162461bcd60e51b8152600401610220906110d1565b6102fc60006107c6565b565b604080518082019091526060808252602082015285841461036b5760405162461bcd60e51b815260206004820152602160248201527f65726331313535732f746f6b656e496473206c656e677468206d69736d6174636044820152600d60fb1b6064820152608401610220565b8582146103cd5760405162461bcd60e51b815260206004820152602a60248201527f65726331313535732f726564656d7074696f6e416d6f756e7473206c656e67746044820152690d040dad2e6dac2e8c6d60b31b6064820152608401610220565b600061040b84848080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061081692505050565b905061041681610864565b9998505050505050505050565b604080518082019091526060808252602082015261044082610864565b949350505050565b604080518082019091526060808252602082015261046582610864565b95945050505050565b6000546001600160a01b031633146104985760405162461bcd60e51b8152600401610220906110d1565b80518251146105085760405162461bcd60e51b815260206004820152603660248201527f526563697069656e747320616e642073686172657320617272617973206d75736044820152750e840d0c2ecca40e8d0ca40e6c2daca40d8cadccee8d60531b6064820152608401610220565b600061051382610816565b9050806064146105655760405162461bcd60e51b815260206004820152601b60248201527f546f74616c20736861726573206d75737420657175616c2031303000000000006044820152606401610220565b8251610578906002906020860190610ad0565b50815161058c906003906020850190610b35565b507f919670197286461f736c76f6283ed050bb2801865950326d8f151b1fcd64a4a283836040516105be929190610fe4565b60405180910390a1505050565b60408051808201909152606080825260208201528382146106205760405162461bcd60e51b815260206004820152600f60248201526e0d8cadccee8d040dad2e6dac2e8c6d608b1b6044820152606401610220565b600061065e84848080602002602001604051908101604052809392919081815260200183836020028082843760009201919091525061081692505050565b905061066981610864565b979650505050505050565b60608060028054806020026020016040519081016040528092919081815260200182805480156106cd57602002820191906000526020600020905b81546001600160a01b031681526001909101906020018083116106af575b50505050509150600380548060200260200160405190810160405280929190818152602001828054801561072057602002820191906000526020600020905b81548152602001906001019080831161070c575b505050505090509091565b6000546001600160a01b031633146107555760405162461bcd60e51b8152600401610220906110d1565b6001600160a01b0381166107ba5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b6064820152608401610220565b6107c3816107c6565b50565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b600080805b835181101561085d5783818151811061083657610836611106565b6020026020010151826108499190611132565b9150806108558161114b565b91505061081b565b5092915050565b6040805180820190915260608082526020820152816000036108c85760405162461bcd60e51b815260206004820152601c60248201527f72657175657374656420616d6f756e74206d757374206265203e2030000000006044820152606401610220565b6000612710600154846108db9190611164565b6108e5919061117b565b9050806000036109375760405162461bcd60e51b815260206004820152601a60248201527f466565206d7573742062652067726561746572207468616e20300000000000006044820152606401610220565b61094081610947565b9392505050565b604080518082019091526060808252602082015260025460008167ffffffffffffffff81111561097957610979610dcd565b6040519080825280602002602001820160405280156109a2578160200160208202803683370190505b5090508360005b83811015610a3d576064600382815481106109c6576109c6611106565b9060005260206000200154876109dc9190611164565b6109e6919061117b565b8382815181106109f8576109f8611106565b602002602001018181525050828181518110610a1657610a16611106565b602002602001015182610a29919061119d565b915080610a358161114b565b9150506109a9565b508082600081518110610a5257610a52611106565b60200260200101818151610a669190611132565b9052506002805460408051602080840282018101909252828152929190830182828015610abc57602002820191906000526020600020905b81546001600160a01b03168152600190910190602001808311610a9e575b505050918652505050602083015250919050565b828054828255906000526020600020908101928215610b25579160200282015b82811115610b2557825182546001600160a01b0319166001600160a01b03909116178255602090920191600190910190610af0565b50610b31929150610b70565b5090565b828054828255906000526020600020908101928215610b25579160200282015b82811115610b25578251825591602001919060010190610b55565b5b80821115610b315760008155600101610b71565b600060208284031215610b9757600080fd5b5035919050565b80356001600160a01b0381168114610bb557600080fd5b919050565b60008083601f840112610bcc57600080fd5b50813567ffffffffffffffff811115610be457600080fd5b6020830191508360208260051b8501011115610bff57600080fd5b9250929050565b60008060008060008060006080888a031215610c2157600080fd5b610c2a88610b9e565b9650602088013567ffffffffffffffff80821115610c4757600080fd5b610c538b838c01610bba565b909850965060408a0135915080821115610c6c57600080fd5b610c788b838c01610bba565b909650945060608a0135915080821115610c9157600080fd5b50610c9e8a828b01610bba565b989b979a50959850939692959293505050565b6020808252825160408383015280516060840181905260009291820190839060808601905b80831015610cff5783516001600160a01b03168252928401926001929092019190840190610cd6565b5086840151868203601f190160408801528051808352908501935090840191506000905b80821015610d435783518352928401929184019160019190910190610d23565b50909695505050505050565b600080600060608486031215610d6457600080fd5b610d6d84610b9e565b9250610d7b60208501610b9e565b9150604084013590509250925092565b60008060008060808587031215610da157600080fd5b610daa85610b9e565b9350610db860208601610b9e565b93969395505050506040820135916060013590565b634e487b7160e01b600052604160045260246000fd5b604051601f8201601f1916810167ffffffffffffffff81118282101715610e0c57610e0c610dcd565b604052919050565b600067ffffffffffffffff821115610e2e57610e2e610dcd565b5060051b60200190565b600082601f830112610e4957600080fd5b81356020610e5e610e5983610e14565b610de3565b82815260059290921b84018101918181019086841115610e7d57600080fd5b8286015b84811015610e985780358352918301918301610e81565b509695505050505050565b60008060408385031215610eb657600080fd5b823567ffffffffffffffff80821115610ece57600080fd5b818501915085601f830112610ee257600080fd5b81356020610ef2610e5983610e14565b82815260059290921b84018101918181019089841115610f1157600080fd5b948201945b83861015610f3657610f2786610b9e565b82529482019490820190610f16565b96505086013592505080821115610f4c57600080fd5b50610f5985828601610e38565b9150509250929050565b600080600080600060608688031215610f7b57600080fd5b610f8486610b9e565b9450602086013567ffffffffffffffff80821115610fa157600080fd5b610fad89838a01610bba565b90965094506040880135915080821115610fc657600080fd5b50610fd388828901610bba565b969995985093965092949392505050565b604080825283519082018190526000906020906060840190828701845b828110156110265781516001600160a01b031684529284019290840190600101611001565b5050508381038285015284518082528583019183019060005b8181101561105b5783518352928401929184019160010161103f565b5090979650505050505050565b60006020828403121561107a57600080fd5b61094082610b9e565b600060208083528351808285015260005b818110156110b057858101830151858201604001528201611094565b506000604082860101526040601f19601f8301168501019250505092915050565b6020808252818101527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e6572604082015260600190565b634e487b7160e01b600052603260045260246000fd5b634e487b7160e01b600052601160045260246000fd5b808201808211156111455761114561111c565b92915050565b60006001820161115d5761115d61111c565b5060010190565b80820281158282048414176111455761114561111c565b60008261119857634e487b7160e01b600052601260045260246000fd5b500490565b818103818111156111455761114561111c56fea2646970667358221220476c7a249bb79fb63ef083f0e28a4fe0922bcc826479835f4d6bd22ae51bb0ce64736f6c63430008130033",
+  "devdoc": {
+    "author": "Neutral Labs Inc. & Toucan Protocol",
+    "details": "It implements the IFeeCalculator interface.",
+    "kind": "dev",
+    "methods": {
+      "calculateDepositFees(address,address,uint256)": {
+        "params": {
+          "depositAmount": "The amount to be deposited."
+        },
+        "returns": {
+          "feeDistribution": "How the fee is meant to be distributed among the fee recipients."
+        }
+      },
+      "calculateDepositFees(address,address,uint256,uint256)": {
+        "params": {
+          "depositAmount": "The amount to be deposited."
+        },
+        "returns": {
+          "feeDistribution": "How the fee is meant to be distributed among the fee recipients."
+        }
+      },
+      "calculateRedemptionFees(address,address[],uint256[])": {
+        "params": {
+          "redemptionAmounts": "The amounts to be redeemed.",
+          "tco2s": "The addresses of the TCO2 token."
+        },
+        "returns": {
+          "feeDistribution": "How the fee is meant to be distributed among the fee recipients."
+        }
+      },
+      "calculateRedemptionFees(address,address[],uint256[],uint256[])": {
+        "params": {
+          "erc1155s": "The addresses of the ERC1155 projects.",
+          "redemptionAmounts": "The amounts to be redeemed.",
+          "tokenIds": "The tokenIds of the project vintages."
+        },
+        "returns": {
+          "feeDistribution": "How the fee is meant to be distributed among the fee recipients."
+        }
+      },
+      "feeSetup(address[],uint256[])": {
+        "details": "Can only be called by the current owner.",
+        "params": {
+          "recipients": "The addresses of the fee recipients.",
+          "shares": "The share of the fee each recipient should receive."
+        }
+      },
+      "getFeeSetup()": {
+        "returns": {
+          "recipients": "shares The fee recipients and their share of the total fee."
+        }
+      },
+      "owner()": {
+        "details": "Returns the address of the current owner."
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+      },
+      "setFeeBasisPoints(uint256)": {
+        "details": "Can only be called by the current owner.",
+        "params": {
+          "_feeBasisPoints": "The new fee basis points."
+        }
+      },
+      "transferOwnership(address)": {
+        "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+      }
+    },
+    "stateVariables": {
+      "VERSION": {
+        "details": "Version-related parameters. VERSION keeps track of production releases. VERSION_RELEASE_CANDIDATE keeps track of iterations of a VERSION in our staging environment."
+      }
+    },
+    "title": "FlatFeeCalculator",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "calculateDepositFees(address,address,uint256)": {
+        "notice": "Calculates the deposit fee for a given amount."
+      },
+      "calculateDepositFees(address,address,uint256,uint256)": {
+        "notice": "Calculates the deposit fee for a given amount of an ERC1155 project."
+      },
+      "calculateRedemptionFees(address,address[],uint256[])": {
+        "notice": "Calculates the redemption fees for a given amount."
+      },
+      "calculateRedemptionFees(address,address[],uint256[],uint256[])": {
+        "notice": "Calculates the redemption fees for a given amount on ERC1155 projects."
+      },
+      "feeSetup(address[],uint256[])": {
+        "notice": "Sets up the fee distribution among recipients."
+      },
+      "getFeeSetup()": {
+        "notice": "Returns the current fee setup."
+      },
+      "setFeeBasisPoints(uint256)": {
+        "notice": "Sets the fee basis points."
+      }
+    },
+    "notice": "This contract calculates deposit and redemption fees for a given pool.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 5822,
+        "contract": "@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol:FlatFeeCalculator",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 18764,
+        "contract": "@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol:FlatFeeCalculator",
+        "label": "feeBasisPoints",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_uint256"
+      },
+      {
+        "astId": 18767,
+        "contract": "@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol:FlatFeeCalculator",
+        "label": "_recipients",
+        "offset": 0,
+        "slot": "2",
+        "type": "t_array(t_address)dyn_storage"
+      },
+      {
+        "astId": 18770,
+        "contract": "@toucanprotocol/dynamic-fee-pools/src/FlatFeeCalculator.sol:FlatFeeCalculator",
+        "label": "_shares",
+        "offset": 0,
+        "slot": "3",
+        "type": "t_array(t_uint256)dyn_storage"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_array(t_address)dyn_storage": {
+        "base": "t_address",
+        "encoding": "dynamic_array",
+        "label": "address[]",
+        "numberOfBytes": "32"
+      },
+      "t_array(t_uint256)dyn_storage": {
+        "base": "t_uint256",
+        "encoding": "dynamic_array",
+        "label": "uint256[]",
+        "numberOfBytes": "32"
+      },
+      "t_uint256": {
+        "encoding": "inplace",
+        "label": "uint256",
+        "numberOfBytes": "32"
+      }
+    }
+  }
+}

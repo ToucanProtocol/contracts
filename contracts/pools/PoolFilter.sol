@@ -93,54 +93,61 @@ abstract contract PoolFilter is
     //      Read-only functions
     // ----------------------------------------
 
-    /// @notice Checks if an ERC-20 token is eligible for this pool
+    /// @notice Checks if an ERC20 token is eligible for this pool
+    /// @param erc20Addr The ERC20 token
+    /// @return String with error code if any error occurs, else empty string
     function checkEligible(address erc20Addr)
         external
         view
         virtual
-        returns (bool)
+        returns (string memory)
     {
         bool isToucanContract = IToucanContractRegistry(contractRegistry)
             .isValidERC20(erc20Addr);
 
         if (isToucanContract) {
             if (internalAllowlist[erc20Addr]) {
-                return true;
+                return '';
             }
 
-            require(!internalBlocklist[erc20Addr], Errors.CP_BLOCKLISTED);
+            if (internalBlocklist[erc20Addr]) {
+                return Errors.CP_BLOCKLISTED;
+            }
 
-            checkAttributeMatching(erc20Addr);
+            return checkAttributeMatching(erc20Addr);
         } else {
             /// @dev If not Toucan native contract, check if address is allowlisted
-            require(externalAllowlist[erc20Addr], Errors.CP_NOT_ALLOWLISTED);
+            if (!externalAllowlist[erc20Addr]) {
+                return Errors.CP_NOT_ALLOWLISTED;
+            }
         }
 
-        return true;
+        return '';
     }
 
     /// @notice Checks if an ERC-1155 token is eligible for this pool
     /// @param tokenAddress address of the ERC1155 token
     /// @param tokenId ID of the ERC1155 token
-    /// @return true if token is eligible, reverts otherwise
+    /// @return String with error code if any error occurs, else empty string
     function checkERC1155Eligible(address tokenAddress, uint256 tokenId)
         external
         view
-        returns (bool)
+        returns (string memory)
     {
-        require(
-            externalERC1155Allowlist[tokenAddress][tokenId],
-            Errors.CP_NOT_ALLOWLISTED
-        );
-        return true;
+        if (!externalERC1155Allowlist[tokenAddress][tokenId])
+            return Errors.CP_NOT_ALLOWLISTED;
+
+        return '';
     }
 
     /// @notice Checks whether incoming ERC20s match the accepted criteria/attributes
+    /// @param erc20Addr The ERC20 token
+    /// @return String with error code if any error occurs, else empty string
     function checkAttributeMatching(address erc20Addr)
         public
         view
         virtual
-        returns (bool)
+        returns (string memory)
     {
         ProjectData memory projectData;
         VintageData memory vintageData;
@@ -149,25 +156,21 @@ abstract contract PoolFilter is
 
         /// @dev checks if any one of the attributes are blocklisted.
         /// If mappings are set to "allowlist"-mode, require the opposite
-        require(
-            vintageData.startTime >= minimumVintageStartTime,
-            Errors.CP_START_TIME_TOO_OLD
-        );
-        require(
-            regions[projectData.region] == regionsIsAcceptedMapping,
-            Errors.CP_REGION_NOT_ACCEPTED
-        );
-        require(
-            standards[projectData.standard] == standardsIsAcceptedMapping,
-            Errors.CP_STANDARD_NOT_ACCEPTED
-        );
-        require(
-            methodologies[projectData.methodology] ==
-                methodologiesIsAcceptedMapping,
-            Errors.CP_METHODOLOGY_NOT_ACCEPTED
-        );
+        if (vintageData.startTime < minimumVintageStartTime)
+            return Errors.CP_START_TIME_TOO_OLD;
 
-        return true;
+        if (regions[projectData.region] != regionsIsAcceptedMapping)
+            return Errors.CP_REGION_NOT_ACCEPTED;
+
+        if (standards[projectData.standard] != standardsIsAcceptedMapping)
+            return Errors.CP_STANDARD_NOT_ACCEPTED;
+
+        if (
+            methodologies[projectData.methodology] !=
+            methodologiesIsAcceptedMapping
+        ) return Errors.CP_METHODOLOGY_NOT_ACCEPTED;
+
+        return '';
     }
 
     // ----------------------------------------

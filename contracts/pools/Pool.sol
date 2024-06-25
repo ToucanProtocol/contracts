@@ -44,8 +44,6 @@ abstract contract Pool is
     //      Events
     // ----------------------------------------
 
-    event Deposited(address erc20Addr, uint256 amount);
-    event Redeemed(address account, address erc20, uint256 amount);
     event DepositFeePaid(address depositor, uint256 fees);
     event RedeemFeePaid(address redeemer, uint256 fees);
     event RedeemFeeBurnt(address redeemer, uint256 fees);
@@ -91,10 +89,6 @@ abstract contract Pool is
     //                Abstract
     // ----------------------------------------
 
-    function _increaseSupply(PoolVintageToken memory vintage, int256 delta)
-        internal
-        virtual;
-
     function _feeDistribution(PoolVintageToken memory vintage, uint256)
         internal
         view
@@ -117,6 +111,15 @@ abstract contract Pool is
     function _checkEligible(PoolVintageToken memory vintage)
         internal
         view
+        virtual;
+
+    function _emitDepositedEvent(
+        PoolVintageToken memory vintage,
+        uint256 amount
+    ) internal virtual;
+
+    function _emitRedeemedEvent(PoolVintageToken memory vintage, uint256 amount)
+        internal
         virtual;
 
     // ----------------------------------------
@@ -228,6 +231,7 @@ abstract contract Pool is
 
     /// @notice Function to limit the maximum pool supply
     /// @dev supplyCap is initially set to 0 and must be increased before deposits
+    /// @param newCap New pool supply cap
     function setSupplyCap(uint256 newCap) external virtual {
         onlyPoolOwner();
         supplyCap = newCap;
@@ -248,7 +252,7 @@ abstract contract Pool is
 
     function _deposit(
         PoolVintageToken memory vintage,
-        uint256 amount,
+        uint256 amountE18,
         uint256 maxFee
     ) internal returns (uint256 mintedPoolTokenAmount) {
         onlyUnpaused();
@@ -265,18 +269,17 @@ abstract contract Pool is
 
         // If the amount to be deposited exceeds the remaining space, deposit
         // the maximum amount possible up to the cap instead of failing.
-        if (amount > remainingSpace) amount = remainingSpace;
+        if (amountE18 > remainingSpace) amountE18 = remainingSpace;
 
-        uint256 depositedAmount = amount;
+        uint256 depositedAmount = amountE18;
+        uint256 feeDistributionTotal = 0;
         if (feeCalculator != IFeeCalculator(address(0))) {
             // If a fee module is configured, use it to calculate the minting fees
             FeeDistribution memory feeDistribution = _feeDistribution(
                 vintage,
                 depositedAmount
             );
-            uint256 feeDistributionTotal = getFeeDistributionTotal(
-                feeDistribution
-            );
+            feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
             _checkMaxFee(maxFee, feeDistributionTotal);
             depositedAmount -= feeDistributionTotal;
 
@@ -288,18 +291,47 @@ abstract contract Pool is
             emit DepositFeePaid(msg.sender, feeDistributionTotal);
         }
 
-        // Mint pool tokens to the user
-        _mint(msg.sender, depositedAmount);
+        // Mint pool tokens to the user based on the amount of the deposited
+        // underlying token
+        mintedPoolTokenAmount = _mint(
+            msg.sender,
+            depositedAmount,
+            feeDistributionTotal,
+            vintage
+        );
 
         // Update supply-related storage variables in the pool
-        _increaseSupply(vintage, int256(amount));
+        _changeSupply(vintage, int256(amountE18));
 
-        // Transfer the TCO2 to the pool
-        _transfer(vintage, msg.sender, address(this), amount);
+        // Transfer the underlying token to the pool
+        _transfer(vintage, msg.sender, address(this), amountE18);
 
-        emit Deposited(vintage.tokenAddress, amount);
+        _emitDepositedEvent(vintage, amountE18);
+    }
 
-        return depositedAmount;
+    /// @notice Function to mint pool tokens based on the amount of TCO2
+    /// @dev This function enables the minting of pool tokens based on the amount and the vintage token
+    /// @dev For generic Pool contract the minting is 1:1
+    function _mint(
+        address account,
+        uint256 amount,
+        uint256, /* fee */
+        PoolVintageToken memory
+    ) internal virtual returns (uint256) {
+        super._mint(account, amount);
+        return amount;
+    }
+
+    /// @notice Function to burn pool tokens based on the amount of TCO2
+    /// @dev This function enables the burning of pool tokens based on the amount and the vintage token
+    /// @dev For generic Pool contract the burning is 1:1
+    function _burn(
+        address account,
+        uint256 amount,
+        PoolVintageToken memory
+    ) internal virtual returns (uint256) {
+        super._burn(account, amount);
+        return amount;
     }
 
     /// @notice Returns minimum vintage start time for this pool
@@ -326,7 +358,8 @@ abstract contract Pool is
         return IPoolFilter(filter).methodologies(methodology);
     }
 
-    /// @dev Internal function to calculate redemption fees.
+    /// @dev Internal function to calculate redemption fees according to the
+    /// amounts of pool tokens to be spent
     /// Made virtual so that each child contract can implement its own
     /// internal fee calculation logic that can be shared with the
     /// current Pool contract. Child contracts will most likely need
@@ -347,7 +380,8 @@ abstract contract Pool is
             FeeDistribution memory feeDistribution
         );
 
-    /// @dev Internal function to calculate redemption fees.
+    /// @dev Internal function to calculate redemption fees according to the
+    /// amounts of TCO2 to be redeemed
     /// Made virtual so that each child contract can implement its own
     /// internal fee calculation logic that can be shared with the
     /// current Pool contract. Child contracts will most likely need
@@ -416,6 +450,7 @@ abstract contract Pool is
 
         // Execute redemptions
         uint256 totalFee = 0;
+
         for (uint256 i = 0; i < vintageLength; ++i) {
             _checkEligible(vintages[i]);
 
@@ -424,6 +459,7 @@ abstract contract Pool is
             totalFee += feeAmounts[i];
 
             // Redeem the amount minus the fee
+            //slither-disable-next-line unused-return
             _redeemSingle(vintages[i], amountToRedeem);
 
             // If requested, retire the vintage tokens in one go. Callers should
@@ -446,7 +482,7 @@ abstract contract Pool is
 
         // Distribute the fee between the recipients
         if (totalFee > 0) {
-            distributeRedemptionFee(
+            _distributeRedemptionFee(
                 feeDistribution.recipients,
                 feeDistribution.shares
             );
@@ -460,9 +496,20 @@ abstract contract Pool is
         }
     }
 
+    function _changeSupply(PoolVintageToken memory vintage, int256 delta)
+        internal
+        virtual
+    {
+        uint256 currentSupply = totalProjectSupply[vintage.projectTokenId];
+        totalProjectSupply[vintage.projectTokenId] = uint256(
+            int256(currentSupply) + delta
+        );
+        totalUnderlyingSupply = uint256(int256(totalUnderlyingSupply) + delta);
+    }
+
     function _redeemOutMany(
         PoolVintageToken[] memory vintages,
-        uint256[] memory amounts,
+        uint256[] memory amountsE18,
         uint256 maxFee,
         bool toRetire
     )
@@ -471,7 +518,7 @@ abstract contract Pool is
     {
         onlyUnpaused();
         uint256 vintageLength = vintages.length;
-        _checkLength(vintageLength, amounts.length);
+        _checkLength(vintageLength, amountsE18.length);
 
         // Initialize return arrays
         if (toRetire) {
@@ -482,13 +529,13 @@ abstract contract Pool is
         (
             uint256 feeDistributionTotal,
             FeeDistribution memory feeDistribution
-        ) = _calculateRedemptionOutFees(vintages, amounts, toRetire);
+        ) = _calculateRedemptionOutFees(vintages, amountsE18, toRetire);
         _checkMaxFee(maxFee, feeDistributionTotal);
         poolAmountSpent += feeDistributionTotal;
 
         // Distribute the fee between the recipients
         if (feeDistributionTotal != 0) {
-            distributeRedemptionFee(
+            _distributeRedemptionFee(
                 feeDistribution.recipients,
                 feeDistribution.shares
             );
@@ -499,9 +546,8 @@ abstract contract Pool is
             _checkEligible(vintages[i]);
 
             // Redeem the amount
-            uint256 amountToRedeem = amounts[i];
-            poolAmountSpent += amountToRedeem;
-            _redeemSingle(vintages[i], amountToRedeem);
+            uint256 amountToRedeem = amountsE18[i];
+            poolAmountSpent += _redeemSingle(vintages[i], amountToRedeem);
 
             // If requested, retire the vintage tokens in one go. Callers should
             // first approve the pool in order for the pool to retire
@@ -517,7 +563,7 @@ abstract contract Pool is
     }
 
     // Distribute the fees between the recipients
-    function distributeRedemptionFee(
+    function _distributeRedemptionFee(
         address[] memory recipients,
         uint256[] memory fees
     ) internal {
@@ -538,20 +584,21 @@ abstract contract Pool is
     }
 
     /// @dev Internal function that redeems a single underlying token
-    function _redeemSingle(PoolVintageToken memory vintage, uint256 amount)
+    function _redeemSingle(PoolVintageToken memory vintage, uint256 amountE18)
         internal
         virtual
+        returns (uint256 burntAmount)
     {
         // Burn pool tokens
-        _burn(msg.sender, amount);
+        burntAmount = _burn(msg.sender, amountE18, vintage);
 
         // Update supply-related storage variables in the pool
-        _increaseSupply(vintage, int256(amount) * -1);
+        _changeSupply(vintage, int256(amountE18) * -1);
 
         // Transfer vintage token tokens to the caller
-        _transfer(vintage, address(this), msg.sender, amount);
+        _transfer(vintage, address(this), msg.sender, amountE18);
 
-        emit Redeemed(msg.sender, vintage.tokenAddress, amount);
+        _emitRedeemedEvent(vintage, amountE18);
     }
 
     /// @dev Implemented in order to disable transfers when paused

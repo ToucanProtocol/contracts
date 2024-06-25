@@ -112,10 +112,10 @@ abstract contract PoolWithFixedFees is PoolERC20able {
         return 0;
     }
 
-    /// @notice View function to calculate fees pre-execution
-    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @notice View function to calculate fees pre-execution,
+    /// according to the amounts of pool tokens to be spent.
     /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
     /// @param toRetire Whether the TCO2s will be retired atomically
     /// with the redemption. It may be that lower fees will be charged
     /// in this case.
@@ -172,10 +172,11 @@ abstract contract PoolWithFixedFees is PoolERC20able {
         feeDistribution = getFixedRedemptionFeeRecipients(feeDistributionTotal);
     }
 
-    /// @notice View function to calculate fees pre-execution
+    /// @notice View function to calculate fees pre-execution,
+    /// according to the amounts of TCO2 to be redeemed.
     /// @dev User specifies in front-end the addresses and amounts they want
     /// @param tco2s Array of TCO2 contract addresses
-    /// @param amounts Array of amounts to redeem for each tco2s
+    /// @param amounts Array of amounts of TCO2 to be redeemed
     /// @param toRetire Whether the TCO2s will be retired atomically
     /// with the redemption. It may be that lower fees will be charged
     /// in this case.
@@ -256,7 +257,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of TCO2 amounts to redeem
     /// The indexes of this array are matching 1:1 with the tco2s array.
-    /// @return poolAmountSpent The amount of pool tokens that were spent
+    /// @return poolAmountSpent The amount of pool tokens spent by the caller
     function redeemOutMany(address[] memory tco2s, uint256[] memory amounts)
         external
         virtual
@@ -330,7 +331,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
         uint256 scoredTCO2Len = scoredTCO2s.length;
         while (amount > 0 && i < scoredTCO2Len) {
             address tco2 = scoredTCO2s[i];
-            uint256 balance = tokenBalances(tco2);
+            uint256 balance = tokenBalance(tco2);
             uint256 amountToRedeem = 0;
 
             // Only TCO2s with a balance should be included for a redemption.
@@ -357,6 +358,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
 
                 tco2s[nonZeroCount - 1] = tco2;
                 amounts[nonZeroCount - 1] = amountToRedeem;
+                //slither-disable-next-line unused-return
                 _redeemSingle(_buildPoolVintageToken(tco2), amountToRedeem);
             }
         }
@@ -375,7 +377,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
             // tco2 balance is smaller than the remaining amount while the last bit of
             // the `amount` which is smaller than the tco2 balance, got redeemed
             // in the first loop.
-            uint256 balance = tokenBalances(tco2);
+            uint256 balance = tokenBalance(tco2);
 
             // Ignore empty balances so we don't generate redundant transactions.
             //slither-disable-next-line incorrect-equality
@@ -383,6 +385,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
 
             tco2s[nonZeroCount] = tco2;
             amounts[nonZeroCount] = balance;
+            //slither-disable-next-line unused-return
             _redeemSingle(_buildPoolVintageToken(tco2), balance);
             unchecked {
                 ++nonZeroCount;

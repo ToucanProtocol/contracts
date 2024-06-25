@@ -6,10 +6,10 @@
 pragma solidity 0.8.14;
 
 import {IEcoCarbonCredit} from '../interfaces/IEcoCarbonCredit.sol';
-import {PoolWithFeeCalculatorERC1155} from './PoolWithFeeCalculatorERC1155.sol';
+import {PoolWithAdjustingERC1155} from './PoolWithAdjustingERC1155.sol';
 
 /// @notice REDD pool contract
-contract REDD is PoolWithFeeCalculatorERC1155 {
+contract REDD is PoolWithAdjustingERC1155 {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------
@@ -18,7 +18,7 @@ contract REDD is PoolWithFeeCalculatorERC1155 {
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
     string public constant VERSION = '1.0.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
     // ----------------------------------------
     //      Upgradable related functions

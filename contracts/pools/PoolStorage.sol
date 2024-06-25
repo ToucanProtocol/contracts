@@ -99,11 +99,27 @@ abstract contract PoolStorageV1_5 {
     /// @notice module to calculate fees for the pool
     //slither-disable-next-line uninitialized-state,constable-states
     IFeeCalculator public feeCalculator;
-    /// @notice Total TCO2 supply in the pool.
-    uint256 public totalTCO2Supply;
+    /// @notice Total supply of underlying collateral in the pool.  Supply
+    /// amounts are kept in the underlying's native precision regardless
+    /// of whether underlying is an ERC-20 or ERC-1155 token.
+    uint256 public totalUnderlyingSupply;
     /// @notice Project token id to total supply of the project
-    /// in the pool.
+    /// in the pool. Supply amounts are kept in the underlying's native
+    /// precision regardless of whether underlying is an ERC-20 or ERC-1155
+    /// token.
     mapping(uint256 => uint256) public totalProjectSupply;
+}
+
+abstract contract PoolStorageV1_6 {
+    /// @notice Mapping to track scores for ERC-1155 tokens
+    mapping(address => mapping(uint256 => uint256)) internal _scores;
+
+    mapping(address => mapping(uint256 => bool)) internal _vintageDeposited;
+    /// @notice Underlying decimals for ERC-1155 tokens. 0 decimals means
+    /// that the smallest denomination the ERC-1155 token can represent is
+    /// a tonne, 3 decimals means a kilogram, etc.
+    //slither-disable-next-line constable-states
+    uint8 internal _underlyingDecimals;
 }
 
 abstract contract PoolStorage is
@@ -112,5 +128,6 @@ abstract contract PoolStorage is
     PoolStorageV1_2,
     PoolStorageV1_3,
     PoolStorageV1_4,
-    PoolStorageV1_5
+    PoolStorageV1_5,
+    PoolStorageV1_6
 {}

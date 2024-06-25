@@ -60,7 +60,8 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
         feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
     }
 
-    /// @notice View function to calculate fees pre-execution
+    /// @notice View function to calculate fees pre-execution,
+    /// according to the amounts of pool tokens to be spent.
     /// NOTE: This function is not supported yet
     function calculateRedemptionInFees(
         address[] memory, /* tco2s */
@@ -93,8 +94,8 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
         revert(Errors.CP_NOT_SUPPORTED);
     }
 
-    /// @notice View function to calculate fees pre-execution
-    /// @dev User specifies in front-end the addresses and amounts they want
+    /// @notice View function to calculate fees pre-execution,
+    /// according to the amounts of TCO2 to be redeemed.
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of TCO2 amounts to redeem
     /// The indexes of this array are matching 1:1 with the tco2s array.
@@ -134,7 +135,7 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
         // Calculating fees for multi-TCO2 redemptions is not supported yet
         uint256 vintageLength = vintages.length;
         require(vintageLength == 1, Errors.CP_NOT_SUPPORTED);
-        require(vintageLength == amounts.length, Errors.CP_LENGTH_MISMATCH);
+        _checkLength(vintageLength, amounts.length);
 
         // If the fee calculator is not configured or the caller is exempted, no fees are paid
         if (
@@ -171,7 +172,9 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
         uint256 amount,
         uint256 maxFee
     ) external returns (uint256 mintedPoolTokenAmount) {
-        require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
+        if (address(feeCalculator) != address(0)) {
+            require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
+        }
         return super._deposit(_buildPoolVintageToken(tco2), amount, maxFee);
     }
 
@@ -184,13 +187,15 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
     /// Use `calculateRedemptionOutFees(tco2s,amounts,false)` to determine the fee that will
     /// be charged given the state of the pool during this call. Add a buffer on top of the
     /// returned fee amount up to the maximum fee you are willing to pay.
-    /// @return poolAmountSpent The amount of pool tokens that were spent
+    /// @return poolAmountSpent The amount of pool tokens spent by the caller
     function redeemOutMany(
         address[] memory tco2s,
         uint256[] memory amounts,
         uint256 maxFee
     ) external virtual returns (uint256 poolAmountSpent) {
-        require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
+        if (address(feeCalculator) != address(0)) {
+            require(maxFee != 0, Errors.CP_INVALID_MAX_FEE);
+        }
         require(tco2s.length == 1, Errors.CP_NOT_SUPPORTED);
         PoolVintageToken[] memory vintages = _buildPoolVintageTokens(tco2s);
         (, poolAmountSpent) = _redeemOutMany(vintages, amounts, maxFee, false);

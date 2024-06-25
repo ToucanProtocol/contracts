@@ -131,4 +131,14 @@ library Errors {
     // Splitting is required on detokenization/retirement finalization, but 2 new serial numbers
     // were not provided
     string public constant TCO2_MISSING_SERIALS = '56';
+    // The score set for the ERC-1155 token in the pool is invalid
+    string public constant INVALID_ERC1155_SCORE = '57';
+    // The score of the ERC-1155 token in the pool is not set
+    string public constant EMPTY_ERC155_SCORE = '58';
+    // The underlying decimals are too high for the pool
+    string public constant UNDERLYING_DECIMALS_TOO_HIGH = '59';
+    // The provided supply cap is invalid and should match the underlying token decimals
+    // eg., for an ERC-1155 token whose smallest denomination is tonnes, the pool supply
+    // cap should not include decimals of lower fidelity than tonnes.
+    string public constant INVALID_SUPPLY_CAP = '60';
 }

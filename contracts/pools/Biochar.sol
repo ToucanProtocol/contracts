@@ -42,4 +42,16 @@ contract Biochar is PoolWithFeeCalculatorERC20, PoolBridgeable {
     {
         return totalProjectSupply[projectTokenId];
     }
+
+    /// @dev Exposed for backwards compatibility and will be removed
+    /// in a future version. Use tokenBalance instead.
+    function tokenBalances(address tco2) public view returns (uint256) {
+        return tokenBalance(tco2);
+    }
+
+    /// @dev Exposed for backwards compatibility and will be removed
+    /// in a future version. Use totalUnderlyingSupply instead.
+    function totalTCO2Supply() external view returns (uint256) {
+        return totalUnderlyingSupply;
+    }
 }

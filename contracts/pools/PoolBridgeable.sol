@@ -132,7 +132,7 @@ abstract contract PoolBridgeable is Pool {
                 VintageData memory vData = IToucanCarbonOffsets(tco2)
                     .getVintageData();
                 totalProjectSupply[vData.projectTokenId] -= amount;
-                totalTCO2Supply -= amount;
+                totalUnderlyingSupply -= amount;
             }
 
             // Transfer tokens to recipient

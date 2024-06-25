@@ -16,6 +16,9 @@ import {IPoolFilter} from '../interfaces/IPoolFilter.sol';
 abstract contract PoolERC20able is Pool {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    event Deposited(address erc20Addr, uint256 amount);
+    event Redeemed(address account, address erc20, uint256 amount);
+
     /// @notice Return the total supply of the project for the
     /// given TCO2 token.
     /// @return supply
@@ -37,6 +40,7 @@ abstract contract PoolERC20able is Pool {
     function redeemAndBurn(address tco2, uint256 amount) external {
         onlyUnpaused();
         require(redeemFeeExemptedTCO2s[tco2], Errors.CP_NOT_EXEMPTED);
+        //slither-disable-next-line unused-return
         _redeemSingle(_buildPoolVintageToken(tco2), amount);
         // User has to approve the pool contract in the TCO2 contract
         // in order for this function to successfully burn the tokens
@@ -46,7 +50,7 @@ abstract contract PoolERC20able is Pool {
     /// @notice View function to calculate deposit fees pre-execution
     /// @dev User specifies in front-end the address and amount they want
     /// @param tco2 TCO2 contract addresses
-    /// @param amount Amount to redeem
+    /// @param amount Amount to deposit
     /// @return feeDistributionTotal Total fee amount to be paid
     function calculateDepositFees(address tco2, uint256 amount)
         external
@@ -54,7 +58,8 @@ abstract contract PoolERC20able is Pool {
         virtual
         returns (uint256 feeDistributionTotal);
 
-    /// @notice View function to calculate redemption fees pre-execution
+    /// @notice View function to calculate redemption fees pre-execution,
+    /// according to the amounts of pool tokens to be spent.
     /// @param tco2s Array of TCO2 contract addresses
     /// @param amounts Array of pool token amounts to spend in order to redeem TCO2s.
     /// The indexes of this array are matching 1:1 with the tco2s array.
@@ -68,8 +73,10 @@ abstract contract PoolERC20able is Pool {
         bool toRetire
     ) external view virtual returns (uint256 feeDistributionTotal);
 
-    /// @notice View function to calculate redemption fees pre-execution
-    /// @param tco2s Array of TCO2 contract addresseså
+    /// @notice View function to calculate redemption fees pre-execution,
+    /// according to the amounts of TCO2 to be redeemed.
+    /// @param tco2s Array of TCO2 contract addresses
+    /// @param amounts Array of TCO2 amounts to redeem.
     /// The indexes of this array are matching 1:1 with the tco2s array.
     /// @param toRetire Whether the TCO2s will be retired atomically
     /// with the redemption. It may be that lower fees will be charged
@@ -82,7 +89,9 @@ abstract contract PoolERC20able is Pool {
     ) external view virtual returns (uint256 feeDistributionTotal);
 
     /// @notice Returns the balance of the carbon offset found in the pool
-    function tokenBalances(address tco2) public view returns (uint256) {
+    /// @param tco2 TCO2 contract address
+    /// @return balance pool balance
+    function tokenBalance(address tco2) public view returns (uint256) {
         return IERC20Upgradeable(tco2).balanceOf(address(this));
     }
 
@@ -99,11 +108,24 @@ abstract contract PoolERC20able is Pool {
         returns (bool isEligible)
     {
         _checkEligible(_buildPoolVintageToken(vintageToken));
-
         return true;
     }
 
     // Internal
+
+    function _emitDepositedEvent(
+        PoolVintageToken memory vintage,
+        uint256 amount
+    ) internal override {
+        emit Deposited(vintage.tokenAddress, amount);
+    }
+
+    function _emitRedeemedEvent(PoolVintageToken memory vintage, uint256 amount)
+        internal
+        override
+    {
+        emit Redeemed(msg.sender, vintage.tokenAddress, amount);
+    }
 
     function _checkEligible(PoolVintageToken memory vintage)
         internal
@@ -111,31 +133,13 @@ abstract contract PoolERC20able is Pool {
         override
     {
         //slither-disable-next-line unused-return
-        try IPoolFilter(filter).checkEligible(vintage.tokenAddress) returns (
-            //slither-disable-next-line uninitialized-local
-            bool isEligible
-        ) {
-            require(isEligible, Errors.CP_NOT_ELIGIBLE);
-            //slither-disable-next-line uninitialized-local
-        } catch Error(string memory reason) {
-            revert(reason);
-            //slither-disable-next-line uninitialized-local
-        } catch (bytes memory reason) {
-            // this most often results in a random bytes sequence,
-            // but it's worth at least trying to log it
-            revert(string.concat('unexpected error: ', string(reason)));
-        }
-    }
-
-    function _increaseSupply(PoolVintageToken memory vintage, int256 delta)
-        internal
-        virtual
-        override
-    {
-        totalProjectSupply[vintage.projectTokenId] = uint256(
-            int256(totalProjectSupply[vintage.projectTokenId]) + delta
+        string memory eligibilityError = IPoolFilter(filter).checkEligible(
+            vintage.tokenAddress
         );
-        totalTCO2Supply = uint256(int256(totalTCO2Supply) + delta);
+
+        if (bytes(eligibilityError).length > 0) {
+            revert(eligibilityError);
+        }
     }
 
     function _feeDistribution(PoolVintageToken memory vintage, uint256 amount)
