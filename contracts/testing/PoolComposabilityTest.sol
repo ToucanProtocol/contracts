@@ -6,6 +6,7 @@
 pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
 import '../interfaces/IRetirementCertificates.sol';
 
@@ -136,7 +137,7 @@ contract PoolComposabilityTest {
                 'Just testing',
                 retirementIds
             );
-        IRetirementCertificates(_retirementCertificates).safeTransferFrom(
+        IERC721(_retirementCertificates).safeTransferFrom(
             address(this),
             msg.sender,
             tokenId
@@ -175,7 +176,7 @@ contract PoolComposabilityTest {
                     'Just testing',
                     ids
                 );
-            IRetirementCertificates(_retirementCertificates).safeTransferFrom(
+            IERC721(_retirementCertificates).safeTransferFrom(
                 address(this),
                 msg.sender,
                 tokenId

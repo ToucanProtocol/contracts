@@ -85,7 +85,7 @@ abstract contract PoolFilter is
 
     /// @dev function that checks whether the caller is the
     /// contract owner
-    function onlyPoolOwner() internal view virtual {
+    function onlyPoolOwner() internal view {
         require(owner() == msg.sender, Errors.CP_ONLY_OWNER);
     }
 
@@ -177,7 +177,7 @@ abstract contract PoolFilter is
     //      Admin functions
     // ----------------------------------------
 
-    function setToucanContractRegistry(address _address) external virtual {
+    function setToucanContractRegistry(address _address) external {
         onlyPoolOwner();
         contractRegistry = _address;
         emit ToucanRegistrySet(_address);
@@ -187,10 +187,7 @@ abstract contract PoolFilter is
     /// acceptance or rejection criteria
     /// @param _mappingName attribute mapping of project-vintage data
     /// @param accepted determines if mapping works as a blocklist or allowlist
-    function switchMapping(string memory _mappingName, bool accepted)
-        external
-        virtual
-    {
+    function switchMapping(string memory _mappingName, bool accepted) external {
         onlyPoolOwner();
         if (_mappingName.equals('regions')) {
             accepted
@@ -366,7 +363,6 @@ abstract contract PoolFilter is
     /// @param _minimumVintageStartTime unix time format
     function setMinimumVintageStartTime(uint64 _minimumVintageStartTime)
         external
-        virtual
     {
         onlyPoolOwner();
         minimumVintageStartTime = _minimumVintageStartTime;

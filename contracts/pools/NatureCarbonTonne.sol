@@ -6,12 +6,12 @@
 pragma solidity 0.8.14;
 
 import {Errors} from '../libraries/Errors.sol';
-import {PoolBridgeable} from './PoolBridgeable.sol';
+import {PoolBridgeableLegacy} from './PoolBridgeableLegacy.sol';
 import {PoolWithFixedFees} from './PoolWithFixedFees.sol';
 
 /// @notice Nature Carbon Tonne (or NatureCarbonTonne)
 /// Contract is an ERC20 compliant token that acts as a pool for TCO2 tokens
-contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeable {
+contract NatureCarbonTonne is PoolWithFixedFees, PoolBridgeableLegacy {
     // ----------------------------------------
     //      Constants
     // ----------------------------------------

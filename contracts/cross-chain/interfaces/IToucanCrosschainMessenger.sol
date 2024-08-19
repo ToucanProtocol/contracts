@@ -21,6 +21,13 @@ interface IToucanCrosschainMessenger {
         address recipient
     ) external payable;
 
+    function bridgeTCO2s(
+        uint32 destinationDomain,
+        address[] memory token,
+        uint256[] memory amount,
+        address recipient
+    ) external payable;
+
     function remoteTokens(address _token, uint32 _destinationDomain)
         external
         view
@@ -30,6 +37,13 @@ interface IToucanCrosschainMessenger {
         uint32 destinationDomain,
         address token,
         uint256 amount,
+        address recipient
+    ) external view returns (uint256);
+
+    function quoteBridgeTCO2sFee(
+        uint32 destinationDomain,
+        address[] memory tokens,
+        uint256[] memory amounts,
         address recipient
     ) external view returns (uint256);
 }

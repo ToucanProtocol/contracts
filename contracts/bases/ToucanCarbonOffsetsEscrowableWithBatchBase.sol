@@ -183,7 +183,7 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
         address escrow = IToucanContractRegistry(contractRegistry)
             .toucanCarbonOffsetsEscrowAddress();
 
-        // Create escrow contract request, and trasnfer TCO2s from sender to escrow contract
+        // Create escrow contract request, and transfer TCO2s from sender to escrow contract
         require(
             approve(escrow, params.amount),
             Errors.TCO2_APPROVAL_AMT_FAILED

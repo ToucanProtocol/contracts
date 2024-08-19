@@ -6,6 +6,7 @@
 pragma solidity 0.8.14;
 
 import {CreateRetirementRequestParams} from '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import '../retirements/RetirementCertificatesTypes.sol';
 
 interface IRetirementCertificates {
     function mintCertificate(
@@ -30,9 +31,19 @@ interface IRetirementCertificates {
         bool isLegacy
     ) external returns (uint256 retireEventCounter);
 
-    function safeTransferFrom(
-        address from,
-        address to,
-        uint256 tokenId
-    ) external;
+    /// NOTE: This function is deprecated in favour of `certificates` and should be removed in future versions.
+    function getData(uint256 tokenId)
+        external
+        view
+        returns (CertificateData memory);
+
+    function certificates(uint256 tokenId)
+        external
+        view
+        returns (CertificateData memory);
+
+    function retirements(uint256)
+        external
+        view
+        returns (RetirementEvent memory);
 }

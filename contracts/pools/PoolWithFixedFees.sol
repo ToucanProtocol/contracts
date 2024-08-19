@@ -28,7 +28,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
 
     /// @notice Update the fee redeem percentage
     /// @param feeBp_ percentage of fee in basis points
-    function setFeeRedeemPercentage(uint256 feeBp_) external virtual {
+    function setFeeRedeemPercentage(uint256 feeBp_) external {
         onlyWithRole(MANAGER_ROLE);
         require(feeBp_ < feeRedeemDivider, Errors.CP_INVALID_FEE);
         _feeRedeemPercentageInBase = feeBp_;
@@ -37,7 +37,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
 
     /// @notice Update the fee percentage charged in redeemManyAndRetire
     /// @param feeBp_ percentage of fee in basis points
-    function setFeeRedeemRetirePercentage(uint256 feeBp_) external virtual {
+    function setFeeRedeemRetirePercentage(uint256 feeBp_) external {
         onlyWithRole(MANAGER_ROLE);
         require(feeBp_ < feeRedeemDivider, Errors.CP_INVALID_FEE);
         _feeRedeemRetirePercentageInBase = feeBp_;
@@ -46,7 +46,7 @@ abstract contract PoolWithFixedFees is PoolERC20able {
 
     /// @notice Update the fee redeem receiver
     /// @param feeRedeemReceiver_ address to transfer the fees
-    function setFeeRedeemReceiver(address feeRedeemReceiver_) external virtual {
+    function setFeeRedeemReceiver(address feeRedeemReceiver_) external {
         onlyPoolOwner();
         require(feeRedeemReceiver_ != address(0), Errors.CP_EMPTY_ADDRESS);
         _feeRedeemReceiver = feeRedeemReceiver_;

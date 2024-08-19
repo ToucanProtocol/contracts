@@ -164,24 +164,20 @@ contract CarbonOffsetBatches is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), callable only by the Toucan contract registry or the contract owner
-    function pause() external virtual onlyBy(contractRegistry, owner()) {
+    function pause() external onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @notice Emergency function to re-enable contract's core functionality after being paused
     /// @dev wraps _unpause(), callable only by the Toucan contract registry or the contract owner
-    function unpause() external virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
     /// @notice Admin function to set the contract registry
     /// @dev Callable only by the contract owner
     /// @param _address The address of the new contract registry
-    function setToucanContractRegistry(address _address)
-        external
-        virtual
-        onlyOwner
-    {
+    function setToucanContractRegistry(address _address) external onlyOwner {
         contractRegistry = _address;
     }
 
@@ -623,7 +619,7 @@ contract CarbonOffsetBatches is
         return baseURI;
     }
 
-    function setBaseURI(string memory gateway) external virtual onlyOwner {
+    function setBaseURI(string memory gateway) external onlyOwner {
         baseURI = gateway;
     }
 

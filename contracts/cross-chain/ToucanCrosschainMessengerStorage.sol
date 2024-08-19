@@ -14,25 +14,26 @@ struct RemoteTokenInformation {
     uint256 timer;
 }
 
+struct BridgeRequest {
+    bool isReverted; // this state is added for future addition of revert functionality
+    uint256 timestamp;
+    BridgeRequestType requestType;
+    MessageType messageType;
+}
+
+enum BridgeRequestType {
+    NOT_REGISTERED, // 0
+    SENT, // 1
+    RECEIVED // 2
+}
+
+enum MessageType {
+    TOKEN_TRANSFER,
+    TCO2_REBALANCE
+}
+
 /// @dev Separate storage contract to improve upgrade safety
 abstract contract ToucanCrosschainMessengerStorageV1 {
-    enum BridgeRequestType {
-        NOT_REGISTERED, // 0
-        SENT, // 1
-        RECEIVED // 2
-    }
-
-    enum MessageTypes {
-        MINT
-    }
-
-    struct BridgeRequest {
-        bool isReverted; // this state is added for future addition of revert functionality
-        uint256 timestamp;
-        BridgeRequestType requestType;
-        MessageTypes messageType;
-    }
-
     /// @dev nonce is used to serialize requests executed
     /// by the source chain in order to avoid duplicates
     /// from being processed in the remote chain
@@ -42,12 +43,13 @@ abstract contract ToucanCrosschainMessengerStorageV1 {
     /// @dev requests keeps track of a hash of the request
     /// to the request info in order to avoid duplicates
     /// from being processed in the remote chain
+    /// @custom:oz-retyped-from mapping(bytes32 => ToucanCrosschainMessengerStorageV1.BridgeRequest)
     mapping(bytes32 => BridgeRequest) public requests;
     /// @notice remoteTokens maps a token (address) in the source
     /// chain to the domain id of the remote chain (uint32)
     /// to info about the token in the remote chain (RemoteTokenInformation)
     mapping(address => mapping(uint32 => RemoteTokenInformation))
-        internal remoteTokens_;
+        internal _remoteTokens;
 }
 
 abstract contract ToucanCrosschainMessengerStorage is

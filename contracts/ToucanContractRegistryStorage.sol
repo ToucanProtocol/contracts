@@ -27,7 +27,13 @@ abstract contract ToucanContractRegistryStorageV2 {
     address internal _toucanCarbonOffsetsEscrowAddress;
 }
 
+abstract contract ToucanContractRegistryStorageV3 {
+    address internal _retirementCertificateSlicerAddress;
+    address internal _retirementCertificateSlicesAddress;
+}
+
 abstract contract ToucanContractRegistryStorage is
     ToucanContractRegistryStorageV1,
-    ToucanContractRegistryStorageV2
+    ToucanContractRegistryStorageV2,
+    ToucanContractRegistryStorageV3
 {}

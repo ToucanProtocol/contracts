@@ -81,33 +81,29 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     {}
 
     /// @dev sets the Beacon that tracks the current implementation logic of the TCO2s
-    function setBeacon(address _beacon) external virtual onlyOwner {
+    function setBeacon(address _beacon) external onlyOwner {
         beacon = _beacon;
     }
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() external virtual onlyBy(contractRegistry, owner()) {
+    function pause() external onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() external virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
     /// @dev set the registry contract to be tracked
-    function setToucanContractRegistry(address _address)
-        external
-        virtual
-        onlyOwner
-    {
+    function setToucanContractRegistry(address _address) external onlyOwner {
         contractRegistry = _address;
     }
 
     /// @notice adds account to the allowedBridges list
     /// meant to be used only for cross-chain bridging
-    function addToAllowedBridges(address account) external virtual onlyOwner {
+    function addToAllowedBridges(address account) external onlyOwner {
         bool isAllowed = allowedBridges[account];
         require(!isAllowed, 'Already allowed');
 
@@ -117,11 +113,7 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
 
     /// @notice removes account from the allowedBridges list
     /// meant to be used only for cross-chain bridging
-    function removeFromAllowedBridges(address account)
-        external
-        virtual
-        onlyOwner
-    {
+    function removeFromAllowedBridges(address account) external onlyOwner {
         bool isAllowed = allowedBridges[account];
         require(isAllowed, 'Already not allowed');
 
@@ -272,7 +264,6 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     /// @param _bridgeFeePercentageInBase percentage of bridge fee in base
     function setBridgeFeePercentage(uint256 _bridgeFeePercentageInBase)
         external
-        virtual
         onlyOwner
     {
         require(
@@ -286,7 +277,6 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     /// @param _bridgeFeeReceiver address to transfer the fees
     function setBridgeFeeReceiver(address _bridgeFeeReceiver)
         external
-        virtual
         onlyOwner
     {
         bridgeFeeReceiver = _bridgeFeeReceiver;
@@ -296,7 +286,6 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     /// @param _bridgeFeeBurnPercentageInBase percentage of bridge fee in base
     function setBridgeFeeBurnPercentage(uint256 _bridgeFeeBurnPercentageInBase)
         external
-        virtual
         onlyOwner
     {
         require(
@@ -310,7 +299,6 @@ abstract contract ToucanCarbonOffsetsFactoryBase is
     /// @param _bridgeFeeBurnAddress address to transfer the fees to burn
     function setBridgeFeeBurnAddress(address _bridgeFeeBurnAddress)
         external
-        virtual
         onlyOwner
     {
         bridgeFeeBurnAddress = _bridgeFeeBurnAddress;

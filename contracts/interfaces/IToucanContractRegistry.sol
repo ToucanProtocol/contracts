@@ -21,6 +21,16 @@ interface IToucanContractRegistry {
 
     function toucanCarbonOffsetsEscrowAddress() external view returns (address);
 
+    function retirementCertificateSlicerAddress()
+        external
+        view
+        returns (address);
+
+    function retirementCertificateSlicesAddress()
+        external
+        view
+        returns (address);
+
     function isValidERC20(address erc20) external view returns (bool);
 
     function addERC20(address erc20, string memory standardRegistry) external;

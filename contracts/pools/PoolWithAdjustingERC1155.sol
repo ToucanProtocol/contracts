@@ -23,7 +23,10 @@ abstract contract PoolWithAdjustingERC1155 is PoolWithFeeCalculatorERC1155 {
     // Admin functions
     // ------------------------
 
-    /// @notice Set scores for ERC-1155 tokens
+    /// @notice Set scores for ERC-1155 vintage tokens. Scores range from 0 to
+    /// 100 and determine the percentage of pool tokens minted or burnt during
+    /// deposits or redemptions. A score of 0 disables depositing and redeeming
+    /// for the vintage token.
     /// @dev Only executable by the pool owner
     /// @param erc1155s Array of ERC-1155 contracts
     /// @param tokenIds Array of ERC-1155 token IDs
@@ -69,7 +72,10 @@ abstract contract PoolWithAdjustingERC1155 is PoolWithFeeCalculatorERC1155 {
     //   Permissionless functions
     // ----------------------------
 
-    /// @notice Get the score of an ERC-1155 token
+    /// @notice Get the score for an ERC-1155 vintage token. Scores range from
+    /// 0 to 100 and determine the percentage of pool tokens minted or burnt
+    /// during deposits or redemptions. A score of 0 means that the vintage
+    /// token cannot be deposited or redeemed.
     /// @param erc1155 Address of the ERC-1155 contract
     /// @param tokenId ID of the ERC-1155 token
     /// @return score The score of the ERC-1155 token

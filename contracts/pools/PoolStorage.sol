@@ -122,6 +122,10 @@ abstract contract PoolStorageV1_6 {
     uint8 internal _underlyingDecimals;
 }
 
+abstract contract PoolStorageV1_7 {
+    uint256 public minimumTCLSeedingThreshold;
+}
+
 abstract contract PoolStorage is
     PoolStorageV1,
     PoolStorageV1_1,
@@ -129,5 +133,6 @@ abstract contract PoolStorage is
     PoolStorageV1_3,
     PoolStorageV1_4,
     PoolStorageV1_5,
-    PoolStorageV1_6
+    PoolStorageV1_6,
+    PoolStorageV1_7
 {}

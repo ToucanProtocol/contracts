@@ -54,6 +54,7 @@ abstract contract Pool is
     event FilterUpdated(address filter);
     event AddFeeExemptedTCO2(address tco2);
     event RemoveFeeExemptedTCO2(address tco2);
+    event MinimumTCLSeedingThresholdUpdated(uint256 newThreshold);
 
     struct PoolVintageToken {
         // Address of the token contract. This can be either
@@ -136,12 +137,12 @@ abstract contract Pool is
 
     /// @dev function that checks whether the caller is the
     /// contract owner
-    function onlyPoolOwner() internal view virtual {
+    function onlyPoolOwner() internal view {
         require(owner() == msg.sender, Errors.CP_ONLY_OWNER);
     }
 
     /// @dev function that only lets the contract's owner and granted role to execute
-    function onlyWithRole(bytes32 role) internal view virtual {
+    function onlyWithRole(bytes32 role) internal view {
         require(
             hasRole(role, msg.sender) || owner() == msg.sender,
             Errors.CP_UNAUTHORIZED
@@ -159,13 +160,13 @@ abstract contract Pool is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() external virtual {
+    function pause() external {
         onlyWithRole(PAUSER_ROLE);
         _pause();
     }
 
     /// @dev Unpause the system, wraps _unpause(), only Admin
-    function unpause() external virtual {
+    function unpause() external {
         onlyWithRole(PAUSER_ROLE);
         _unpause();
     }
@@ -187,10 +188,7 @@ abstract contract Pool is
 
     /// @notice Update the fee redeem burn address
     /// @param feeRedeemBurnAddress_ address to transfer the fees to burn
-    function setFeeRedeemBurnAddress(address feeRedeemBurnAddress_)
-        external
-        virtual
-    {
+    function setFeeRedeemBurnAddress(address feeRedeemBurnAddress_) external {
         onlyPoolOwner();
         require(feeRedeemBurnAddress_ != address(0), Errors.CP_EMPTY_ADDRESS);
         _feeRedeemBurnAddress = feeRedeemBurnAddress_;
@@ -199,7 +197,7 @@ abstract contract Pool is
 
     /// @notice Adds a new address for redeem fees exemption
     /// @param _address address to be exempted on redeem fees
-    function addRedeemFeeExemptedAddress(address _address) external virtual {
+    function addRedeemFeeExemptedAddress(address _address) external {
         onlyPoolOwner();
         redeemFeeExemptedAddresses[_address] = true;
         emit RedeemFeeExempted(_address, true);
@@ -207,7 +205,7 @@ abstract contract Pool is
 
     /// @notice Removes an address from redeem fees exemption
     /// @param _address address to be removed from exemption
-    function removeRedeemFeeExemptedAddress(address _address) external virtual {
+    function removeRedeemFeeExemptedAddress(address _address) external {
         onlyPoolOwner();
         redeemFeeExemptedAddresses[_address] = false;
         emit RedeemFeeExempted(_address, false);
@@ -215,7 +213,7 @@ abstract contract Pool is
 
     /// @notice Adds a new TCO2 for redeem fees exemption
     /// @param _tco2 TCO2 to be exempted on redeem fees
-    function addRedeemFeeExemptedTCO2(address _tco2) external virtual {
+    function addRedeemFeeExemptedTCO2(address _tco2) external {
         onlyPoolOwner();
         redeemFeeExemptedTCO2s[_tco2] = true;
         emit AddFeeExemptedTCO2(_tco2);
@@ -223,7 +221,7 @@ abstract contract Pool is
 
     /// @notice Removes a TCO2 from redeem fees exemption
     /// @param _tco2 TCO2 to be removed from exemption
-    function removeRedeemFeeExemptedTCO2(address _tco2) external virtual {
+    function removeRedeemFeeExemptedTCO2(address _tco2) external {
         onlyPoolOwner();
         redeemFeeExemptedTCO2s[_tco2] = false;
         emit RemoveFeeExemptedTCO2(_tco2);
@@ -244,6 +242,14 @@ abstract contract Pool is
         onlyPoolOwner();
         filter = _filter;
         emit FilterUpdated(_filter);
+    }
+
+    function setMinimumTCLSeedingThreshold(uint256 _minimumTCLSeedingThreshold)
+        external
+    {
+        onlyWithRole(MANAGER_ROLE);
+        minimumTCLSeedingThreshold = _minimumTCLSeedingThreshold;
+        emit MinimumTCLSeedingThresholdUpdated(_minimumTCLSeedingThreshold);
     }
 
     // ----------------------------
@@ -273,11 +279,22 @@ abstract contract Pool is
 
         uint256 depositedAmount = amountE18;
         uint256 feeDistributionTotal = 0;
-        if (feeCalculator != IFeeCalculator(address(0))) {
+        if (
+            totalUnderlyingSupply + amountE18 >= minimumTCLSeedingThreshold &&
+            feeCalculator != IFeeCalculator(address(0))
+        ) {
+            // we take a fee only on the part of the deposited amount that brings the total over the threshold
+            uint256 chargeableAmount = totalUnderlyingSupply >=
+                minimumTCLSeedingThreshold
+                ? amountE18
+                : amountE18 +
+                    totalUnderlyingSupply -
+                    minimumTCLSeedingThreshold;
+
             // If a fee module is configured, use it to calculate the minting fees
             FeeDistribution memory feeDistribution = _feeDistribution(
                 vintage,
-                depositedAmount
+                chargeableAmount
             );
             feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
             _checkMaxFee(maxFee, feeDistributionTotal);

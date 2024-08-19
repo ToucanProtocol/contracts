@@ -50,13 +50,20 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
     {
         onlyUnpaused();
 
-        // If the fee calculator is not configured, no fees are paid
-        if (address(feeCalculator) == address(0)) {
+        // If the fee calculator is not configured or the amount doesn't bring us to the threshold, no fees are paid
+        if (
+            totalUnderlyingSupply + amount < minimumTCLSeedingThreshold ||
+            address(feeCalculator) == address(0)
+        ) {
             return 0;
         }
 
+        uint256 chargeableAmount = totalUnderlyingSupply >=
+            minimumTCLSeedingThreshold
+            ? amount
+            : amount + totalUnderlyingSupply - minimumTCLSeedingThreshold;
         FeeDistribution memory feeDistribution = feeCalculator
-            .calculateDepositFees(address(this), tco2, amount);
+            .calculateDepositFees(address(this), tco2, chargeableAmount);
         feeDistributionTotal = getFeeDistributionTotal(feeDistribution);
     }
 

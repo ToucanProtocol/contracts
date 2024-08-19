@@ -33,7 +33,7 @@ contract ToucanContractRegistry is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.2.0';
+    string public constant VERSION = '1.3.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     /// @dev All roles related to accessing this contract
@@ -149,25 +149,19 @@ contract ToucanContractRegistry is
     // ----------------------------------------
     function setCarbonOffsetBatchesAddress(address _address)
         external
-        virtual
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
         _carbonOffsetBatchesAddress = _address;
     }
 
-    function setCarbonProjectsAddress(address _address)
-        external
-        virtual
-        onlyOwner
-    {
+    function setCarbonProjectsAddress(address _address) external onlyOwner {
         require(_address != address(0), 'Zero address');
         _carbonProjectsAddress = _address;
     }
 
     function setCarbonProjectVintagesAddress(address _address)
         external
-        virtual
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
@@ -176,7 +170,6 @@ contract ToucanContractRegistry is
 
     function setToucanCarbonOffsetsFactoryAddress(address tco2Factory)
         external
-        virtual
         onlyOwner
     {
         require(tco2Factory != address(0), 'Zero address');
@@ -216,7 +209,6 @@ contract ToucanContractRegistry is
 
     function setToucanCarbonOffsetsEscrowAddress(address _address)
         external
-        virtual
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
@@ -225,17 +217,31 @@ contract ToucanContractRegistry is
 
     function setRetirementCertificatesAddress(address _address)
         external
-        virtual
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
         _retirementCertificatesAddress = _address;
     }
 
+    function setRetirementCertificateSlicerAddress(address _address)
+        external
+        onlyOwner
+    {
+        require(_address != address(0), 'Zero address');
+        _retirementCertificateSlicerAddress = _address;
+    }
+
+    function setRetirementCertificateSlicesAddress(address _address)
+        external
+        onlyOwner
+    {
+        require(_address != address(0), 'Zero address');
+        _retirementCertificateSlicesAddress = _address;
+    }
+
     /// @notice Keep track of TCO2s per standard
     function addERC20(address erc20, string calldata standardRegistry)
         external
-        virtual
         onlyBy(toucanCarbonOffsetFactories[standardRegistry], owner())
     {
         projectVintageERC20Registry[erc20] = true;
@@ -304,6 +310,24 @@ contract ToucanContractRegistry is
         returns (address)
     {
         return _retirementCertificatesAddress;
+    }
+
+    function retirementCertificateSlicerAddress()
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return _retirementCertificateSlicerAddress;
+    }
+
+    function retirementCertificateSlicesAddress()
+        external
+        view
+        virtual
+        returns (address)
+    {
+        return _retirementCertificateSlicesAddress;
     }
 
     /// TODO: Kept for backwards-compatibility; will be removed in a future

@@ -10,19 +10,17 @@ import '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
 import {Pool} from './Pool.sol';
 
-abstract contract PoolBridgeable is Pool {
+abstract contract PoolBridgeableLegacy is Pool {
     // ----------------------------------------
     //      Events
     // ----------------------------------------
 
     event RouterUpdated(address router);
-
-    event TCO2RebalanceRequestInitiated(
+    event TCO2Bridged(
         uint32 indexed destinationDomain,
-        address[] tco2s,
-        uint256[] amounts
+        address indexed tco2,
+        uint256 amount
     );
-    event TCO2RebalanceRequestCompleted(address[] tco2s, uint256[] amounts);
 
     // -------------------------------------
     //   Functions
@@ -88,12 +86,15 @@ abstract contract PoolBridgeable is Pool {
         address tcm = router;
         address recipient = _getRemotePoolAddress(tcm, destinationDomain);
 
-        fee = IToucanCrosschainMessenger(tcm).quoteBridgeTCO2sFee(
-            destinationDomain,
-            tco2s,
-            amounts,
-            recipient
-        );
+        //slither-disable-next-line uninitialized-local
+        for (uint256 i; i < tco2Length; ++i) {
+            fee += IToucanCrosschainMessenger(tcm).quoteTokenTransferFee(
+                destinationDomain,
+                tco2s[i],
+                amounts[i],
+                recipient
+            );
+        }
     }
 
     /// @notice Allows MANAGER or the owner to bridge TCO2s into
@@ -120,78 +121,27 @@ abstract contract PoolBridgeable is Pool {
         address tcm = router;
         address recipient = _getRemotePoolAddress(tcm, destinationDomain);
 
+        uint256 payment = msg.value / tco2Length;
         //slither-disable-next-line uninitialized-local
         for (uint256 i; i < tco2Length; ++i) {
             address tco2 = tco2s[i];
             uint256 amount = amounts[i];
 
-            // Update supply-related storage variables in the pool
-            VintageData memory vData = IToucanCarbonOffsets(tco2)
-                .getVintageData();
-            require(
-                totalProjectSupply[vData.projectTokenId] >= amount,
-                'insufficient vintage amount'
-            );
-            totalProjectSupply[vData.projectTokenId] -= amount;
-            // this is enforced by an implicit invariant that makes
-            // sure a single project supply can never be more than
-            // the total underlying supply. Adding a check will
-            // anyway make debugging easier should the invariant
-            // unexpectedly be broken.
-            require(
-                totalUnderlyingSupply >= amount,
-                'insufficient underlying supply'
-            );
-            totalUnderlyingSupply -= amount;
+            {
+                // Update supply-related storage variables in the pool
+                VintageData memory vData = IToucanCarbonOffsets(tco2)
+                    .getVintageData();
+                totalProjectSupply[vData.projectTokenId] -= amount;
+                totalUnderlyingSupply -= amount;
+            }
+
+            // Transfer tokens to recipient
+            //slither-disable-next-line reentrancy-eth
+            IToucanCrosschainMessenger(tcm).transferTokensToRecipient{
+                value: payment
+            }(destinationDomain, tco2, amount, recipient);
+
+            emit TCO2Bridged(destinationDomain, tco2, amount);
         }
-
-        // Transfer tokens to recipient
-        //slither-disable-next-line reentrancy-eth
-        IToucanCrosschainMessenger(tcm).bridgeTCO2s{value: msg.value}(
-            destinationDomain,
-            tco2s,
-            amounts,
-            recipient
-        );
-
-        emit TCO2RebalanceRequestInitiated(destinationDomain, tco2s, amounts);
-    }
-
-    /// @notice Allows a router to complete the bridging of tokens.
-    /// It transfers the tokens to the pool itself and updates the counters.
-    /// @param tco2s The TCO2s that have been bridged
-    /// @param amounts The amounts of TCO2s that have been bridged
-    function completeTCO2Bridging(
-        address[] calldata tco2s,
-        uint256[] calldata amounts
-    ) external {
-        onlyRouter();
-        uint256 tco2Length = tco2s.length;
-        require(tco2Length != 0, Errors.CP_EMPTY_ARRAY);
-        _checkLength(tco2Length, amounts.length);
-
-        //slither-disable-next-line uninitialized-local
-        for (uint256 i; i < tco2Length; ++i) {
-            address tco2 = tco2s[i];
-            uint256 amount = amounts[i];
-
-            // Update supply-related storage variables in the pool
-            VintageData memory vData = IToucanCarbonOffsets(tco2)
-                .getVintageData();
-
-            PoolVintageToken memory vintage = PoolVintageToken(
-                tco2,
-                0,
-                vData.projectTokenId
-            );
-
-            // Update supply-related storage variables in the pool
-            _changeSupply(vintage, int256(amount));
-
-            // Transfer the underlying token to the pool
-            _transfer(vintage, msg.sender, address(this), amount);
-        }
-
-        emit TCO2RebalanceRequestCompleted(tco2s, amounts);
     }
 }

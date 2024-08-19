@@ -103,20 +103,16 @@ contract CarbonProjectVintages is
 
     /// @notice Emergency function to disable contract's core functionality
     /// @dev wraps _pause(), only Admin
-    function pause() external virtual onlyBy(contractRegistry, owner()) {
+    function pause() external onlyBy(contractRegistry, owner()) {
         _pause();
     }
 
     /// @dev unpause the system, wraps _unpause(), only Admin
-    function unpause() external virtual onlyBy(contractRegistry, owner()) {
+    function unpause() external onlyBy(contractRegistry, owner()) {
         _unpause();
     }
 
-    function setToucanContractRegistry(address _address)
-        external
-        virtual
-        onlyOwner
-    {
+    function setToucanContractRegistry(address _address) external onlyOwner {
         contractRegistry = _address;
     }
 
@@ -248,7 +244,7 @@ contract CarbonProjectVintages is
         return baseURI;
     }
 
-    function setBaseURI(string memory baseURI_) external virtual onlyOwner {
+    function setBaseURI(string memory baseURI_) external onlyOwner {
         baseURI = baseURI_;
     }
 
@@ -261,10 +257,7 @@ contract CarbonProjectVintages is
         override
         returns (string memory)
     {
-        require(
-            _exists(tokenId),
-            'ERC721URIStorage: URI query for nonexistent token'
-        );
+        require(_exists(tokenId), 'Non-existent token id');
 
         string memory uri = vintageData[tokenId].uri;
         string memory base = _baseURI();
