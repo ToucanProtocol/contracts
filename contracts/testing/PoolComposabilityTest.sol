@@ -8,7 +8,7 @@ pragma solidity 0.8.14;
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 
-import '../interfaces/IRetirementCertificates.sol';
+import '../retirements/interfaces/IRetirementCertificates.sol';
 
 interface IToucanPoolTest {
     function getScoredTCO2s() external view returns (address[] memory);

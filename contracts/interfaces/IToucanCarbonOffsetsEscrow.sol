@@ -6,7 +6,19 @@
 pragma solidity 0.8.14;
 
 import {DetokenizationRequest, RetirementRequest, RequestStatus} from '../ToucanCarbonOffsetsEscrowTypes.sol';
-import {CreateRetirementRequestParams} from '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+
+struct CreateRetirementRequestParams {
+    uint256[] tokenIds;
+    uint256 amount;
+    string retiringEntityString;
+    address beneficiary;
+    string beneficiaryString;
+    string retirementMessage;
+    string beneficiaryLocation;
+    string consumptionCountryCode;
+    uint256 consumptionPeriodStart;
+    uint256 consumptionPeriodEnd;
+}
 
 interface IToucanCarbonOffsetsEscrow {
     function createDetokenizationRequest(

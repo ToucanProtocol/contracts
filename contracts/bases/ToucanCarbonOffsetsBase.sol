@@ -13,10 +13,10 @@ import '../interfaces/ICarbonOffsetBatches.sol';
 import '../interfaces/ICarbonProjects.sol';
 import '../interfaces/ICarbonProjectVintages.sol';
 import '../interfaces/IPausable.sol';
-import '../interfaces/IRetirementCertificates.sol';
 import '../interfaces/IToucanCarbonOffsetsEscrow.sol';
 import '../interfaces/IToucanCarbonOffsetsFactory.sol';
 import '../interfaces/IToucanContractRegistry.sol';
+import '../retirements/interfaces/IRetirementCertificates.sol';
 import '../ToucanCarbonOffsetsStorage.sol';
 import {BatchStatus} from '../CarbonOffsetBatchesTypes.sol';
 
@@ -278,15 +278,32 @@ abstract contract ToucanCarbonOffsetsBase is
         address retiringEntity,
         CreateRetirementRequestParams memory params
     ) internal virtual whenNotPaused {
-        // Retire provided amount
-        uint256 retirementEventId = _retire(
-            msg.sender,
-            params.amount,
-            retiringEntity
-        );
-        uint256[] memory retirementEventIds = new uint256[](1);
-        retirementEventIds[0] = retirementEventId;
-
+        uint256[] memory retirementEventIds;
+        if (params.tokenIds.length == 0) {
+            uint256 retirementEventId = _retire(
+                msg.sender,
+                params.amount,
+                retiringEntity
+            );
+            retirementEventIds = new uint256[](1);
+            retirementEventIds[0] = retirementEventId;
+        } else {
+            retirementEventIds = new uint256[](params.tokenIds.length);
+            uint256 decimalMultiplier = 10**decimals();
+            for (uint256 i = 0; i < params.tokenIds.length; i++) {
+                //slither-disable-next-line unused-return
+                (, uint256 batchQuantity, ) = ICarbonOffsetBatches(
+                    IToucanContractRegistry(contractRegistry)
+                        .carbonOffsetBatchesAddress()
+                ).getBatchNFTData(params.tokenIds[i]);
+                uint256 retirementEventId = _retire(
+                    msg.sender,
+                    batchQuantity * decimalMultiplier,
+                    retiringEntity
+                );
+                retirementEventIds[i] = retirementEventId;
+            }
+        }
         //slither-disable-next-line unused-return
         IRetirementCertificates(
             IToucanContractRegistry(contractRegistry)

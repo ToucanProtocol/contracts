@@ -203,14 +203,12 @@ contract ToucanCrosschainMessenger is
         }
     }
 
-    /// @notice Pauses the cross chain bridge
-    /// @dev when invoked by owner it Pauses the cross chain bridging logic to interact with abacus
+    /// @notice Pause the cross chain bridge
     function pause() external onlyPausers whenNotPaused {
         _pause();
     }
 
-    /// @notice Unpauses the cross chain bridge
-    /// @dev when invoked by owner it unpauses the cross chain bridging logic to interact with abacus
+    /// @notice Unpause the cross chain bridge
     function unpause() external onlyPausers whenPaused {
         _unpause();
     }
@@ -219,9 +217,9 @@ contract ToucanCrosschainMessenger is
     //      Message-handling functions
     // ----------------------------------------
 
-    /// @notice Receive messages sent via Abacus from other remote Routers;
+    /// @notice Receive messages sent via Hyperlane from other remote Routers;
     /// parse the contents of the message and enact the message's effects on the local chain
-    /// @dev it is internally invoked via handle() which is invoked by Abacus's inbox
+    /// @dev it is internally invoked via handle() which is invoked by Hyperlane's mailbox
     /// @param origin The domain the message is coming from
     /// @param message The message in the form of raw bytes
     function _handle(

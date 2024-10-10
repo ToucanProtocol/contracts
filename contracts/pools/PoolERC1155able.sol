@@ -10,9 +10,9 @@ import '@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {FeeDistribution} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
-import {Pool} from './Pool.sol';
-import {IPoolFilter} from '../interfaces/IPoolFilter.sol';
 import {Errors} from '../libraries/Errors.sol';
+import {IPoolFilter} from './interfaces/IPoolFilter.sol';
+import {Pool} from './Pool.sol';
 
 abstract contract PoolERC1155able is Pool, ERC1155Holder {
     event ERC1155Deposited(

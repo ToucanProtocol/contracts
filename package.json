@@ -4,9 +4,9 @@
   },
   "dependencies": {
     "@hyperlane-xyz/core": "3.2.0",
-    "@openzeppelin/contracts": "4.6.0",
-    "@openzeppelin/contracts-upgradeable": "4.6.0",
-    "@toucanprotocol/dynamic-fee-pools": "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git"
+    "@openzeppelin/contracts": "4.9.6",
+    "@openzeppelin/contracts-upgradeable": "4.9.6",
+    "@toucanprotocol/dynamic-fee-pools": "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#bf89dccb06bf9e50b98c3c5666cb7e7d110ae50f"
   },
   "devDependencies": {
     "@ethersproject/abi": "^5.4.7",
@@ -29,5 +29,6 @@
     "ts-node": ">=8.0.0",
     "typechain": "^8.1.0",
     "typescript": ">=4.5.0"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

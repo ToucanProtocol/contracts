@@ -778,10 +778,10 @@
     table "^6.8.0"
     undici "^5.14.0"
 
-"@openzeppelin/contracts-upgradeable@4.6.0":
-  version "4.6.0"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.6.0.tgz#1bf55f230f008554d4c6fe25eb165b85112108b0"
-  integrity sha512-5OnVuO4HlkjSCJO165a4i2Pu1zQGzMs//o54LPrwUgxvEO2P3ax1QuaSI0cEHHTveA77guS0PnNugpR2JMsPfA==
+"@openzeppelin/contracts-upgradeable@4.9.6":
+  version "4.9.6"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.9.6.tgz#38b21708a719da647de4bb0e4802ee235a0d24df"
+  integrity sha512-m4iHazOsOCv1DgM7eD7GupTJ+NFVujRZt1wzddDPSVGpWdKq1SKkla5htKG7+IS4d2XOCtzkUNwRZ7Vq5aEUMA==
 
 "@openzeppelin/contracts-upgradeable@^v4.9.3":
   version "4.9.5"
@@ -792,6 +792,11 @@
   version "4.6.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.6.0.tgz#c91cf64bc27f573836dba4122758b4743418c1b3"
   integrity sha512-8vi4d50NNya/bQqCmaVzvHNmwHvS0OBKb7HNtuNwEE3scXWrP31fKQoGxNMT+KbzmrNZzatE3QK5p2gFONI/hg==
+
+"@openzeppelin/contracts@4.9.6":
+  version "4.9.6"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.9.6.tgz#2a880a24eb19b4f8b25adc2a5095f2aa27f39677"
+  integrity sha512-xSmezSupL+y9VkHZJGDoCBpmnB2ogM13ccaYDWqJTfS3dbuHkgjuwDFUmaFauBCboQMGB/S5UqUl2y54X99BmA==
 
 "@openzeppelin/contracts@^4.9.3":
   version "4.9.5"
@@ -928,9 +933,9 @@
   dependencies:
     antlr4ts "^0.5.0-alpha.4"
 
-"@toucanprotocol/dynamic-fee-pools@git+https://github.com/ToucanProtocol/dynamic-fee-pools.git":
+"@toucanprotocol/dynamic-fee-pools@git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#bf89dccb06bf9e50b98c3c5666cb7e7d110ae50f":
   version "1.0.0"
-  resolved "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#09f9cddaca6b39214095f239d4c940f577eb6ec0"
+  resolved "git+https://github.com/ToucanProtocol/dynamic-fee-pools.git#bf89dccb06bf9e50b98c3c5666cb7e7d110ae50f"
   dependencies:
     "@openzeppelin/contracts" "4.6.0"
     "@prb/math" "4.0.1"

@@ -10,11 +10,10 @@ import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-import '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
-import '../interfaces/IRetirementCertificates.sol';
 import '../interfaces/ICarbonProjectVintages.sol';
 import '../interfaces/IToucanContractRegistry.sol';
 import '../libraries/Strings.sol';
+import './interfaces/IRetirementCertificates.sol';
 import './RetirementCertificatesStorage.sol';
 
 /// @notice The `RetirementCertificates` contract lets users mint NFTs that act as proof-of-retirement.
@@ -260,6 +259,15 @@ contract RetirementCertificates is
                 true,
             'Invalid caller'
         );
+
+        // If no beneficiary address and name are provided, default them to the retiring entity
+        if (
+            params.beneficiary == address(0) &&
+            bytes(params.beneficiaryString).length == 0
+        ) {
+            params.beneficiary = retiringEntity;
+            params.beneficiaryString = params.retiringEntityString;
+        }
 
         uint256 newItemId = _tokenIds;
         unchecked {

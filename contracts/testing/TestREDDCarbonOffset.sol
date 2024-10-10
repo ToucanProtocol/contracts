@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 import '@openzeppelin/contracts/token/ERC1155/ERC1155.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 
-import {IEcoCarbonCredit} from '../interfaces/IEcoCarbonCredit.sol';
+import {IEcoCarbonCredit} from '../pools/interfaces/IEcoCarbonCredit.sol';
 
 contract TestREDDCarbonOffset is IEcoCarbonCredit, ERC1155, Ownable {
     uint256 public immutable projectId;

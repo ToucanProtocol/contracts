@@ -13,9 +13,9 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import {FeeDistribution, IFeeCalculator} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
 import '../bases/RoleInitializer.sol';
-import '../interfaces/IPoolFilter.sol';
 import '../interfaces/IToucanCarbonOffsets.sol';
 import {Errors} from '../libraries/Errors.sol';
+import './interfaces/IPoolFilter.sol';
 import './PoolStorage.sol';
 
 /// @notice Pool template contract

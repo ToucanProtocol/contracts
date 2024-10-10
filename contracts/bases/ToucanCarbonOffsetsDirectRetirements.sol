@@ -39,7 +39,7 @@ abstract contract ToucanCarbonOffsetsDirectRetirements is
         retirementEventId = _retire(account, amount, account);
     }
 
-    /// @notice Retire an amount of TCO2s, register an retirement event
+    /// @notice Retire an amount of TCO2s, register a retirement event
     /// then mint a certificate passing a single retirementEventId.
     /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name.
     /// @param beneficiary The beneficiary to set in the NFT.

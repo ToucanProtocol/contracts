@@ -5,11 +5,11 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-abstract contract RetirementCertificateSlicerStorage {
+abstract contract RetirementCertificateFractionalizerStorage {
     address public contractRegistry;
     string public beneficiaryString;
 
-    /// @dev mapping from vintage id to the total amount of slices burnt for that vintage
+    /// @dev mapping from vintage id to the total amount of fractions burnt for that vintage
     mapping(uint256 => uint256) public totalBurntSupply;
 
     /// @dev mapping from certificate depositor to vintage to a FIFO queue

@@ -5,7 +5,7 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {IEcoCarbonCredit} from '../interfaces/IEcoCarbonCredit.sol';
+import {IEcoCarbonCredit} from './interfaces/IEcoCarbonCredit.sol';
 import {PoolWithAdjustingERC1155} from './PoolWithAdjustingERC1155.sol';
 
 /// @notice REDD pool contract

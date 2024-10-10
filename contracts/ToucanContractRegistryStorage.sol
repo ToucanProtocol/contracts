@@ -28,8 +28,8 @@ abstract contract ToucanContractRegistryStorageV2 {
 }
 
 abstract contract ToucanContractRegistryStorageV3 {
-    address internal _retirementCertificateSlicerAddress;
-    address internal _retirementCertificateSlicesAddress;
+    address internal _retirementCertificateFractionalizerAddress;
+    address internal _retirementCertificateFractionsAddress;
 }
 
 abstract contract ToucanContractRegistryStorage is

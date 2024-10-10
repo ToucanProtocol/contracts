@@ -10,22 +10,22 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 
-import './RetirementCertificateSlicesStorage.sol';
-import '../interfaces/IRetirementCertificateSlices.sol';
+import './RetirementCertificateFractionsStorage.sol';
+import './interfaces/IRetirementCertificateFractions.sol';
 import '../libraries/Strings.sol';
 import '../bases/RoleInitializer.sol';
 
-/// @notice The `RetirementCertificateSlices.sol` contract lets users mint NFTs that
-/// represent a slice of a retirement certificate.
+/// @notice The `RetirementCertificateFractions.sol` contract lets users mint NFTs that
+/// represent a fraction of a retirement certificate.
 /// @dev The amount of carbon is denominated in the 18-decimal form
-contract RetirementCertificateSlices is
-    IRetirementCertificateSlices,
+contract RetirementCertificateFractions is
+    IRetirementCertificateFractions,
     ERC721Upgradeable,
     UUPSUpgradeable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     RoleInitializer,
-    RetirementCertificateSlicesStorage
+    RetirementCertificateFractionsStorage
 {
     // ----------------------------------------
     //      Libraries
@@ -70,8 +70,8 @@ contract RetirementCertificateSlices is
     ) external initializer {
         __Context_init_unchained();
         __ERC721_init_unchained(
-            'Toucan Protocol: Retirement Certificate Slices for Tokenized Carbon Offsets',
-            'TOUCAN-CERT-SLICE'
+            'Toucan Protocol: Retirement Certificate Fractions for Tokenized Carbon Offsets',
+            'TOUCAN-CERT-FRACTIONS'
         );
         __ReentrancyGuard_init_unchained();
         __UUPSUpgradeable_init_unchained();
@@ -128,13 +128,14 @@ contract RetirementCertificateSlices is
         _unpause();
     }
 
-    /// @notice Mint a slice of a retirement certificate.
-    /// @dev Only the retirement certificate slicer can call this function.
-    /// @param sliceData The data of the slice to mint.
-    /// @return The id of the minted slice NFT.
-    function mintSlice(
+    /// @notice Mint a fraction of a retirement certificate.
+    /// @dev Only a minter can call this function. Access is meant to
+    /// be granted to the retirement certificate fractionalizer.
+    /// @param fractionData The data of the fraction to mint.
+    /// @return The id of the minted fraction NFT.
+    function mintFraction(
         address, /* caller */
-        SliceData calldata sliceData
+        FractionData calldata fractionData
     )
         external
         virtual
@@ -143,23 +144,23 @@ contract RetirementCertificateSlices is
         onlyRole(MINTER_ROLE)
         returns (uint256)
     {
-        return _mintSlice(sliceData);
+        return _mintFraction(fractionData);
     }
 
-    function _mintSlice(SliceData calldata sliceData)
+    function _mintFraction(FractionData calldata fractionData)
         internal
         returns (uint256)
     {
-        require(sliceData.amount != 0, 'Amount must be greater than 0');
+        require(fractionData.amount != 0, 'Amount must be greater than 0');
         uint256 newItemId = _tokenIds;
         unchecked {
             ++newItemId;
         }
         _tokenIds = newItemId;
 
-        slices[newItemId] = sliceData;
+        fractions[newItemId] = fractionData;
 
-        _safeMint(sliceData.beneficiary, newItemId);
+        _safeMint(fractionData.beneficiary, newItemId);
         return newItemId;
     }
 
@@ -179,7 +180,7 @@ contract RetirementCertificateSlices is
         returns (string memory)
     {
         require(_exists(tokenId), 'Non-existent token id');
-        string memory _tokenURI = slices[tokenId].tokenURI;
+        string memory _tokenURI = fractions[tokenId].tokenURI;
         // If there is no base URI, return the token URI.
         // If both are not set, return an empty string.
         if (bytes(baseURI).length == 0) return _tokenURI;

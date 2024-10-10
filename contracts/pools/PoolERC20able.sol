@@ -9,9 +9,9 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeab
 import {FeeDistribution} from '@toucanprotocol/dynamic-fee-pools/src/interfaces/IFeeCalculator.sol';
 
 import {VintageData, IToucanCarbonOffsets} from '../interfaces/IToucanCarbonOffsets.sol';
-import {Pool} from './Pool.sol';
 import {Errors} from '../libraries/Errors.sol';
-import {IPoolFilter} from '../interfaces/IPoolFilter.sol';
+import {IPoolFilter} from './interfaces/IPoolFilter.sol';
+import {Pool} from './Pool.sol';
 
 abstract contract PoolERC20able is Pool {
     using SafeERC20Upgradeable for IERC20Upgradeable;

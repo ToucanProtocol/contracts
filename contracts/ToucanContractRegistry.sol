@@ -34,7 +34,7 @@ contract ToucanContractRegistry is
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
     string public constant VERSION = '1.3.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 2;
 
     /// @dev All roles related to accessing this contract
     bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
@@ -223,20 +223,20 @@ contract ToucanContractRegistry is
         _retirementCertificatesAddress = _address;
     }
 
-    function setRetirementCertificateSlicerAddress(address _address)
+    function setRetirementCertificateFractionalizerAddress(address _address)
         external
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
-        _retirementCertificateSlicerAddress = _address;
+        _retirementCertificateFractionalizerAddress = _address;
     }
 
-    function setRetirementCertificateSlicesAddress(address _address)
+    function setRetirementCertificateFractionsAddress(address _address)
         external
         onlyOwner
     {
         require(_address != address(0), 'Zero address');
-        _retirementCertificateSlicesAddress = _address;
+        _retirementCertificateFractionsAddress = _address;
     }
 
     /// @notice Keep track of TCO2s per standard
@@ -312,22 +312,22 @@ contract ToucanContractRegistry is
         return _retirementCertificatesAddress;
     }
 
-    function retirementCertificateSlicerAddress()
+    function retirementCertificateFractionalizerAddress()
         external
         view
         virtual
         returns (address)
     {
-        return _retirementCertificateSlicerAddress;
+        return _retirementCertificateFractionalizerAddress;
     }
 
-    function retirementCertificateSlicesAddress()
+    function retirementCertificateFractionsAddress()
         external
         view
         virtual
         returns (address)
     {
-        return _retirementCertificateSlicesAddress;
+        return _retirementCertificateFractionsAddress;
     }
 
     /// TODO: Kept for backwards-compatibility; will be removed in a future

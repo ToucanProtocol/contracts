@@ -11,7 +11,6 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 
 import './bases/RoleInitializer.sol';
-import {CreateRetirementRequestParams} from './bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
 import {Errors} from './libraries/Errors.sol';
 import {SerialNumber, PuroSerialNumbers} from './libraries/PuroSerialNumbers.sol';
 import {ICarbonOffsetBatches} from './interfaces/ICarbonOffsetBatches.sol';

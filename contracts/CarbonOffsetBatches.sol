@@ -647,10 +647,11 @@ contract CarbonOffsetBatches is
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256 amount
+        uint256 amount,
+        uint256 batchSize
     ) internal virtual override {
         onlyUnpaused();
-        super._beforeTokenTransfer(from, to, amount);
+        super._beforeTokenTransfer(from, to, amount, batchSize);
     }
 
     /// @notice Append a comment to a Batch-NFT
@@ -682,16 +683,17 @@ contract CarbonOffsetBatches is
     /// @param serialNumber Serial number of the carbon credits to be tokenized
     /// @param quantity Quantity to be tokenized in 1e18 format, greater than 0
     /// @param projectVintageTokenId The token ID of the vintage
+    /// @return tokenId The token ID of the newly minted batch
     function tokenize(
         address recipient,
         string calldata serialNumber,
         uint256 quantity,
         uint256 projectVintageTokenId
-    ) external {
+    ) external returns (uint256 tokenId) {
         onlyUnpaused();
         onlyWithRole(TOKENIZER_ROLE);
         // Prepare and confirm batch
-        uint256 tokenId = _mintEmptyBatch(address(this), recipient);
+        tokenId = _mintEmptyBatch(address(this), recipient);
         _updateSerialAndQuantity(tokenId, serialNumber, quantity);
         _linkWithVintage(tokenId, projectVintageTokenId);
         _confirmBatch(tokenId);

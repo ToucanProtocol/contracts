@@ -21,12 +21,12 @@ interface IToucanContractRegistry {
 
     function toucanCarbonOffsetsEscrowAddress() external view returns (address);
 
-    function retirementCertificateSlicerAddress()
+    function retirementCertificateFractionalizerAddress()
         external
         view
         returns (address);
 
-    function retirementCertificateSlicesAddress()
+    function retirementCertificateFractionsAddress()
         external
         view
         returns (address);

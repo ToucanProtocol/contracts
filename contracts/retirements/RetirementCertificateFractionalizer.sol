@@ -11,26 +11,25 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155SupplyUpgradeable.sol';
 
 import '../interfaces/IToucanContractRegistry.sol';
-import '../interfaces/IRetirementCertificateSlices.sol';
-import '../interfaces/IRetirementCertificateSlicer.sol';
-import '../interfaces/IRetirementCertificates.sol';
-import '../interfaces/IRetirementCertificateSlices.sol';
 import '../libraries/Strings.sol';
 import '../token/ERC1155Allowable.sol';
 import '../bases/RoleInitializer.sol';
-import './RetirementCertificateSlicerStorage.sol';
+import './interfaces/IRetirementCertificates.sol';
+import './interfaces/IRetirementCertificateFractionalizer.sol';
+import './interfaces/IRetirementCertificateFractions.sol';
+import './RetirementCertificateFractionalizerStorage.sol';
 
-/// @notice The `RetirementCertificateSlicer` contract lets users mint slices of retirement certificates.
-/// Users must first deposit a retirement certificate into this contract to mint slices.
-contract RetirementCertificateSlicer is
-    IRetirementCertificateSlicer,
+/// @notice The `RetirementCertificateFractionalizer` contract lets users mint fractions of retirement certificates.
+/// Users must first deposit a retirement certificate into this contract to mint fractions.
+contract RetirementCertificateFractionalizer is
+    IRetirementCertificateFractionalizer,
     ERC1155Allowable,
     ERC1155SupplyUpgradeable,
     UUPSUpgradeable,
     ReentrancyGuardUpgradeable,
     PausableUpgradeable,
     RoleInitializer,
-    RetirementCertificateSlicerStorage
+    RetirementCertificateFractionalizerStorage
 {
     // ----------------------------------------
     //      Libraries
@@ -141,25 +140,25 @@ contract RetirementCertificateSlicer is
     //     Permissionless functions
     // ----------------------------------
 
-    /// @notice Mint a slice of a retirement certificate, from the balance of the caller
-    /// @param params The request data of the slice to mint
-    /// @return sliceTokenId The id of the minted slice NFT, in the slices contract
-    function mintSlice(SliceRequestData calldata params)
+    /// @notice Mint a fraction of a retirement certificate, from the balance of the caller
+    /// @param params The request data of the fraction to mint
+    /// @return fractionTokenId The id of the minted fraction NFT, in the fractions contract
+    function mintFraction(FractionRequestData calldata params)
         external
         whenNotPaused
-        returns (uint256 sliceTokenId)
+        returns (uint256 fractionTokenId)
     {
-        return _mintSliceFrom(_msgSender(), params);
+        return _mintFractionFrom(_msgSender(), params);
     }
 
-    /// @notice Mint a slice of a retirement certificate, from the balance of the listing owner
-    /// @param from The owner of the balance to mint the slice from
-    /// @param params The request data of the slice to mint
-    /// @return sliceTokenId The id of the minted slice NFT, in the slices contract
-    function mintSliceFrom(address from, SliceRequestData calldata params)
+    /// @notice Mint a fraction of a retirement certificate, from the balance of the listing owner
+    /// @param from The owner of the balance to mint the fraction from
+    /// @param params The request data of the fraction to mint
+    /// @return fractionTokenId The id of the minted fraction NFT, in the fractions contract
+    function mintFractionFrom(address from, FractionRequestData calldata params)
         public
         whenNotPaused
-        returns (uint256 sliceTokenId)
+        returns (uint256 fractionTokenId)
     {
         require(params.amount > 0, 'Amount must be greater than 0');
         if (from != _msgSender() && !isApprovedForAll(from, _msgSender())) {
@@ -170,22 +169,22 @@ contract RetirementCertificateSlicer is
                 params.amount
             );
         }
-        sliceTokenId = _mintSliceFrom(from, params);
+        fractionTokenId = _mintFractionFrom(from, params);
     }
 
-    function _mintSliceFrom(address from, SliceRequestData calldata params)
-        internal
-        returns (uint256 sliceTokenId)
-    {
-        // reduce the slice's amount from the owner's balance
+    function _mintFractionFrom(
+        address from,
+        FractionRequestData calldata params
+    ) internal returns (uint256 fractionTokenId) {
+        // reduce the fraction's amount from the owner's balance
         // this also checks if the owner has enough balance
         _burn(from, params.projectVintageTokenId, params.amount);
 
-        SliceData memory sliceData = SliceData({
+        FractionData memory fractionData = FractionData({
             amount: params.amount,
             projectVintageTokenId: params.projectVintageTokenId,
             createdAt: block.timestamp,
-            slicingEntity: from,
+            fractioningEntity: from,
             beneficiary: params.beneficiary,
             beneficiaryString: params.beneficiaryString,
             retirementMessage: params.retirementMessage,
@@ -196,17 +195,14 @@ contract RetirementCertificateSlicer is
             tokenURI: params.tokenURI,
             extraData: params.extraData
         });
-        address retirementCertificateSlices = IToucanContractRegistry(
-            contractRegistry
-        ).retirementCertificateSlicesAddress();
-        IRetirementCertificateSlices slices = IRetirementCertificateSlices(
-            retirementCertificateSlices
-        );
-        sliceTokenId = slices.mintSlice(_msgSender(), sliceData);
+        address rcFractions = IToucanContractRegistry(contractRegistry)
+            .retirementCertificateFractionsAddress();
+        fractionTokenId = IRetirementCertificateFractions(rcFractions)
+            .mintFraction(_msgSender(), fractionData);
     }
 
     /// @dev by depositing a retirement certificate into this contract, the sender gets
-    /// the right to mint slices based on the amount of the certificate
+    /// the right to mint fractions based on the amount of the certificate
     function onERC721Received(
         address, /* operator */
         address from,
@@ -261,7 +257,7 @@ contract RetirementCertificateSlicer is
 
     /// @notice Get the FIFO queue of retirement event ids for a given owner and vintage
     /// @param owner The owner of the retirement event ids; this is the original depositor
-    /// of the parent retirement certificate in the slicer.
+    /// of the parent retirement certificate in the fractionalizer.
     /// @param vintageId The project vintage of the retirement events
     /// @return An array of retirement event ids
     function getRetirementEventIds(address owner, uint256 vintageId)

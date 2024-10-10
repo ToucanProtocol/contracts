@@ -7,7 +7,7 @@ pragma solidity 0.8.14;
 
 import {VintageData} from '../CarbonProjectVintageTypes.sol';
 import {ProjectData} from '../CarbonProjectTypes.sol';
-import {CreateRetirementRequestParams} from '../bases/ToucanCarbonOffsetsWithBatchBaseTypes.sol';
+import {CreateRetirementRequestParams} from '../interfaces/IToucanCarbonOffsetsEscrow.sol';
 
 interface IToucanCarbonOffsets {
     function retireFrom(address account, uint256 amount)

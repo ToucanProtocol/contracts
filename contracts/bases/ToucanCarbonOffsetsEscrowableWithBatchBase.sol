@@ -196,10 +196,6 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
         emit RetirementRequested(_msgSender(), requestId, params);
     }
 
-    // ----------------------------------------
-    //       Internal functions
-    // ----------------------------------------
-
     function retireAndMintCertificateForEntity(
         address retiringEntity,
         CreateRetirementRequestParams calldata params

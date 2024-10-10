@@ -5,10 +5,8 @@
 // If you encounter a vulnerability or an issue, please contact <security@toucan.earth> or visit security.toucan.earth
 pragma solidity 0.8.14;
 
-import {SliceData} from '../retirements/RetirementCertificateSlicesTypes.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
-interface IRetirementCertificateSlices {
-    function mintSlice(address caller, SliceData calldata sliceData)
-        external
-        returns (uint256);
+interface IDIMOUserProfile is IERC721Upgradeable {
+    function mint(address to) external returns (uint256);
 }

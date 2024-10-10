@@ -17,8 +17,8 @@ contract Biochar is PoolWithFeeCalculatorERC20, PoolBridgeable {
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.0.0';
-    uint256 public constant VERSION_RELEASE_CANDIDATE = 4;
+    string public constant VERSION = '1.1.0';
+    uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     // ----------------------------------------
     //      Upgradable related functions
