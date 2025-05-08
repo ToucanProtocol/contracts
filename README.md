@@ -38,9 +38,9 @@ To find out the technical details of Toucan Protocol, please see
 # Roadmap to an Open Source protocol
 
 In addition to what's published in this repository, we have many other
-technical components which we intend to publish as part of a planned
-initiative to incrementally Open Source the protocol, including the
-following:
+technical components which we intend to publish as part of [a planned
+initiative to incrementally Open Source the protocol][OSS blog],
+including the following:
 
 - Test suite for the smart contracts
 - Protocol deployment / maintenance scripts (hardhat tasks etc.)
@@ -49,6 +49,8 @@ subgraphs](https://thegraph.com/explorer/profile/0xbf2dfa6ca10f115861f23fd9733eb
 
 We are currently working on preparing these in a form suitable for
 publication.  This is quite a big task, so it will happen gradually.
+
+[OSS blog]: https://blog.toucan.earth/toucan-protocol-is-going-open-source-and-introducing-cedar/
 
 # Technical details
 
