@@ -9,6 +9,7 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol';
 
 import './bases/RoleInitializer.sol';
 import {Errors} from './libraries/Errors.sol';
@@ -160,6 +161,9 @@ contract ToucanCarbonOffsetsEscrow is
         uint256 batchIdLength = tokenIds.length;
         for (uint256 i = 0; i < batchIdLength; ++i) {
             uint256 tokenId = tokenIds[i];
+            if (IERC721Upgradeable(batchNFT).ownerOf(tokenId) != msg.sender) {
+                revert(Errors.COB_INVALID_BATCH_OWNER);
+            }
             (, uint256 batchAmount, ) = _getNormalizedDataFromBatch(
                 batchNFT,
                 tokenId

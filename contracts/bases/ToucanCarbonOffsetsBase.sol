@@ -249,14 +249,17 @@ abstract contract ToucanCarbonOffsetsBase is
         _burn(account, amount);
     }
 
-    // @dev Internal function for the burning of TCO2 tokens
-    // @dev retiringEntityAddress is a parameter to handle scenarios, when
-    // retirements are performed from the escrow contract and the retiring entity
-    // is different than the account.
+    /// @dev Internal function for the burning of TCO2 tokens
+    /// @param account The account from where TCO2s are burned
+    /// @param amount The amount of TCO2s to burn
+    /// @param retiringEntity The entity that is retiring TCO2
+    /// @param serialNumber The serial number of the batch associated with the retirement
+    /// @return retirementEventId The id of the retirement event
     function _retire(
         address account,
         uint256 amount,
-        address retiringEntityAddress
+        address retiringEntity,
+        string memory serialNumber
     ) internal virtual returns (uint256 retirementEventId) {
         _burn(account, amount);
 
@@ -264,55 +267,14 @@ abstract contract ToucanCarbonOffsetsBase is
         address certAddr = IToucanContractRegistry(contractRegistry)
             .retirementCertificatesAddress();
         retirementEventId = IRetirementCertificates(certAddr).registerEvent(
-            retiringEntityAddress,
+            retiringEntity,
             _projectVintageTokenId,
             amount,
+            serialNumber,
             false
         );
 
-        emit Retired(retiringEntityAddress, amount, retirementEventId);
-    }
-
-    // @dev Internal function retire and mint certificates
-    function _retireAndMintCertificate(
-        address retiringEntity,
-        CreateRetirementRequestParams memory params
-    ) internal virtual whenNotPaused {
-        uint256[] memory retirementEventIds;
-        if (params.tokenIds.length == 0) {
-            uint256 retirementEventId = _retire(
-                msg.sender,
-                params.amount,
-                retiringEntity
-            );
-            retirementEventIds = new uint256[](1);
-            retirementEventIds[0] = retirementEventId;
-        } else {
-            retirementEventIds = new uint256[](params.tokenIds.length);
-            uint256 decimalMultiplier = 10**decimals();
-            for (uint256 i = 0; i < params.tokenIds.length; i++) {
-                //slither-disable-next-line unused-return
-                (, uint256 batchQuantity, ) = ICarbonOffsetBatches(
-                    IToucanContractRegistry(contractRegistry)
-                        .carbonOffsetBatchesAddress()
-                ).getBatchNFTData(params.tokenIds[i]);
-                uint256 retirementEventId = _retire(
-                    msg.sender,
-                    batchQuantity * decimalMultiplier,
-                    retiringEntity
-                );
-                retirementEventIds[i] = retirementEventId;
-            }
-        }
-        //slither-disable-next-line unused-return
-        IRetirementCertificates(
-            IToucanContractRegistry(contractRegistry)
-                .retirementCertificatesAddress()
-        ).mintCertificateWithExtraData(
-                retiringEntity,
-                params,
-                retirementEventIds
-            );
+        emit Retired(retiringEntity, amount, retirementEventId);
     }
 
     // -----------------------------

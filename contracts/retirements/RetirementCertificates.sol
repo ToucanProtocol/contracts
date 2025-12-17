@@ -6,13 +6,13 @@
 pragma solidity 0.8.14;
 
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
 import '../interfaces/ICarbonProjectVintages.sol';
 import '../interfaces/IToucanContractRegistry.sol';
 import '../libraries/Strings.sol';
+import './extensions/OptionalSafeMintERC721Upgradeable.sol';
 import './interfaces/IRetirementCertificates.sol';
 import './RetirementCertificatesStorage.sol';
 
@@ -22,7 +22,7 @@ import './RetirementCertificatesStorage.sol';
 /// @dev Getters in this contract return the corresponding amount in tonnes or kilos
 contract RetirementCertificates is
     IRetirementCertificates,
-    ERC721Upgradeable,
+    OptionalSafeMintERC721Upgradeable,
     OwnableUpgradeable,
     UUPSUpgradeable,
     RetirementCertificatesStorageV1,
@@ -60,14 +60,37 @@ contract RetirementCertificates is
     event MinValidAmountSet(uint256 previousAmount, uint256 newAmount);
     event EventsAttached(uint256 tokenId, uint256[] eventIds);
 
+    // ----------------------------------------
+    //      Modifiers
+    // ----------------------------------------
+
+    modifier onlyTCO2() {
+        require(
+            IToucanContractRegistry(contractRegistry).isValidERC20(msg.sender),
+            'Caller not a TCO2'
+        );
+        _;
+    }
+
+    modifier onlyTCO2OrRetiringEntity(address retiringEntity) {
+        require(
+            retiringEntity == msg.sender ||
+                IToucanContractRegistry(contractRegistry).isValidERC20(
+                    msg.sender
+                ),
+            'Invalid caller'
+        );
+        _;
+    }
+
+    // ----------------------------------------
+    //      Upgradeable-related functions
+    // ----------------------------------------
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
-
-    // ----------------------------------------
-    //      Upgradable related functions
-    // ----------------------------------------
 
     function initialize(address _contractRegistry, string memory _baseURI)
         external
@@ -125,6 +148,7 @@ contract RetirementCertificates is
     /// @param retiringEntity The entity that has retired TCO2 and is eligible to mint an NFT.
     /// @param projectVintageTokenId The vintage id of the TCO2 that is retired.
     /// @param amount The amount of the TCO2 that is retired.
+    /// @param serialNumber The serial number of the batch associated with the retirement.
     /// @param isLegacy Whether this event registration was executed by using the legacy retired
     /// amount in the TCO2 contract or utilizes the new retirement event design.
     /// @dev    The function can either be only called by a valid TCO2 contract.
@@ -132,6 +156,7 @@ contract RetirementCertificates is
         address retiringEntity,
         uint256 projectVintageTokenId,
         uint256 amount,
+        string memory serialNumber,
         bool isLegacy
     ) external returns (uint256) {
         // Logic requires that minting can only originate from a project-vintage ERC20 contract
@@ -166,6 +191,7 @@ contract RetirementCertificates is
         _retirements[eventCounter].amount = amount;
         _retirements[eventCounter]
             .projectVintageTokenId = projectVintageTokenId;
+        _retirements[eventCounter].serialNumber = serialNumber;
 
         return eventCounter;
     }
@@ -209,12 +235,13 @@ contract RetirementCertificates is
         emit EventsAttached(tokenId, retirementEventIds);
     }
 
-    /// @notice Mint new Retirement Certificate NFT that shows how many TCO2s have been retired.
-    /// @param retiringEntity The entity that has retired TCO2 and is eligible to mint an NFT.
-    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name.
-    /// @param beneficiary The beneficiary address for whom the TCO2 amount was retired.
-    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name.
-    /// @param retirementMessage A message to accompany the retirement.
+    /// @notice Mint a new RetirementCertificates NFT that shows how many TCO2s have been retired.
+    /// Note that this information is publicly written to the blockchain in plaintext.
+    /// @param retiringEntity The entity that has retired TCO2
+    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name
+    /// @param beneficiary The address of the beneficiary of the retirement
+    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name
+    /// @param retirementMessage A message to be included in the retirement certificate
     /// @param retirementEventIds An array of event ids to associate with the NFT.
     /// @return The token id of the newly minted NFT.
     /// @dev    The function can either be called by a valid TCO2 contract or by someone who
@@ -226,7 +253,13 @@ contract RetirementCertificates is
         string calldata beneficiaryString,
         string calldata retirementMessage,
         uint256[] calldata retirementEventIds
-    ) external virtual nonReentrant returns (uint256) {
+    )
+        external
+        virtual
+        nonReentrant
+        onlyTCO2OrRetiringEntity(retiringEntity)
+        returns (uint256)
+    {
         CreateRetirementRequestParams
             memory params = CreateRetirementRequestParams({
                 tokenIds: new uint256[](0),
@@ -240,26 +273,16 @@ contract RetirementCertificates is
                 consumptionPeriodStart: 0,
                 consumptionPeriodEnd: 0
             });
-        return _mintCertificate(retiringEntity, params, retirementEventIds);
+        return
+            _mintCertificate(retiringEntity, params, retirementEventIds, false);
     }
 
     function _mintCertificate(
         address retiringEntity,
         CreateRetirementRequestParams memory params,
-        uint256[] calldata retirementEventIds
+        uint256[] calldata retirementEventIds,
+        bool skipRevert
     ) internal returns (uint256) {
-        // If the provided retiring entity is not the caller, then
-        // ensure the caller is at least a TCO2 contract. This is to
-        // allow TCO2 contracts to call retireAndMintCertificate.
-        require(
-            retiringEntity == msg.sender ||
-                IToucanContractRegistry(contractRegistry).isValidERC20(
-                    msg.sender
-                ) ==
-                true,
-            'Invalid caller'
-        );
-
         // If no beneficiary address and name are provided, default them to the retiring entity
         if (
             params.beneficiary == address(0) &&
@@ -295,24 +318,26 @@ contract RetirementCertificates is
             .consumptionPeriodEnd;
 
         emit CertificateMinted(newItemId);
-        _safeMint(retiringEntity, newItemId);
+        _optionalSafeMint(retiringEntity, newItemId, skipRevert);
 
         return newItemId;
     }
 
-    /// @notice Mint new Retirement Certificate NFT that shows how many TCO2s have been retired.
+    /// @notice Mint a new RetirementCertificates NFT that shows how many TCO2s have been retired.
+    /// When retiringEntity is a contract, the token will be minted regardless of whether
+    /// retiringEntity is a valid ERC721 receiver or has chosen to decline ERC721 tokens.
     /// @param retiringEntity The entity that has retired TCO2 and is eligible to mint an NFT.
     /// @param params Retirement params
     /// @param retirementEventIds An array of event ids to associate with the NFT.
     /// @return The token id of the newly minted NFT.
-    /// @dev    The function can either be called by a valid TCO2 contract or by someone who
-    ///         owns retirement events.
+    /// @dev    The function can only be called by a valid TCO2 contract.
     function mintCertificateWithExtraData(
         address retiringEntity,
         CreateRetirementRequestParams calldata params,
         uint256[] calldata retirementEventIds
-    ) external virtual nonReentrant returns (uint256) {
-        return _mintCertificate(retiringEntity, params, retirementEventIds);
+    ) external virtual nonReentrant onlyTCO2 returns (uint256) {
+        return
+            _mintCertificate(retiringEntity, params, retirementEventIds, true);
     }
 
     /// @param tokenId The id of the NFT to get the URI.
@@ -331,12 +356,13 @@ contract RetirementCertificates is
 
     /// @notice Update retirementMessage, beneficiary, and beneficiaryString of a NFT
     /// within 24h of creation. Empty values are ignored, ie., will not overwrite the
-    /// existing stored values in the NFT.
-    /// @param tokenId The id of the NFT to update.
-    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name.
-    /// @param beneficiary The new beneficiary to set in the NFT.
-    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name.
-    /// @param retirementMessage The new retirementMessage to set in the NFT.
+    /// existing stored values in the NFT. Note that this information is publicly written
+    /// to the blockchain in plaintext.
+    /// @param tokenId The id of the NFT to update
+    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name
+    /// @param beneficiary The address of the beneficiary of the retirement
+    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name
+    /// @param retirementMessage A message to be included in the retirement certificate
     function updateCertificate(
         uint256 tokenId,
         string calldata retiringEntityString,

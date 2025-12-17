@@ -24,7 +24,7 @@ abstract contract ToucanCarbonOffsetsDirectRetirements is
         whenNotPaused
         returns (uint256 retirementEventId)
     {
-        retirementEventId = _retire(msg.sender, amount, msg.sender);
+        retirementEventId = _retire(msg.sender, amount, msg.sender, '');
     }
 
     /// @dev Allow for pools or third party contracts to retire for the user
@@ -36,16 +36,16 @@ abstract contract ToucanCarbonOffsetsDirectRetirements is
         returns (uint256 retirementEventId)
     {
         _spendAllowance(account, msg.sender, amount);
-        retirementEventId = _retire(account, amount, account);
+        retirementEventId = _retire(account, amount, account, '');
     }
 
-    /// @notice Retire an amount of TCO2s, register a retirement event
-    /// then mint a certificate passing a single retirementEventId.
-    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name.
-    /// @param beneficiary The beneficiary to set in the NFT.
-    /// @param beneficiaryString The beneficiaryString to set in the NFT.
-    /// @param retirementMessage The retirementMessage to set in the NFT.
-    /// @param amount The amount to retire and issue an NFT certificate for.
+    /// @notice Retire an amount of TCO2s and mint a RetirementCertificate NFT.
+    /// Note that this information is publicly written to the blockchain in plaintext.
+    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name
+    /// @param beneficiary The address of the beneficiary of the retirement
+    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name
+    /// @param retirementMessage A message to be included in the retirement certificate
+    /// @param amount The amount to retire and issue an NFT certificate for
     function retireAndMintCertificate(
         string calldata retiringEntityString,
         address beneficiary,
@@ -53,20 +53,21 @@ abstract contract ToucanCarbonOffsetsDirectRetirements is
         string calldata retirementMessage,
         uint256 amount
     ) external virtual whenNotPaused {
-        CreateRetirementRequestParams
-            memory params = CreateRetirementRequestParams({
-                tokenIds: new uint256[](0),
-                amount: amount,
-                retiringEntityString: retiringEntityString,
-                beneficiary: beneficiary,
-                beneficiaryString: beneficiaryString,
-                retirementMessage: retirementMessage,
-                beneficiaryLocation: '',
-                consumptionCountryCode: '',
-                consumptionPeriodStart: 0,
-                consumptionPeriodEnd: 0
-            });
+        uint256 retirementEventId = _retire(msg.sender, amount, msg.sender, '');
+        uint256[] memory retirementEventIds = new uint256[](1);
+        retirementEventIds[0] = retirementEventId;
 
-        _retireAndMintCertificate(msg.sender, params);
+        //slither-disable-next-line unused-return
+        IRetirementCertificates(
+            IToucanContractRegistry(contractRegistry)
+                .retirementCertificatesAddress()
+        ).mintCertificate(
+                msg.sender,
+                retiringEntityString,
+                beneficiary,
+                beneficiaryString,
+                retirementMessage,
+                retirementEventIds
+            );
     }
 }

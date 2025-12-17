@@ -17,9 +17,7 @@ library Strings {
         pure
         returns (bool)
     {
-        return
-            (bytes(a).length == bytes(b).length) &&
-            (keccak256(bytes(a)) == keccak256(bytes(b)));
+        return StringsUpgradeable.equal(a, b);
     }
 
     /// @notice Convert a string to an integer

@@ -124,9 +124,9 @@ library Errors {
     string public constant CP_INVALID_MAX_FEE = '52';
     // The pool feature is not supported
     string public constant CP_NOT_SUPPORTED = '53';
-    // Used for instance to check for sub-tonnage retirement requests
+    // The TCO2 decimals provided to retirement or detokenization requests are invalid
     string public constant TCO2_INVALID_DECIMALS = '54';
-    // The TCO2 Quantity in the batch is invalid
+    // The TCO2 quantity in the batch is invalid
     string public constant COB_INVALID_QUANTITY = '55';
     // Splitting is required on detokenization/retirement finalization, but 2 new serial numbers
     // were not provided
@@ -138,7 +138,7 @@ library Errors {
     // The underlying decimals are too high for the pool
     string public constant UNDERLYING_DECIMALS_TOO_HIGH = '59';
     // The provided supply cap is invalid and should match the underlying token decimals
-    // eg., for an ERC-1155 token whose smallest denomination is tonnes, the pool supply
-    // cap should not include decimals of lower fidelity than tonnes.
+    // eg, for an ERC-1155 token whose smallest denomination is tonnes, the pool supply
+    // cap should not include decimals of lower fidelity than tonnes
     string public constant INVALID_SUPPLY_CAP = '60';
 }

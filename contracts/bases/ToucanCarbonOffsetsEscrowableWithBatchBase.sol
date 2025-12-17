@@ -11,7 +11,6 @@ import {Errors} from '../libraries/Errors.sol';
 /// @notice Base contract that can be reused between different TCO2
 /// implementations that need to work with batch NFTs
 abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
-    IERC721Receiver,
     ToucanCarbonOffsetsWithBatchBase
 {
     // ----------------------------------------
@@ -135,8 +134,10 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
     // ----------------------------------------
 
     /// @notice Request a detokenization of batch-NFTs. The amount of TCO2 to detokenize will be transferred from
-    /// the user to an escrow contract.
-    /// @dev This function is permissionless and can be called by anyone
+    /// the user to an escrow contract. The detokenization request will be processed asynchronously by Toucan
+    /// so callers should monitor the status of the request by listening to the DetokenizationFinalized and
+    /// DetokenizationReverted events.
+    /// @dev This function is permissionless and can be called by anyone with enough TCO2 to detokenize
     /// @param tokenIds Token IDs of one or more batches to detokenize
     /// @param amount The amount of TCO2 to detokenize, must be greater than zero and equal to or smaller than the
     /// total amount of the batches (and also greater then the total amount of all the batches except the last one)
@@ -159,15 +160,20 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
     }
 
     /// @notice Request a retirement of TCO2s from batch-NFTs. The amount of TCO2s to retire will be transferred
-    /// from the user to an escrow contract.
-    /// @dev This function is permissionless and can be called by anyone
+    /// from the user to an escrow contract. The retirement request will be processed asynchronously by Toucan
+    /// so callers should monitor the status of the request by listening to the RetirementFinalized and
+    /// RetirementReverted events.
+    /// NOTE: This information is publicly written to the blockchain in plaintext.
+    /// @dev When _msgSender() is a contract, an ERC721 token will be minted by finalizeRetirement, regardless of whether
+    /// _msgSender() is a valid ERC721 receiver or its receiver hook ends up reverting for whatever reason. This is to
+    /// ensure that the retirement request can always be finalized onchain when its offchain counterpart is successful.
     /// @param params The parameters of the retirement request:
     ///     uint256[] tokenIds One or more batches to retire
     ///     uint256 amount The amount of TCO2 to retire, must be greater than zero and equal to or smaller than the
     /// total amount of the batches (and also greater then the total amount of all the batches except the last one)
-    ///     string retiringEntityString The name of the retiring entity
+    ///     string retiringEntityString An identifiable string for the retiring entity, eg. their name
     ///     address beneficiary The address of the beneficiary of the retirement
-    ///     string beneficiaryString The name of the beneficiary of the retirement
+    ///     string beneficiaryString An identifiable string for the beneficiary, eg. their name
     ///     string retirementMessage A message to be included in the retirement certificate
     ///     string beneficiaryLocation The location of the beneficiary of the retirement
     ///     string consumptionCountryCode The country code of the consumption location
@@ -199,7 +205,42 @@ abstract contract ToucanCarbonOffsetsEscrowableWithBatchBase is
     function retireAndMintCertificateForEntity(
         address retiringEntity,
         CreateRetirementRequestParams calldata params
-    ) external virtual onlyEscrow {
-        _retireAndMintCertificate(retiringEntity, params);
+    ) external virtual onlyEscrow whenNotPaused {
+        uint256 decimalMultiplier = 10**decimals();
+        uint256 batchesLength = params.tokenIds.length;
+        uint256[] memory retirementEventIds = new uint256[](batchesLength);
+
+        IToucanContractRegistry tcnRegistry = IToucanContractRegistry(
+            contractRegistry
+        );
+        ICarbonOffsetBatches cob = ICarbonOffsetBatches(
+            tcnRegistry.carbonOffsetBatchesAddress()
+        );
+
+        for (uint256 i = 0; i < batchesLength; i++) {
+            //slither-disable-next-line unused-return
+            (, uint256 batchQuantity, ) = cob.getBatchNFTData(
+                params.tokenIds[i]
+            );
+            // TODO: Could be squashed with getBatchNFTData by using cob.nftList()
+            string memory serialNumber = cob.getSerialNumber(
+                params.tokenIds[i]
+            );
+            uint256 retirementEventId = _retire(
+                msg.sender,
+                batchQuantity * decimalMultiplier,
+                retiringEntity,
+                serialNumber
+            );
+            retirementEventIds[i] = retirementEventId;
+        }
+
+        //slither-disable-next-line unused-return
+        IRetirementCertificates(tcnRegistry.retirementCertificatesAddress())
+            .mintCertificateWithExtraData(
+                retiringEntity,
+                params,
+                retirementEventIds
+            );
     }
 }

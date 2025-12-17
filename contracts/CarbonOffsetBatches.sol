@@ -197,10 +197,7 @@ contract CarbonOffsetBatches is
     }
 
     /// @dev internal helper function to set the status and emit an event
-    function _updateStatus(uint256 tokenId, BatchStatus newStatus)
-        internal
-        virtual
-    {
+    function _updateStatus(uint256 tokenId, BatchStatus newStatus) internal {
         nftList[tokenId].status = newStatus;
         emit BatchStatusUpdate(tokenId, newStatus);
     }
@@ -225,7 +222,7 @@ contract CarbonOffsetBatches is
     function setStatusForDetokenizationOrRetirement(
         uint256 tokenId,
         BatchStatus newStatus
-    ) external virtual override {
+    ) external {
         onlyUnpaused();
         onlyEscrow();
         address tokenOwner = ownerOf(tokenId);
@@ -262,7 +259,7 @@ contract CarbonOffsetBatches is
     /// Fractionalization requires status Confirmed.
     /// @dev Callable only by verifiers, only for pending batches. This flow requires a previous linking with a vintage
     /// @param tokenId The token ID of the batch
-    function confirmBatch(uint256 tokenId) external virtual {
+    function confirmBatch(uint256 tokenId) external {
         onlyUnpaused();
         onlyWithRole(VERIFIER_ROLE);
         _confirmBatch(tokenId);
@@ -284,22 +281,18 @@ contract CarbonOffsetBatches is
     /// @notice Reject Batch-NFTs, e.g. if the serial number entered is incorrect.
     /// @dev Callable only by verifiers, only for pending batches.
     /// @param tokenId The token ID of the batch
-    function rejectBatch(uint256 tokenId) public virtual {
+    function rejectBatch(uint256 tokenId) public {
         onlyUnpaused();
         onlyWithRole(VERIFIER_ROLE);
         onlyPending(tokenId);
 
-        // unsetting serialnumber with rejection
-        serialNumberApproved[nftList[tokenId].serialNumber] = false;
         _updateStatus(tokenId, BatchStatus.Rejected);
     }
 
     /// @notice Function to reject Batch-NFTs, including a reason to be displayed to the user.
     function rejectWithComment(uint256 tokenId, string memory comment)
         external
-        virtual
     {
-        onlyUnpaused();
         rejectBatch(tokenId);
         _addComment(tokenId, comment);
     }
@@ -318,6 +311,9 @@ contract CarbonOffsetBatches is
                 ownerOf(tokenId)
             )
         ) revert(Errors.COB_ALREADY_FRACTIONALIZED);
+
+        serialNumberApproved[nftList[tokenId].serialNumber] = false;
+
         _updateStatus(tokenId, BatchStatus.Rejected);
         _addComment(tokenId, comment);
     }
@@ -327,7 +323,7 @@ contract CarbonOffsetBatches is
     /// batch, e.g. the batch was incorrectly rejected.
     /// @dev Callable only by verifiers, only for rejected batches.
     /// @param tokenId The token ID of the batch
-    function setToPending(uint256 tokenId) external virtual {
+    function setToPending(uint256 tokenId) external {
         onlyUnpaused();
         onlyWithRole(VERIFIER_ROLE);
         if (nftList[tokenId].status != BatchStatus.Rejected)
@@ -341,7 +337,6 @@ contract CarbonOffsetBatches is
     /// @param projectVintageTokenId The token ID of the vintage
     function linkWithVintage(uint256 tokenId, uint256 projectVintageTokenId)
         external
-        virtual
     {
         onlyUnpaused();
         onlyWithRole(VERIFIER_ROLE);
@@ -367,7 +362,7 @@ contract CarbonOffsetBatches is
     function confirmBatchWithVintage(
         uint256 tokenId,
         uint256 projectVintageTokenId
-    ) external virtual {
+    ) external {
         onlyUnpaused();
         onlyWithRole(VERIFIER_ROLE);
         // We don't want this to be a "backdoor" for modifying the vintage; it
@@ -402,7 +397,7 @@ contract CarbonOffsetBatches is
     /// @dev To be updated by NFT owner after serial number has been provided
     /// @param to The address the NFT should be minted to. This should be the user.
     /// @return The token ID of the newly minted NFT
-    function mintEmptyBatch(address to) external virtual returns (uint256) {
+    function mintEmptyBatch(address to) external returns (uint256) {
         onlyUnpaused();
         return _mintEmptyBatch(to, to);
     }
@@ -443,7 +438,7 @@ contract CarbonOffsetBatches is
         string memory serialNumber,
         uint256 quantity,
         string memory uri
-    ) external virtual {
+    ) external {
         onlyUnpaused();
         onlyVerifierOrBatchOwner(tokenId);
         onlyPending(tokenId);
@@ -477,7 +472,7 @@ contract CarbonOffsetBatches is
         uint256 tokenId,
         string memory newSerialNumber,
         uint256 newQuantity
-    ) external virtual {
+    ) external {
         onlyUnpaused();
         onlyVerifierOrBatchOwner(tokenId);
         onlyPending(tokenId);
@@ -489,8 +484,6 @@ contract CarbonOffsetBatches is
     function getConfirmationStatus(uint256 tokenId)
         external
         view
-        virtual
-        override
         returns (BatchStatus)
     {
         return nftList[tokenId].status;
@@ -505,8 +498,6 @@ contract CarbonOffsetBatches is
     function getBatchNFTData(uint256 tokenId)
         external
         view
-        virtual
-        override
         returns (
             uint256,
             uint256,
@@ -527,8 +518,6 @@ contract CarbonOffsetBatches is
     function getSerialNumber(uint256 tokenId)
         external
         view
-        virtual
-        override
         returns (string memory)
     {
         if (!_exists(tokenId)) revert(Errors.COB_NOT_EXISTS);
@@ -542,7 +531,6 @@ contract CarbonOffsetBatches is
     function getComments(uint256 tokenId)
         external
         view
-        virtual
         returns (string[] memory, address[] memory)
     {
         return (nftList[tokenId].comments, nftList[tokenId].commentAuthors);
@@ -564,7 +552,7 @@ contract CarbonOffsetBatches is
     /// Queries the factory to find the corresponding TCO2 contract
     /// Fractionalization happens via receive hook on `safeTransferFrom`
     /// @param tokenId The token ID of the batch
-    function fractionalize(uint256 tokenId) external virtual {
+    function fractionalize(uint256 tokenId) external {
         onlyApprovedOrOwner(tokenId);
         // Fractionalize by transferring the batch-NFT to the TCO2 contract.
         safeTransferFrom(
@@ -606,7 +594,6 @@ contract CarbonOffsetBatches is
     function supportsInterface(bytes4 interfaceId)
         public
         view
-        virtual
         override(AccessControlUpgradeable, ERC721EnumerableUpgradeable)
         returns (bool)
     {

@@ -30,6 +30,7 @@ struct RetirementEvent {
     /// in TCO2 contracts.
     uint256 amount;
     uint256 projectVintageTokenId;
+    string serialNumber;
 }
 
 interface IRetirementCertificates {
@@ -52,6 +53,7 @@ interface IRetirementCertificates {
         address retiringEntity,
         uint256 projectVintageTokenId,
         uint256 amount,
+        string memory serialNumber,
         bool isLegacy
     ) external returns (uint256 retireEventCounter);
 

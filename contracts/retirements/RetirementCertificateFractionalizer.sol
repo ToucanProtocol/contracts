@@ -156,11 +156,10 @@ contract RetirementCertificateFractionalizer is
     /// @param params The request data of the fraction to mint
     /// @return fractionTokenId The id of the minted fraction NFT, in the fractions contract
     function mintFractionFrom(address from, FractionRequestData calldata params)
-        public
+        external
         whenNotPaused
         returns (uint256 fractionTokenId)
     {
-        require(params.amount > 0, 'Amount must be greater than 0');
         if (from != _msgSender() && !isApprovedForAll(from, _msgSender())) {
             _decreaseAllowance(
                 from,
@@ -176,6 +175,7 @@ contract RetirementCertificateFractionalizer is
         address from,
         FractionRequestData calldata params
     ) internal returns (uint256 fractionTokenId) {
+        require(params.amount > 0, 'Amount must be greater than 0');
         // reduce the fraction's amount from the owner's balance
         // this also checks if the owner has enough balance
         _burn(from, params.projectVintageTokenId, params.amount);
@@ -219,9 +219,8 @@ contract RetirementCertificateFractionalizer is
         IRetirementCertificates retirementCertificates = IRetirementCertificates(
                 retirementCertificatesAddress
             );
-        CertificateData memory certificateData = retirementCertificates.getData(
-            tokenId
-        );
+        CertificateData memory certificateData = retirementCertificates
+            .certificates(tokenId);
         require(
             certificateData.beneficiary == address(this),
             'Beneficiary of the certificate must be this contract'

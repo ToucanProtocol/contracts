@@ -23,7 +23,7 @@ contract ToucanCarbonOffsets is
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.6.0';
+    string public constant VERSION = '1.7.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     // ----------------------------------------
@@ -56,16 +56,18 @@ contract ToucanCarbonOffsets is
             msg.sender,
             _projectVintageTokenId,
             amount,
+            '',
             true
         );
     }
 
     /// @notice Mint an NFT showing how many tonnes of CO2 have been retired/cancelled
     /// Going forward users should mint NFT directly in the RetirementCertificates contract.
-    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name.
-    /// @param beneficiary The beneficiary to set in the NFT.
-    /// @param beneficiaryString The beneficiaryString to set in the NFT.
-    /// @param retirementMessage The retirementMessage to set in the NFT.
+    /// Note that this information is publicly written to the blockchain in plaintext.
+    /// @param retiringEntityString An identifiable string for the retiring entity, eg. their name
+    /// @param beneficiary The address of the beneficiary of the retirement
+    /// @param beneficiaryString An identifiable string for the beneficiary, eg. their name
+    /// @param retirementMessage A message to be included in the retirement certificate
     function mintCertificateLegacy(
         string calldata retiringEntityString,
         address beneficiary,

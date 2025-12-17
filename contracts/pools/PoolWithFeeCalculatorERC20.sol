@@ -166,7 +166,8 @@ abstract contract PoolWithFeeCalculatorERC20 is PoolERC20able {
     }
 
     /// @notice Deposit function for pool that accepts TCO2s and mints pool token 1:1
-    /// @param tco2 TCO2 to be deposited, requires approve
+    /// @param tco2 TCO2 to be deposited. The pool contract needs to be approved in the
+    /// TCO2 contract by the caller in order to allow the transfer of TCO2 tokens to the pool
     /// @param amount Amount of TCO2 to be deposited
     /// @param maxFee Maximum fee to be paid for the deposit. This value cannot be zero.
     /// Use `calculateDepositFees(tco2,amount)` to determine the fee that will be charged

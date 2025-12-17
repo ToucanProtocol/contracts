@@ -19,7 +19,7 @@ contract ToucanCarbonOffsetsFactory is ToucanCarbonOffsetsFactoryBase {
     /// @dev Version-related parameters. VERSION keeps track of production
     /// releases. VERSION_RELEASE_CANDIDATE keeps track of iterations
     /// of a VERSION in our staging environment.
-    string public constant VERSION = '1.3.0';
+    string public constant VERSION = '1.4.0';
     uint256 public constant VERSION_RELEASE_CANDIDATE = 1;
 
     // ----------------------------------------

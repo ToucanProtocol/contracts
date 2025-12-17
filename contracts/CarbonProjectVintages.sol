@@ -202,17 +202,6 @@ contract CarbonProjectVintages is
         emit ProjectVintageUpdated(tokenId);
     }
 
-    /// @dev Removes a project-vintage and corresponding data
-    function removeVintage(uint256 tokenId)
-        external
-        virtual
-        onlyManagers
-        whenNotPaused
-    {
-        totalSupply--;
-        delete vintageData[tokenId];
-    }
-
     /// @dev retrieve all data from VintageData struct
     function getProjectVintageDataByTokenId(uint256 tokenId)
         external

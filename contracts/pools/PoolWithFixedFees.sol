@@ -324,20 +324,36 @@ abstract contract PoolWithFixedFees is PoolERC20able {
     {
         onlyUnpaused();
         require(amount != 0, Errors.CP_ZERO_AMOUNT);
-        uint256 i = 0;
-        // Non-zero count tracks TCO2s with a balance
-        uint256 nonZeroCount = 0;
 
+        // Pre-allocate arrays with maximum possible size
         uint256 scoredTCO2Len = scoredTCO2s.length;
-        while (amount > 0 && i < scoredTCO2Len) {
+        tco2s = new address[](scoredTCO2Len);
+        amounts = new uint256[](scoredTCO2Len);
+
+        // Track how many non-zero TCO2s we actually add
+        uint256 nonZeroCount = 0;
+        uint256 remainingAmount = amount;
+
+        // Single iteration to populate arrays and perform redemptions
+        for (uint256 i = 0; i < scoredTCO2Len && remainingAmount > 0; ) {
             address tco2 = scoredTCO2s[i];
             uint256 balance = tokenBalance(tco2);
-            uint256 amountToRedeem = 0;
 
-            // Only TCO2s with a balance should be included for a redemption.
+            // Only process TCO2s with non-zero balance
             if (balance != 0) {
-                amountToRedeem = amount > balance ? balance : amount;
-                amount -= amountToRedeem;
+                uint256 amountToRedeem = remainingAmount > balance
+                    ? balance
+                    : remainingAmount;
+                remainingAmount -= amountToRedeem;
+
+                // Add to return arrays
+                tco2s[nonZeroCount] = tco2;
+                amounts[nonZeroCount] = amountToRedeem;
+
+                // Perform the redemption
+                //slither-disable-next-line unused-return
+                _redeemSingle(_buildPoolVintageToken(tco2), amountToRedeem);
+
                 unchecked {
                     ++nonZeroCount;
                 }
@@ -346,50 +362,16 @@ abstract contract PoolWithFixedFees is PoolERC20able {
             unchecked {
                 ++i;
             }
-
-            // Create return arrays statically since Solidity does not
-            // support dynamic arrays or mappings in-memory (EIP-1153).
-            // Do it here to avoid having to fill out the last indexes
-            // during the second iteration.
-            //slither-disable-next-line incorrect-equality
-            if (amount == 0) {
-                tco2s = new address[](nonZeroCount);
-                amounts = new uint256[](nonZeroCount);
-
-                tco2s[nonZeroCount - 1] = tco2;
-                amounts[nonZeroCount - 1] = amountToRedeem;
-                //slither-disable-next-line unused-return
-                _redeemSingle(_buildPoolVintageToken(tco2), amountToRedeem);
-            }
         }
 
-        if (amount != 0) {
-            revert(Errors.CP_NON_ZERO_REMAINING);
-        }
+        require(remainingAmount == 0, Errors.CP_NON_ZERO_REMAINING);
 
-        // Execute the second iteration by avoiding to run the last index
-        // since we have already executed that in the first iteration.
-        nonZeroCount = 0;
-        for (uint256 j = 0; j < i - 1; ++j) {
-            address tco2 = scoredTCO2s[j];
-            // This second loop only gets called when the `amount` is larger
-            // than the first tco2 balance in the array. Here, in every iteration the
-            // tco2 balance is smaller than the remaining amount while the last bit of
-            // the `amount` which is smaller than the tco2 balance, got redeemed
-            // in the first loop.
-            uint256 balance = tokenBalance(tco2);
-
-            // Ignore empty balances so we don't generate redundant transactions.
-            //slither-disable-next-line incorrect-equality
-            if (balance == 0) continue;
-
-            tco2s[nonZeroCount] = tco2;
-            amounts[nonZeroCount] = balance;
-            //slither-disable-next-line unused-return
-            _redeemSingle(_buildPoolVintageToken(tco2), balance);
-            unchecked {
-                ++nonZeroCount;
-            }
+        // Trim arrays to actual size using assembly
+        assembly {
+            // Update array length for tco2s
+            mstore(tco2s, nonZeroCount)
+            // Update array length for amounts
+            mstore(amounts, nonZeroCount)
         }
     }
 

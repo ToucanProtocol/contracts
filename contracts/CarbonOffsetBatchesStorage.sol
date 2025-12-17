@@ -20,6 +20,7 @@ abstract contract CarbonOffsetBatchesStorageV1 {
     struct NFTData {
         uint256 projectVintageTokenId;
         string serialNumber;
+        // Quantity is denominated in tonnes
         uint256 quantity;
         BatchStatus status;
         string uri;
